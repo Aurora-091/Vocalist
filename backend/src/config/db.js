@@ -12,18 +12,23 @@ const supabase = createClient(
   }
 );
 
+let anonClient;
+
 function getAnonClient() {
   if (!env.SUPABASE_ANON_KEY) {
     throw new Error(
       "SUPABASE_ANON_KEY is required for end-user authentication flows"
     );
   }
-  return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  if (!anonClient) {
+    anonClient = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+  return anonClient;
 }
 
 module.exports = supabase;

@@ -149,6 +149,7 @@ async function update({ orgId, id, payload }) {
 }
 
 async function remove({ orgId, id }) {
+  ensureAgentId(id);
   const deleted = await agentRepository.softDelete({ id, orgId });
   if (!deleted) throw ApiError.notFound("Agent not found");
   return { id: deleted.id };
