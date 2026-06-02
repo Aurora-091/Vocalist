@@ -1,24 +1,37 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
+const env = require("./src/config/env");
+const logger = require("./src/config/logger");
+const createApp = require("./src/app");
 
-const env = require("./config/env");
-const routes = require("./routers/index.routes");
+const dialerWorker = require("./src/workers/dialer.worker");
+const retryWorker = require("./src/workers/retry.worker");
+const billingRollup = require("./src/workers/billing-rollup.worker");
 
-const app = express();
+const app = createApp();
 
-app.use(helmet());
-app.use(cors());
-app.use(morgan("dev"));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use("/", routes);
-
-app.listen(env.PORT, () => {
-  console.log(
-    `🚀 Aurora API running on port ${env.PORT}`
-  );
+const server = app.listen(env.PORT, () => {
+  logger.info({ port: env.PORT, env: env.NODE_ENV }, "Aurora API listening");
 });
+
+const stoppers = [];
+if (process.env.RUN_WORKERS === "1") {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+    logger.warn("RUN_WORKERS=1 but SUPABASE_SERVICE_ROLE_KEY is not set; workers disabled");
+  } else {
+    logger.info("Starting background workers");
+    stoppers.push(dialerWorker.start());
+    stoppers.push(retryWorker.start());
+    stoppers.push(billingRollup.start());
+  }
+}
+
+function shutdown(signal) {
+  logger.info({ signal }, "Shutting down");
+  stoppers.forEach((stop) => { try { stop(); } catch {} });
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("unhandledRejection", (err) => logger.error({ err }, "unhandledRejection"));
+process.on("uncaughtException", (err) => logger.error({ err }, "uncaughtException"));
