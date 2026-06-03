@@ -15,13 +15,14 @@ export async function api<T = any>(
     },
   });
   if (!res.ok) {
+    const text = await res.text();
     let detail: any;
     try {
-      detail = await res.json();
+      detail = JSON.parse(text);
     } catch {
-      detail = await res.text();
+      detail = text;
     }
-    const err = new Error(detail?.error || detail?.message || `Request failed (${res.status})`);
+    const err = new Error(detail?.error?.message || detail?.error || detail?.message || `Request failed (${res.status})`);
     (err as any).status = res.status;
     (err as any).detail = detail;
     throw err;
