@@ -3,7 +3,8 @@ const { z } = require("zod");
 const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
-const { NotFound } = require("../../utils/errors");
+const { NotFound, BadRequest } = require("../../utils/errors");
+const agentService = require("./agent.service");
 
 const router = express.Router();
 router.use(requireAuth, requireOrg);
@@ -15,7 +16,6 @@ const createSchema = z.object({
   voice_id: z.string().max(120).optional(),
   inbound_number: z.string().max(40).optional(),
   provider: z.enum(["vapi", "retell", "pipecat"]).default("vapi"),
-  provider_ref: z.string().max(120).optional(),
   languages: z.array(z.string()).optional(),
   business_hours: z.record(z.string(), z.any()).optional(),
   timezone: z.string().max(80).optional(),
@@ -58,23 +58,18 @@ router.post(
   requireRole("owner", "admin"),
   validate({ body: createSchema }),
   asyncHandler(async (req, res) => {
-    const { data, error } = await req.supabase
-      .from("agents")
-      .insert({
-        org_id: req.auth.orgId,
-        ...req.body,
-        persona: req.body.persona || {},
-      })
-      .select("*")
-      .single();
-    if (error) throw error;
-
-    await req.supabase
-      .from("onboarding_state")
-      .update({ steps: { create_agent: true }, updated_at: new Date().toISOString() })
-      .eq("org_id", req.auth.orgId);
-
-    res.status(201).json({ agent: data });
+    try {
+      const agent = await agentService.createAgent(req.supabase, req.auth.orgId, req.body);
+      
+      await req.supabase
+        .from("onboarding_state")
+        .update({ steps: { create_agent: true }, updated_at: new Date().toISOString() })
+        .eq("org_id", req.auth.orgId);
+        
+      res.status(201).json({ agent });
+    } catch (err) {
+      throw new Error("Failed to create agent: " + err.message);
+    }
   })
 );
 
@@ -126,16 +121,13 @@ router.patch(
     body: updateSchema,
   }),
   asyncHandler(async (req, res) => {
-    const { data, error } = await req.supabase
-      .from("agents")
-      .update({ ...req.body, updated_at: new Date().toISOString() })
-      .eq("id", req.params.id)
-      .is("deleted_at", null)
-      .select("*")
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) throw NotFound("Agent not found");
-    res.json({ agent: data });
+    try {
+      const agent = await agentService.updateAgent(req.supabase, req.auth.orgId, req.params.id, req.body);
+      res.json({ agent });
+    } catch (err) {
+      if (err.message.includes("not found")) throw NotFound(err.message);
+      throw new Error("Failed to update agent: " + err.message);
+    }
   })
 );
 
@@ -144,13 +136,32 @@ router.delete(
   requireRole("owner", "admin"),
   validate({ params: z.object({ id: z.string().uuid() }) }),
   asyncHandler(async (req, res) => {
-    const { error } = await req.supabase
-      .from("agents")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", req.params.id);
-    if (error) throw error;
-    res.status(204).end();
+    try {
+      await agentService.deleteAgent(req.supabase, req.auth.orgId, req.params.id);
+      res.status(204).end();
+    } catch (err) {
+      if (err.message.includes("not found")) throw NotFound(err.message);
+      throw new Error("Failed to delete agent: " + err.message);
+    }
+  })
+);
+
+router.post(
+  "/:id/assign-number",
+  requireRole("owner", "admin"),
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({ phone_number_id: z.string().uuid() })
+  }),
+  asyncHandler(async (req, res) => {
+    try {
+      const agent = await agentService.assignNumber(req.supabase, req.auth.orgId, req.params.id, req.body.phone_number_id);
+      res.json({ agent });
+    } catch (err) {
+      throw new Error("Failed to assign number: " + err.message);
+    }
   })
 );
 
 module.exports = router;
+
