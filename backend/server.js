@@ -6,6 +6,7 @@ const dialerWorker = require("./src/workers/dialer.worker");
 const retryWorker = require("./src/workers/retry.worker");
 const billingRollup = require("./src/workers/billing-rollup.worker");
 const leaseSweeper = require("./src/workers/lease-sweeper.worker");
+const webhooksOut = require("./src/workers/webhooks-out.worker");
 
 const app = createApp();
 
@@ -23,6 +24,7 @@ if (process.env.RUN_WORKERS === "1") {
     stoppers.push(retryWorker.start());
     stoppers.push(billingRollup.start());
     stoppers.push(leaseSweeper.start());
+    stoppers.push(webhooksOut.start());
   }
 }
 

@@ -19,6 +19,16 @@ const callRoutes = require("./modules/calls/calls.routes");
 const billingRoutes = require("./modules/billing/billing.routes");
 const integrationRoutes = require("./modules/integrations/integration.routes");
 const webhookRoutes = require("./modules/webhooks/webhook.routes");
+const verticalRoutes = require("./modules/verticals/verticals.routes");
+const onboardingRoutes = require("./modules/onboarding/onboarding.routes");
+const knowledgeRoutes = require("./modules/knowledge/knowledge.routes");
+const numberRoutes = require("./modules/numbers/numbers.routes");
+const segmentRoutes = require("./modules/segments/segments.routes");
+const gdprRoutes = require("./modules/gdpr/gdpr.routes");
+const analyticsRoutes = require("./modules/analytics/analytics.routes");
+const settingsRoutes = require("./modules/settings/settings.routes");
+const notificationRoutes = require("./modules/notifications/notifications.routes");
+const webhooksOutRoutes = require("./modules/webhooks-out/webhooks-out.routes");
 
 function createApp() {
   const app = express();
@@ -57,6 +67,16 @@ function createApp() {
   app.use("/v1/calls", callRoutes);
   app.use("/v1/billing", billingRoutes);
   app.use("/v1/integrations", integrationRoutes);
+  app.use("/v1/verticals", verticalRoutes);
+  app.use("/v1/onboarding", onboardingRoutes);
+  app.use("/v1/knowledge", knowledgeRoutes);
+  app.use("/v1/numbers", numberRoutes);
+  app.use("/v1/segments", segmentRoutes);
+  app.use("/v1/gdpr", gdprRoutes);
+  app.use("/v1/analytics", analyticsRoutes);
+  app.use("/v1/settings", settingsRoutes);
+  app.use("/v1/notifications", notificationRoutes);
+  app.use("/v1/webhooks-out", webhooksOutRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

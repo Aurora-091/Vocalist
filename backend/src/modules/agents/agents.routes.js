@@ -16,6 +16,10 @@ const createSchema = z.object({
   inbound_number: z.string().max(40).optional(),
   provider: z.enum(["vapi", "retell", "pipecat"]).default("vapi"),
   provider_ref: z.string().max(120).optional(),
+  languages: z.array(z.string()).optional(),
+  business_hours: z.record(z.string(), z.any()).optional(),
+  timezone: z.string().max(80).optional(),
+  transfer_number: z.string().max(40).optional(),
 });
 
 const updateSchema = createSchema.partial();
@@ -64,7 +68,53 @@ router.post(
       .select("*")
       .single();
     if (error) throw error;
+
+    await req.supabase
+      .from("onboarding_state")
+      .update({ steps: { create_agent: true }, updated_at: new Date().toISOString() })
+      .eq("org_id", req.auth.orgId);
+
     res.status(201).json({ agent: data });
+  })
+);
+
+router.post(
+  "/:id/test-call",
+  requireRole("owner", "admin"),
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({ to: z.string().min(4) }),
+  }),
+  asyncHandler(async (req, res) => {
+    const { data: agent, error: agentErr } = await req.supabase
+      .from("agents")
+      .select("id, name, provider")
+      .eq("id", req.params.id)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (agentErr) throw agentErr;
+    if (!agent) throw NotFound("Agent not found");
+
+    const { data: call, error: callErr } = await req.supabase
+      .from("calls")
+      .insert({
+        org_id: req.auth.orgId,
+        agent_id: agent.id,
+        direction: "outbound",
+        provider: agent.provider,
+        status: "queued",
+        outcome: { test: true, requested_by: req.auth.userId, to: req.body.to },
+      })
+      .select("id, status")
+      .maybeSingle();
+    if (callErr) throw callErr;
+
+    await req.supabase
+      .from("onboarding_state")
+      .update({ steps: { test_and_golive: true }, updated_at: new Date().toISOString() })
+      .eq("org_id", req.auth.orgId);
+
+    res.json({ ok: true, call });
   })
 );
 
