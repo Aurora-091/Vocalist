@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
 import { StatCard } from "../components/ui/StatCard";
 import { Card, CardHeader, CardBody } from "../components/ui/Card";
@@ -30,6 +30,8 @@ export default function Dashboard() {
   const [usage, setUsage] = useState<any>(null);
   const [steps, setSteps] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -52,6 +54,26 @@ export default function Dashboard() {
   }, []);
 
   const checklistDone = steps && Object.values(steps).every(Boolean);
+  const isEmpty =
+    !loading && (overview?.calls_total ?? 0) === 0;
+
+  async function loadDemo() {
+    setSeeding(true);
+    setSeedMsg(null);
+    try {
+      const r = await api<any>("/v1/onboarding/seed-demo", { method: "POST" });
+      if (r.seeded) {
+        setSeedMsg("Demo data loaded. Refreshing…");
+        setTimeout(() => window.location.reload(), 600);
+      } else {
+        setSeedMsg("Demo data already in place.");
+      }
+    } catch (e: any) {
+      setSeedMsg(e.message || "Couldn't load demo data.");
+    } finally {
+      setSeeding(false);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -69,6 +91,33 @@ export default function Dashboard() {
           </Button>
         </Link>
       </div>
+
+      {isEmpty && (
+        <Card className="border-primary/30 bg-primary/[0.03]">
+          <CardBody>
+            <div className="flex items-start gap-4">
+              <span className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </span>
+              <div className="flex-1">
+                <div className="font-medium">Want a tour first?</div>
+                <p className="text-sm text-text-muted mt-1">
+                  Load a demo agent, six contacts, and four sample calls so you
+                  can click around before placing your first real call.
+                </p>
+                <div className="mt-4 flex items-center gap-3">
+                  <Button onClick={loadDemo} disabled={seeding} size="sm">
+                    {seeding ? "Loading…" : "Load demo data"}
+                  </Button>
+                  {seedMsg && (
+                    <span className="text-sm text-text-muted">{seedMsg}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {steps && !checklistDone && (
         <Card>

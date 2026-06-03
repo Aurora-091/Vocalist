@@ -54,6 +54,17 @@ router.get(
   })
 );
 
+router.post(
+  "/seed-demo",
+  asyncHandler(async (req, res) => {
+    const { data, error } = await req.supabase.rpc("seed_demo_data", {
+      p_org: req.auth.orgId,
+    });
+    if (error) throw error;
+    res.json(data || { seeded: false });
+  })
+);
+
 router.patch(
   "/",
   asyncHandler(async (req, res) => {

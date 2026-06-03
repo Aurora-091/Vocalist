@@ -131,12 +131,11 @@ export default function Integrations() {
                       <div>
                         <div className="font-mono text-sm">{n.e164}</div>
                         <div className="text-xs text-text-muted">
-                          {n.number_owner === "tenant" ? "BYO" : "Aurora"} ·{" "}
-                          {n.provider}
+                          {n.byo ? "BYO" : "Aurora-managed"} · {n.status || "active"}
                         </div>
                       </div>
                     </div>
-                    {n.bound_agent_id ? (
+                    {n.agent_id ? (
                       <Badge tone="info">bound</Badge>
                     ) : (
                       <Badge tone="neutral">unassigned</Badge>
@@ -174,7 +173,7 @@ export default function Integrations() {
                     <div className="flex items-center gap-3">
                       <BookOpen className="w-4 h-4 text-text-muted" />
                       <div>
-                        <div className="text-sm font-medium">{s.label || s.uri}</div>
+                        <div className="text-sm font-medium">{s.title || s.uri}</div>
                         <div className="text-xs text-text-muted">
                           {s.kind} · {s.status}
                         </div>
@@ -212,9 +211,9 @@ function AddNumber({ onAdded }: { onAdded: () => void }) {
     setBusy(true);
     setErr(null);
     try {
-      await api("/v1/numbers", {
+      await api("/v1/numbers/byo", {
         method: "POST",
-        body: JSON.stringify({ e164, owner: "tenant" }),
+        body: JSON.stringify({ e164 }),
       });
       onAdded();
       setOpen(false);
@@ -257,7 +256,7 @@ function AddNumber({ onAdded }: { onAdded: () => void }) {
 function AddKnowledge({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [uri, setUri] = useState("");
-  const [label, setLabel] = useState("");
+  const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function add() {
@@ -265,12 +264,12 @@ function AddKnowledge({ onAdded }: { onAdded: () => void }) {
     try {
       await api("/v1/knowledge/sources", {
         method: "POST",
-        body: JSON.stringify({ kind: "website", uri, label }),
+        body: JSON.stringify({ kind: "website", uri, title }),
       });
       onAdded();
       setOpen(false);
       setUri("");
-      setLabel("");
+      setTitle("");
     } finally {
       setBusy(false);
     }
@@ -287,8 +286,8 @@ function AddKnowledge({ onAdded }: { onAdded: () => void }) {
   return (
     <div className="flex items-center gap-2">
       <input
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
         placeholder="FAQ"
         className="h-9 px-3 rounded-md border border-border bg-surface text-sm w-32"
       />
@@ -298,7 +297,7 @@ function AddKnowledge({ onAdded }: { onAdded: () => void }) {
         placeholder="https://example.com/faq"
         className="h-9 px-3 rounded-md border border-border bg-surface text-sm w-72"
       />
-      <Button size="sm" onClick={add} disabled={busy || !uri}>
+      <Button size="sm" onClick={add} disabled={busy || !uri || !title}>
         <Check className="w-4 h-4 mr-1" />
         Save
       </Button>
