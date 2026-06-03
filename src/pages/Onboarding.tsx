@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ArrowRight, Loader as Loader2 } from "lucide-react";
 import { api } from "../lib/api";
-import { Button } from "../components/ui/Button";
+import { Button } from "../components/legacy-ui/Button";
 import { SetupNumber } from "./SetupNumber";
 
 type Vertical = { id: string; key: string; label: string; config: any };

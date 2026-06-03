@@ -11,6 +11,10 @@ yarn-error.log*
 backend/.env
 backend/.env*.local
 
+# Build output
+dist/
+build/
+
 # Supabase CLI State
 supabase/.temp/
 supabase/.branches/

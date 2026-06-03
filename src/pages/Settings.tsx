@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { Card, CardBody, CardHeader } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
-import { Skeleton } from "../components/ui/States";
+import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
+import { Button } from "../components/legacy-ui/Button";
+import { Skeleton } from "../components/legacy-ui/States";
 
 const TABS = ["Organization", "Compliance", "Notifications", "Webhooks"] as const;
 type Tab = typeof TABS[number];

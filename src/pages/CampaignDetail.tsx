@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Play, Pause, X } from "lucide-react";
 import { api } from "../lib/api";
-import { Button } from "../components/ui/Button";
-import { Card, CardBody, CardHeader } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
-import { StatCard } from "../components/ui/StatCard";
-import { Skeleton } from "../components/ui/States";
+import { Button } from "../components/legacy-ui/Button";
+import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
+import { Badge } from "../components/legacy-ui/Badge";
+import { StatCard } from "../components/legacy-ui/StatCard";
+import { Skeleton } from "../components/legacy-ui/States";
 
 const STATUS_TONE: Record<string, "success" | "info" | "neutral" | "warning" | "danger"> = {
   draft: "neutral",
