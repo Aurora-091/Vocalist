@@ -124,4 +124,54 @@ router.post(
   })
 );
 
+router.post(
+  "/twilio/voice",
+  express.urlencoded({ extended: false }),
+  asyncHandler(async (req, res) => {
+    const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+    const sig = req.headers["x-twilio-signature"];
+    const signatureOk = verifyTwilioSignature(env.TWILIO_AUTH_TOKEN, url, req.body, sig);
+    if (!signatureOk && env.NODE_ENV === "production") {
+      return res.status(401).type("text/xml").send("<Response/>");
+    }
+
+    const called = req.body.Called || req.body.To;
+    const { requireAdmin } = require("../../config/supabase");
+    const admin = requireAdmin();
+
+    let agentName = null;
+    if (called) {
+      const { data: number } = await admin
+        .from("phone_numbers")
+        .select("agent_id, agents:agent_id(name, persona)")
+        .eq("e164", called)
+        .maybeSingle();
+      agentName =
+        number?.agents?.persona?.business_name ||
+        number?.agents?.name ||
+        null;
+    }
+
+    const greeting = agentName
+      ? `Thanks for calling ${agentName}. This call may be recorded for quality and training.`
+      : "Thanks for calling. This call may be recorded for quality and training.";
+
+    res
+      .type("text/xml")
+      .send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">${escapeXml(
+          greeting
+        )}</Say><Pause length="60"/></Response>`
+      );
+  })
+);
+
+function escapeXml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 module.exports = router;

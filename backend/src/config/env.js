@@ -18,6 +18,10 @@ const schema = z.object({
 
   VAPI_WEBHOOK_SECRET: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_REGION: z.string().default("us1"),
+  TWILIO_VOICE_BASE_URL: z.string().optional(),
+  TWILIO_SANDBOX_MODE: z.coerce.boolean().default(true),
 
   CALLING_HOUR_START: z.coerce.number().int().min(0).max(23).default(9),
   CALLING_HOUR_END: z.coerce.number().int().min(0).max(23).default(19),
@@ -37,6 +41,10 @@ const raw = {
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   VAPI_WEBHOOK_SECRET: process.env.VAPI_WEBHOOK_SECRET,
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+  TWILIO_REGION: process.env.TWILIO_REGION,
+  TWILIO_VOICE_BASE_URL: process.env.TWILIO_VOICE_BASE_URL,
+  TWILIO_SANDBOX_MODE: process.env.TWILIO_SANDBOX_MODE,
   CALLING_HOUR_START: process.env.CALLING_HOUR_START,
   CALLING_HOUR_END: process.env.CALLING_HOUR_END,
   RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,

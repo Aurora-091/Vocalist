@@ -29,6 +29,7 @@ const analyticsRoutes = require("./modules/analytics/analytics.routes");
 const settingsRoutes = require("./modules/settings/settings.routes");
 const notificationRoutes = require("./modules/notifications/notifications.routes");
 const webhooksOutRoutes = require("./modules/webhooks-out/webhooks-out.routes");
+const twilioRoutes = require("./modules/twilio/twilio.routes");
 
 function createApp() {
   const app = express();
@@ -77,6 +78,7 @@ function createApp() {
   app.use("/v1/settings", settingsRoutes);
   app.use("/v1/notifications", notificationRoutes);
   app.use("/v1/webhooks-out", webhooksOutRoutes);
+  app.use("/v1/twilio", twilioRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
