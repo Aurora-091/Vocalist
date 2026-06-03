@@ -10,12 +10,12 @@ import {
   CreditCard,
   Settings,
   LogOut,
-  Bell,
   ShieldCheck,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { NotificationsBell } from "./NotificationsBell";
 
 const items = [
   { to: "/", label: "Home", icon: LayoutDashboard, end: true },
@@ -108,7 +108,7 @@ export function AppShell() {
               </div>
             )}
             <ShieldCheck className="w-4 h-4 text-success" aria-label="Compliance: healthy" />
-            <Bell className="w-4 h-4 text-text-muted" />
+            <NotificationsBell />
           </div>
         </header>
         <main className="flex-1 overflow-auto bg-bg">
