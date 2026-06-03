@@ -53,9 +53,18 @@
    └────┬────┘   └──────────────┘   └──────────────┘   └───────────────┘
         │  recording_url → Supabase Storage (org-scoped bucket)
         └─ FK: agent_id, campaign_id?, contact_id?
+
+  ── User-flow / knowledge / numbers round (see §3.1) ──
+   vertical_configs (GLOBAL) ──◀ orgs.vertical_config_id
+   orgs ─1:1─ onboarding_state          (dashboard checklist)
+   orgs ─1:N─ knowledge_sources ─1:N─ knowledge_chunks (pgvector)
+   agents ─N:N─ knowledge_sources       via agent_knowledge (subscribe)
+   orgs ─1:1─ twilio_subaccounts        (Aurora-managed path)
+   orgs ─1:N─ phone_numbers ──▶ agents  (number bound to agent)
+   orgs ─1:N─ notifications · webhook_endpoints
 ```
 
-Every box except `orgs` carries `org_id` → `orgs.id`.
+Every box except `orgs` **and `vertical_configs`** carries `org_id` → `orgs.id`. (`vertical_configs` is global platform config; `orgs` is the tenant root.)
 
 ---
 
@@ -75,6 +84,13 @@ create type target_state       as enum ('queued','suppressed','dialing','ringing
 create type call_status        as enum ('queued','ringing','in_progress','completed','failed','no_answer','busy','voicemail','canceled');
 create type meter_kind         as enum ('voice_minutes','sms','overage_minutes','campaign_call');
 create type webhook_source     as enum ('vapi','retell','pipecat','shopify','stripe','calcom','twilio');
+
+-- New (user-flow / knowledge / numbers round)
+create type onboarding_step    as enum ('pick_vertical','connect_tools','add_knowledge','create_agent','get_number','test_and_golive');
+create type knowledge_kind      as enum ('document','website','integration');   -- how a source was added
+create type knowledge_status    as enum ('processing','ready','error','syncing');
+create type number_owner        as enum ('aurora','tenant');                    -- aurora-managed subaccount vs BYO
+create type notification_kind   as enum ('missed_call','voicemail','campaign_done','billing','integration_broken');
 ```
 
 > Enums over `text + check`: they're self-documenting, index-friendly, and the agent CI lint (`sdk-import-lint`) can assert no raw string states leak into the dialer code.
@@ -86,11 +102,13 @@ create type webhook_source     as enum ('vapi','retell','pipecat','shopify','str
 ```sql
 -- Tenant root. The ONLY table without org_id (it IS the org).
 create table orgs (
-  id          uuid primary key default gen_random_uuid(),
-  name        text not null,
-  plan_id     text,                       -- maps to Stripe price/plan
-  created_at  timestamptz not null default now(),
-  deleted_at  timestamptz
+  id                 uuid primary key default gen_random_uuid(),
+  name               text not null,
+  plan_id            text,                       -- maps to Stripe price/plan
+  vertical_config_id uuid references vertical_configs(id),  -- which vertical (NOT hardcoded)
+  branding           jsonb not null default '{}', -- whitelabel: { logo_url, primary_color } for multi-tenant future
+  created_at         timestamptz not null default now(),
+  deleted_at         timestamptz
 );
 
 -- Linked 1:1 to Supabase auth.users
@@ -104,20 +122,50 @@ create table users (
 create index on users (org_id);
 
 create table agents (
-  id            uuid primary key default gen_random_uuid(),
-  org_id        uuid not null references orgs(id) on delete cascade,
-  name          text not null,
-  vertical      text,
-  persona       jsonb not null default '{}',
-  voice_id      text,
-  inbound_number text,
-  provider      voice_provider not null default 'vapi',
-  provider_ref  text,                      -- external assistant/agent id
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now(),
-  deleted_at    timestamptz
+  id              uuid primary key default gen_random_uuid(),
+  org_id          uuid not null references orgs(id) on delete cascade,
+  name            text not null,
+  vertical        text,                     -- denormalized convenience; source of truth = orgs.vertical_config_id
+  persona         jsonb not null default '{}',  -- composed system prompt + first_message + objective + voices[] (see Template Library)
+  voice_id        text,                     -- primary voice
+  languages       text[] not null default '{en}',  -- EN/ES v1; per-language backup voices live in persona.voices[]
+  inbound_number  text,                     -- legacy/quick ref; canonical link is phone_numbers.agent_id
+  business_hours  jsonb not null default '{}',  -- { mon:[9,18], ... } — feeds can_dial() hours check
+  timezone        text not null default 'UTC',
+  transfer_number text,                     -- escalation: hand off to a human (E.164)
+  consent_required boolean not null default false,  -- TCPA gate; FORCED true for any outbound agent (trigger below). Cannot be unset.
+  provider        voice_provider not null default 'vapi',
+  provider_ref    text,                     -- external assistant/agent id
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  deleted_at      timestamptz
 );
 create index on agents (org_id);
+
+-- An agent is "outbound-capable" if its persona.direction includes outbound (or both).
+-- consent_required must be TRUE for any such agent and may never be set back to false.
+-- This is a hard DB invariant, not a UI nicety — it backs scope §I non-negotiable #1.
+create or replace function force_outbound_consent() returns trigger language plpgsql as $
+begin
+  if (new.persona ->> 'direction') in ('outbound','both') then
+    new.consent_required := true;            -- force on
+  end if;
+  -- never allow flipping an already-required flag back off
+  if tg_op = 'UPDATE' and old.consent_required = true and new.consent_required = false then
+    raise exception 'consent_required cannot be unset on agent %', new.id;
+  end if;
+  return new;
+end $;
+
+create trigger agents_force_consent
+  before insert or update on agents
+  for each row execute function force_outbound_consent();
+
+-- The no-code builder writes friendly fields; they compose into persona (jsonb):
+--   name, persona.direction, persona.objective (Goal), persona.voice.tone (Personality),
+--   persona.first_message, voice_id (+ persona.voices[]), languages[], business_hours, timezone,
+--   transfer_number, and agent_knowledge subscriptions. Advanced toggle exposes persona system prompt + tools.
+--   consent_required is read-only in the UI for outbound agents (shown ON, locked) — enforced by the trigger above.
 
 create table integrations (
   id          uuid primary key default gen_random_uuid(),
@@ -132,6 +180,140 @@ create table integrations (
 ```
 
 > **Secrets never live in Postgres columns as plaintext.** `secret_ref` points at Supabase Vault (or an external KMS). This keeps a DB dump from being a credential breach.
+
+---
+
+## 3.1 Onboarding, Verticals, Knowledge, Numbers & standard features
+
+> Backs the [User-Flow & Knowledge spec](Aurora-UserFlow-and-Knowledge.md). Every table carries `org_id` and RLS **except** `vertical_configs` (global config, read-only to tenants). Multi-tenant principle: **a vertical is a config row, never hardcoded.**
+
+### Vertical config registry (global)
+```sql
+-- Global, NOT org-scoped. One row per vertical. App logic reads config; nothing about
+-- Shopify/Clinic is hardcoded. Adding a vertical = inserting a row + its templates.
+create table vertical_configs (
+  id      uuid primary key default gen_random_uuid(),
+  key     text not null unique,            -- 'shopify' | 'clinic' | future
+  label   text not null,                   -- "Online Store" | "Clinic / Practice"
+  config  jsonb not null default '{}',     -- glossary, recommended_integrations[], recommended_template_ids[],
+                                           -- knowledge_prompts[], default_contact_fields[]
+  enabled boolean not null default true,
+  created_at timestamptz not null default now()
+);
+-- RLS: SELECT allowed to all authenticated; no tenant writes (seeded by platform).
+```
+
+### Onboarding state (the dashboard checklist)
+```sql
+-- One row per org, created at signup. Drives the dashboard Setup Checklist card.
+create table onboarding_state (
+  org_id     uuid primary key references orgs(id) on delete cascade,
+  steps      jsonb not null default '{}',  -- { pick_vertical:true, connect_tools:false, ... } per onboarding_step
+  dismissed  boolean not null default false,
+  completed_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+```
+
+### Knowledge Base (org-wide library, agents subscribe; RAG over pgvector)
+```sql
+create extension if not exists vector;   -- pgvector
+
+-- A source = one upload, one crawled site, or one integration pull. Org-wide.
+create table knowledge_sources (
+  id          uuid primary key default gen_random_uuid(),
+  org_id      uuid not null references orgs(id) on delete cascade,
+  kind        knowledge_kind not null,            -- document | website | integration
+  title       text not null,                      -- "Shipping & Returns Policy"
+  uri         text,                               -- Storage path (doc), URL (website), or integration ref
+  storage_ref text,                               -- Supabase Storage pointer for uploaded files
+  status      knowledge_status not null default 'processing',
+  meta        jsonb not null default '{}',        -- page_count, chunk_count, last_synced, error_msg
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index on knowledge_sources (org_id);
+
+-- Chunked + embedded text. Retrieval is scoped to org_id AND the agent's subscribed sources.
+create table knowledge_chunks (
+  id          uuid primary key default gen_random_uuid(),
+  org_id      uuid not null references orgs(id) on delete cascade,   -- redundant but lets RLS + ANN filter cheaply
+  source_id   uuid not null references knowledge_sources(id) on delete cascade,
+  ordinal     int  not null,
+  content     text not null,
+  embedding   vector(1536),                        -- model-dependent dim
+  created_at  timestamptz not null default now()
+);
+create index on knowledge_chunks (org_id);
+create index on knowledge_chunks (source_id);
+create index on knowledge_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+
+-- Which agents use which sources (subscribe model). An agent retrieves ONLY from its subscriptions.
+create table agent_knowledge (
+  agent_id   uuid not null references agents(id) on delete cascade,
+  source_id  uuid not null references knowledge_sources(id) on delete cascade,
+  org_id     uuid not null references orgs(id) on delete cascade,
+  primary key (agent_id, source_id)
+);
+create index on agent_knowledge (org_id);
+```
+> **Retrieval gate:** at call time, similarity search filters `org_id = auth_org()` **and** `source_id IN (this agent's agent_knowledge)`. No agent sees unsubscribed knowledge; no org sees another's (RLS). If no relevant chunk clears the threshold, the agent defers to a human — it does not fabricate (matches every template's guardrail).
+
+### Phone numbers (Twilio: per-tenant subaccount OR BYO)
+```sql
+-- One Twilio subaccount per org for the Aurora-managed path: isolation + per-tenant billing.
+create table twilio_subaccounts (
+  org_id         uuid primary key references orgs(id) on delete cascade,
+  subaccount_sid text not null,
+  secret_ref     text not null,            -- pointer to Vault (auth token), never raw
+  status         text not null default 'active',
+  created_at     timestamptz not null default now()
+);
+
+-- Every number, whether Aurora-purchased (in the subaccount) or brought by the tenant (BYO).
+create table phone_numbers (
+  id          uuid primary key default gen_random_uuid(),
+  org_id      uuid not null references orgs(id) on delete cascade,
+  e164        text not null,
+  owner       number_owner not null,        -- 'aurora' (managed subaccount) | 'tenant' (BYO)
+  byo         boolean not null default false,
+  agent_id    uuid references agents(id) on delete set null,  -- bound agent (inbound routing / outbound caller-id)
+  provider_ref text,                         -- Twilio number SID
+  status      text not null default 'active',
+  created_at  timestamptz not null default now(),
+  unique (org_id, e164)
+);
+create index on phone_numbers (org_id);
+create index on phone_numbers (agent_id);
+```
+> The provisioning **flow is identical across tenants/verticals** — only integrations + templates differ by vertical. BYO numbers bill to the tenant's own Twilio; Aurora-managed numbers roll up per subaccount so telephony COGS is attributable per org and reconcilable against billed minutes.
+
+### Notifications, escalation & outbound webhooks (standard features)
+```sql
+create table notifications (
+  id         uuid primary key default gen_random_uuid(),
+  org_id     uuid not null references orgs(id) on delete cascade,
+  user_id    uuid references users(id) on delete cascade,   -- null = whole org
+  kind       notification_kind not null,
+  payload    jsonb not null default '{}',
+  read_at    timestamptz,
+  created_at timestamptz not null default now()
+);
+create index on notifications (org_id, created_at desc);
+
+-- Outbound webhooks / Zapier: fire call outcomes to the tenant's other tools.
+create table webhook_endpoints (
+  id          uuid primary key default gen_random_uuid(),
+  org_id      uuid not null references orgs(id) on delete cascade,
+  url         text not null,
+  events      text[] not null default '{call.completed}',  -- which outcomes to fire on
+  secret_ref  text,                                         -- HMAC signing key pointer
+  status      text not null default 'active',
+  created_at  timestamptz not null default now()
+);
+create index on webhook_endpoints (org_id);
+```
+> *Call transfer / escalation* is a column (`agents.transfer_number`), not a table — the agent invokes a transfer mid-call. *Business hours / timezone* (`agents.business_hours`, `agents.timezone`) feed the `can_dial()` hours check. *Recordings + transcripts* and *analytics* reuse the existing `calls` table (`recording_url`, `transcript`, `outcome`) — no new tables. *Whitelabel* is `orgs.branding`.
 
 ---
 
@@ -153,6 +335,8 @@ create table contacts (
   email          text,
   source         contact_source not null,
   crm_ref        text,
+  tags           text[] not null default '{}',   -- campaign audience targeting (segments filter on these)
+  fields         jsonb not null default '{}',    -- vertical-specific fields (Shopify: last_order; Clinic: provider, next_appt)
   consent_status consent_status not null default 'none',  -- CACHE, maintained by trigger
   consent_ts     timestamptz,
   created_at     timestamptz not null default now(),
@@ -162,6 +346,18 @@ create table contacts (
 );
 create index on contacts (org_id);
 create index on contacts (org_id, consent_status);
+create index on contacts using gin (tags);
+
+-- Saved audience filter for the campaign builder (e.g. "Past buyers 90d", "Recall due").
+create table segments (
+  id         uuid primary key default gen_random_uuid(),
+  org_id     uuid not null references orgs(id) on delete cascade,
+  name       text not null,
+  filter     jsonb not null default '{}',        -- declarative: tags, consent_status, source, field predicates
+  created_at timestamptz not null default now(),
+  unique (org_id, name)
+);
+create index on segments (org_id);
 
 -- APPEND-ONLY. No UPDATE/DELETE policy. This is the legal record of truth.
 create table consent_events (
@@ -487,7 +683,10 @@ create policy contacts_isolation on contacts
   using (org_id = auth_org())
   with check (org_id = auth_org());
 -- repeat for: agents, integrations, campaigns, campaign_targets, calls,
--- call_events, subscriptions, usage_ledger (read-only policy), consent_events (insert-only)
+-- call_events, subscriptions, usage_ledger (read-only policy), consent_events (insert-only),
+-- segments, onboarding_state, knowledge_sources, knowledge_chunks, agent_knowledge,
+-- twilio_subaccounts, phone_numbers, notifications, webhook_endpoints
+-- EXCEPTION: vertical_configs is global config — SELECT to all authenticated, no tenant writes.
 ```
 
 Append-only tables get a **read + insert** policy but **no update/delete** policy (so nobody, not even the owner, can mutate the audit trail via the API):
@@ -512,13 +711,18 @@ create table subscriptions (
   org_id          uuid primary key references orgs(id) on delete cascade,
   stripe_customer_id     text,
   stripe_subscription_id text,
-  plan_id         text not null,
-  included_minutes int not null default 0,
+  plan_id         text not null,                   -- maps to a tier (Starter/Growth/Pro) — see Scope §E
+  included_minutes int not null default 0,         -- bundled minutes for the period
+  included_numbers int not null default 0,         -- phone numbers bundled in the tier (Scope §E)
+  overage_rate_usd numeric(12,4) not null default 0,-- per-minute overage price for this tier
   status          text not null default 'active',
   period_start    timestamptz,
   period_end      timestamptz,
   updated_at      timestamptz not null default now()
 );
+-- Tier values (price, included_minutes/numbers, overage_rate) are PLACEHOLDERS sourced from the
+-- Stripe price + mirrored here so the DB is self-describing for usage math. They are config, never
+-- hardcoded in app logic. Stripe price metadata is the upstream source; this row is the working copy.
 
 -- APPEND-ONLY. One row per billable unit. Source of truth for invoicing.
 create table usage_ledger (
@@ -563,8 +767,8 @@ select org_id, sum(quantity) as minutes
 
 | When | DB work | Tier |
 |---|---|---|
-| Wk1–4 (inbound MVP) | orgs, users, agents, integrations, contacts, calls, call_events, RLS, webhook_events | mixed; RLS = Tier-1 |
-| Wk5–10 | subscriptions, usage_ledger + rollups + Stripe reconcile | Tier-1 (billing) |
+| Wk1–4 (inbound MVP) | orgs(+vertical_config_id,branding), users, agents(+goal/voice/hours/transfer/consent_required+trigger), integrations, contacts, calls, call_events, RLS, webhook_events, **vertical_configs, onboarding_state, phone_numbers, twilio_subaccounts** | mixed; RLS = Tier-1 |
+| Wk5–10 | subscriptions, usage_ledger + rollups + Stripe reconcile, **knowledge_sources/chunks (pgvector)+agent_knowledge, notifications, webhook_endpoints** | Tier-1 (billing); knowledge = Tier-2 |
 | Wk11–15 (triggered outbound) | consent_events, dnc_list, triggers, `can_dial()` + **full test suite first** | Tier-1 |
 | Wk16–19 (campaign engine) | campaigns, campaign_targets state machine, dialer_transitions, lease/idempotency | Tier-1 |
 
@@ -576,6 +780,7 @@ Freed agent capacity goes into: the consent property tests, the idempotency fuzz
 
 1. Every table with `org_id` has RLS enabled + an isolation policy. *(rls-coverage)*
 2. No `dialing` transition occurs unless `can_dial()` returned true immediately prior. *(consent-invariant)*
+   - Corollary: every outbound-capable agent has `consent_required = true`, forced + locked by the `agents_force_consent` trigger; it can never be unset. *(consent-locked)*
 3. A `revoke` event flips contact cache + DNC + queued targets in one transaction. *(optout-propagation)*
 4. Duplicate webhooks / retries produce exactly one effect. *(idempotency, webhook-sig)*
 5. No call segment is billed twice. *(usage_ledger unique idempotency_key)*
