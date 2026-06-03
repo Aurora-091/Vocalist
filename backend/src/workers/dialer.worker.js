@@ -40,6 +40,7 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     p_e164: contact.e164,
     p_now: new Date().toISOString(),
     p_tz: campaign.calling_tz || "America/New_York",
+    p_agent_id: agent.id,
   });
   if (gateErr) throw gateErr;
 
