@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Plus, Upload, Search } from "lucide-react";
 import { api } from "../lib/api";
-import { Button } from "../components/ui/Button";
-import { Card, CardBody } from "../components/ui/Card";
-import { ConsentBadge } from "../components/ui/Badge";
-import { EmptyState, Skeleton } from "../components/ui/States";
+import { Button } from "../components/legacy-ui/Button";
+import { Card, CardBody } from "../components/legacy-ui/Card";
+import { ConsentBadge } from "../components/legacy-ui/Badge";
+import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 
 type Contact = {
   id: string;

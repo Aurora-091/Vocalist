@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { Card, CardBody, CardHeader } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
-import { Badge } from "../components/ui/Badge";
-import { Skeleton } from "../components/ui/States";
+import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
+import { Button } from "../components/legacy-ui/Button";
+import { Badge } from "../components/legacy-ui/Badge";
+import { Skeleton } from "../components/legacy-ui/States";
 
 type Tier = {
   id: string;

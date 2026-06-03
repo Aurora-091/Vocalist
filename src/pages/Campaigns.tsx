@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Megaphone } from "lucide-react";
 import { api } from "../lib/api";
-import { Button } from "../components/ui/Button";
-import { EmptyState, Skeleton } from "../components/ui/States";
-import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/legacy-ui/Button";
+import { EmptyState, Skeleton } from "../components/legacy-ui/States";
+import { Badge } from "../components/legacy-ui/Badge";
 
 type Campaign = {
   id: string;

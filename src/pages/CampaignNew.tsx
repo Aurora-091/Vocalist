@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { api } from "../lib/api";
-import { Button } from "../components/ui/Button";
-import { Card, CardBody, CardHeader } from "../components/ui/Card";
+import { Button } from "../components/legacy-ui/Button";
+import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 
 export default function CampaignNew() {
   const navigate = useNavigate();

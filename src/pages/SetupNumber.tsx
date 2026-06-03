@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Phone, Search, ShieldCheck, ArrowRight, CircleAlert as AlertCircle } from "lucide-react";
 import { api } from "../lib/api";
-import { Button } from "../components/ui/Button";
-import { Card, CardBody, CardHeader } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
-import { Skeleton } from "../components/ui/States";
+import { Button } from "../components/legacy-ui/Button";
+import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
+import { Badge } from "../components/legacy-ui/Badge";
+import { Skeleton } from "../components/legacy-ui/States";
 
 type Available = {
   phoneNumber: string;

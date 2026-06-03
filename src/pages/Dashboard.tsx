@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Check, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
-import { StatCard } from "../components/ui/StatCard";
-import { Card, CardHeader, CardBody } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
-import { Skeleton } from "../components/ui/States";
+import { StatCard } from "../components/legacy-ui/StatCard";
+import { Card, CardHeader, CardBody } from "../components/legacy-ui/Card";
+import { Button } from "../components/legacy-ui/Button";
+import { Skeleton } from "../components/legacy-ui/States";
 
 const STEP_LABELS: Record<string, string> = {
   pick_vertical: "Pick your business",

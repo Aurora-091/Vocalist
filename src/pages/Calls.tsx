@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Phone, X } from "lucide-react";
 import { api } from "../lib/api";
-import { Badge } from "../components/ui/Badge";
-import { EmptyState, Skeleton } from "../components/ui/States";
+import { Badge } from "../components/legacy-ui/Badge";
+import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 
 type Call = {
   id: string;

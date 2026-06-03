@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { StatCard } from "../components/ui/StatCard";
-import { Card, CardBody, CardHeader } from "../components/ui/Card";
-import { Skeleton } from "../components/ui/States";
+import { StatCard } from "../components/legacy-ui/StatCard";
+import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
+import { Skeleton } from "../components/legacy-ui/States";
 
 export default function Outcomes() {
   const [overview, setOverview] = useState<any>(null);
