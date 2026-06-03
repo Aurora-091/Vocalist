@@ -1,51 +1,33 @@
-const crypto = require("crypto");
 const { requireAdmin } = require("../config/supabase");
 const logger = require("../config/logger");
 const { transition, STATES } = require("../modules/campaigns/state-machine");
+const { buildVoiceProvider } = require("../providers/voice/factory");
 
-const LEASE_DURATION_MS = 60_000;
+const LEASE_SECONDS = 90;
 
-async function leaseDueTargets(admin, { orgId, campaignId, limit }) {
-  const now = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + LEASE_DURATION_MS).toISOString();
-  const leaseToken = crypto.randomUUID();
-
-  const { data: candidates, error } = await admin
-    .from("campaign_targets")
-    .select("id, contact_id, state, attempts")
+async function loadIntegrationConfig(admin, orgId, providerName) {
+  if (providerName !== "vapi" && providerName !== "retell") return {};
+  const { data } = await admin
+    .from("integrations")
+    .select("config")
     .eq("org_id", orgId)
-    .eq("campaign_id", campaignId)
-    .in("state", [STATES.QUEUED, STATES.RETRY_WAIT])
-    .or(`next_attempt_at.is.null,next_attempt_at.lte.${now}`)
-    .or(`lease_expires_at.is.null,lease_expires_at.lte.${now}`)
-    .limit(limit);
-
-  if (error) throw error;
-  if (!candidates || candidates.length === 0) return [];
-
-  const ids = candidates.map((c) => c.id);
-  const { data: leased, error: leaseErr } = await admin
-    .from("campaign_targets")
-    .update({ lease_token: leaseToken, lease_expires_at: expiresAt })
-    .in("id", ids)
-    .or(`lease_expires_at.is.null,lease_expires_at.lte.${now}`)
-    .select("id, contact_id, state, attempts, lease_token");
-
-  if (leaseErr) throw leaseErr;
-  return (leased || []).filter((r) => r.lease_token === leaseToken);
+    .eq("type", "twilio")
+    .maybeSingle();
+  return data?.config || {};
 }
 
-async function dispatchOne(admin, { campaign, target }) {
+async function dispatchOne(admin, { campaign, agent, target }) {
   const { data: contact, error: cErr } = await admin
     .from("contacts")
     .select("id, e164, deleted_at")
     .eq("id", target.contact_id)
     .maybeSingle();
   if (cErr) throw cErr;
+
   if (!contact || contact.deleted_at) {
     await transition(admin, {
-      targetId: target.id,
-      fromState: target.state,
+      targetId: target.target_id,
+      fromState: STATES.DIALING,
       toState: STATES.DO_NOT_CALL,
       reason: "contact_missing",
       orgId: campaign.org_id,
@@ -63,8 +45,8 @@ async function dispatchOne(admin, { campaign, target }) {
 
   if (!gateOk) {
     await transition(admin, {
-      targetId: target.id,
-      fromState: target.state,
+      targetId: target.target_id,
+      fromState: STATES.DIALING,
       toState: STATES.SUPPRESSED,
       reason: "can_dial_false",
       orgId: campaign.org_id,
@@ -72,42 +54,54 @@ async function dispatchOne(admin, { campaign, target }) {
     return { skipped: true, reason: "can_dial_false" };
   }
 
-  const providerCallId = `mock-${crypto.randomUUID()}`;
+  const integrationConfig = await loadIntegrationConfig(admin, campaign.org_id, agent.provider);
+  const provider = buildVoiceProvider({ agent, integrationConfig });
+
+  let providerCall;
+  try {
+    providerCall = await provider.startCall({
+      toE164: contact.e164,
+      fromE164: agent.inbound_number,
+      leaseToken: target.lease_token,
+      metadata: { campaign_id: campaign.id, target_id: target.target_id },
+    });
+  } catch (err) {
+    logger.error({ err: err.message, agentProvider: agent.provider }, "Provider startCall failed");
+    await transition(admin, {
+      targetId: target.target_id,
+      fromState: STATES.DIALING,
+      toState: STATES.FAILED,
+      reason: `provider_error:${err.message.slice(0, 80)}`,
+      orgId: campaign.org_id,
+    });
+    return { failed: true, reason: "provider_error" };
+  }
+
   const { data: callRow, error: callErr } = await admin
     .from("calls")
     .insert({
       org_id: campaign.org_id,
-      agent_id: campaign.agent_id,
+      agent_id: agent.id,
       campaign_id: campaign.id,
       contact_id: contact.id,
       direction: "outbound",
-      status: "queued",
-      provider: "vapi",
-      provider_call_id: providerCallId,
+      status: providerCall.status === "in_progress" ? "in_progress" : "queued",
+      provider: agent.provider,
+      provider_call_id: providerCall.provider_call_id,
     })
     .select("id")
     .single();
-  if (callErr) throw callErr;
-
-  const transitioned = await transition(admin, {
-    targetId: target.id,
-    fromState: target.state,
-    toState: STATES.DIALING,
-    reason: "dispatched",
-    callId: callRow.id,
-    orgId: campaign.org_id,
-  });
-
-  if (!transitioned.ok) {
-    return { skipped: true, reason: "concurrent_state_change" };
+  if (callErr) {
+    logger.error({ err: callErr.message }, "Failed to insert call row after dispatch");
+    return { failed: true, reason: "call_insert_failed" };
   }
 
   await admin
     .from("campaign_targets")
-    .update({ attempts: (target.attempts || 0) + 1 })
-    .eq("id", target.id);
+    .update({ last_call_id: callRow.id })
+    .eq("id", target.target_id);
 
-  return { ok: true, call_id: callRow.id, provider_call_id: providerCallId };
+  return { ok: true, call_id: callRow.id, provider_call_id: providerCall.provider_call_id };
 }
 
 async function tickCampaign(campaign) {
@@ -123,19 +117,32 @@ async function tickCampaign(campaign) {
   const available = Math.max(0, slots - (count || 0));
   if (available === 0) return { available: 0 };
 
-  const targets = await leaseDueTargets(admin, {
-    orgId: campaign.org_id,
-    campaignId: campaign.id,
-    limit: available,
-  });
+  const { data: agent, error: agentErr } = await admin
+    .from("agents")
+    .select("id, org_id, provider, provider_ref, voice_id, inbound_number, persona")
+    .eq("id", campaign.agent_id)
+    .maybeSingle();
+  if (agentErr) throw agentErr;
+  if (!agent) {
+    logger.warn({ campaignId: campaign.id }, "Campaign references missing agent");
+    return { available: 0, error: "agent_missing" };
+  }
 
+  const { data: leased, error } = await admin.rpc("claim_dial_targets", {
+    p_campaign: campaign.id,
+    p_limit: available,
+    p_lease_seconds: LEASE_SECONDS,
+  });
+  if (error) throw error;
+
+  const targets = leased || [];
   const results = [];
   for (const target of targets) {
     try {
-      const r = await dispatchOne(admin, { campaign, target });
+      const r = await dispatchOne(admin, { campaign, agent, target });
       results.push(r);
     } catch (err) {
-      logger.error({ err: err.message, targetId: target.id }, "Dispatch failed");
+      logger.error({ err: err.message, targetId: target.target_id }, "Dispatch failed");
     }
   }
   return { dispatched: results.length, results };
@@ -177,4 +184,4 @@ function start({ intervalMs = 5000 } = {}) {
   return () => { stopped = true; };
 }
 
-module.exports = { start, runOnce, tickCampaign, dispatchOne, leaseDueTargets };
+module.exports = { start, runOnce, tickCampaign, dispatchOne };

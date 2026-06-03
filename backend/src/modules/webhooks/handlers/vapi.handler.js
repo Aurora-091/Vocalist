@@ -23,6 +23,15 @@ const TARGET_STATE_FOR_CALL = {
   "call.busy": STATES.FAILED,
 };
 
+function extractLeaseToken(payload, callPayload) {
+  return (
+    callPayload?.metadata?.lease_token ||
+    payload?.metadata?.lease_token ||
+    payload?.message?.metadata?.lease_token ||
+    null
+  );
+}
+
 async function handle(payload) {
   const admin = requireAdmin();
   const eventType = payload?.type || payload?.event;
@@ -74,11 +83,26 @@ async function handle(payload) {
   if (callRow.campaign_id && TARGET_STATE_FOR_CALL[eventType]) {
     const { data: target } = await admin
       .from("campaign_targets")
-      .select("id, state")
+      .select("id, state, lease_token")
       .eq("campaign_id", callRow.campaign_id)
       .eq("contact_id", callRow.contact_id)
       .maybeSingle();
-    if (target && target.state !== TARGET_STATE_FOR_CALL[eventType]) {
+
+    const headerLeaseToken = extractLeaseToken(payload, callPayload);
+
+    if (!target) {
+      logger.warn({ providerCallId }, "Target row not found for state transition");
+    } else if (
+      headerLeaseToken &&
+      target.lease_token &&
+      headerLeaseToken !== target.lease_token
+    ) {
+      logger.warn(
+        { providerCallId, targetId: target.id },
+        "Stale Vapi event ignored: lease_token mismatch"
+      );
+      return { skipped: true, reason: "stale_lease_token" };
+    } else if (target.state !== TARGET_STATE_FOR_CALL[eventType]) {
       try {
         await transition(admin, {
           targetId: target.id,
@@ -98,20 +122,19 @@ async function handle(payload) {
     const minutes = Math.ceil((update.duration_sec || 0) / 60);
     if (minutes > 0) {
       const idemKey = buildIdempotencyKey(["vapi", providerCallId, "minutes"]);
-      await admin.from("usage_ledger").insert({
+      const { error: ledgerErr } = await admin.from("usage_ledger").insert({
         org_id: callRow.org_id,
         kind: "voice_minutes",
         quantity: minutes,
         call_id: callRow.id,
         period: new Date().toISOString().slice(0, 10),
         idempotency_key: idemKey,
-      }).then(({ error }) => {
-        if (error && error.code !== "23505") throw error;
       });
+      if (ledgerErr && ledgerErr.code !== "23505") throw ledgerErr;
     }
   }
 
   return { ok: true, call_id: callRow.id, status: update.status };
 }
 
-module.exports = { handle };
+module.exports = { handle, extractLeaseToken };
