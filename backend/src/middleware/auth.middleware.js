@@ -1,44 +1,55 @@
-const supabase = require("../config/db");
-const userRepository = require("../modules/users/user.repository");
-const ApiError = require("../utils/ApiError");
+const jwt = require("jsonwebtoken");
+const { Unauthorized, Forbidden } = require("../utils/errors");
+const { clientForToken } = require("../config/supabase");
 const asyncHandler = require("../utils/asyncHandler");
 
-function extractBearerToken(req) {
-  const header = req.headers["authorization"] || req.headers["Authorization"];
+function decodeBearer(req) {
+  const header = req.headers.authorization || req.headers.Authorization;
   if (!header || typeof header !== "string") return null;
   const [scheme, token] = header.split(" ");
-  if (!scheme || scheme.toLowerCase() !== "bearer" || !token) return null;
-  return token.trim();
+  if (scheme !== "Bearer" || !token) return null;
+  return token;
 }
 
-const authMiddleware = asyncHandler(async (req, res, next) => {
-  const token = extractBearerToken(req);
-  if (!token) {
-    throw ApiError.unauthorized("Missing or malformed Authorization header");
-  }
+const requireAuth = asyncHandler(async (req, _res, next) => {
+  const token = decodeBearer(req);
+  if (!token) throw Unauthorized("Missing bearer token");
 
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data?.user) {
-    throw ApiError.unauthorized("Invalid or expired access token");
+  let decoded;
+  try {
+    decoded = jwt.decode(token);
+  } catch {
+    throw Unauthorized("Invalid token");
   }
+  if (!decoded || typeof decoded !== "object") throw Unauthorized("Invalid token");
 
-  const authUser = data.user;
-  const profile = await userRepository.findById(authUser.id);
-  if (!profile) {
-    throw ApiError.unauthorized("User profile not found for authenticated user");
-  }
+  const sub = decoded.sub;
+  const orgId = decoded.org_id || decoded.app_metadata?.org_id;
+  if (!sub) throw Unauthorized("Token missing subject");
 
-  req.user = {
-    id: profile.id,
-    org_id: profile.org_id,
-    role: profile.role,
-    email: profile.email,
+  req.auth = {
+    userId: sub,
+    orgId: orgId || null,
+    email: decoded.email || null,
+    role: decoded.app_metadata?.role || decoded.role || null,
+    token,
   };
-  req.accessToken = token;
-  req.authUser = authUser;
-
+  req.supabase = clientForToken(token);
   next();
 });
 
-module.exports = authMiddleware;
-module.exports.authMiddleware = authMiddleware;
+const requireOrg = (req, _res, next) => {
+  if (!req.auth?.orgId) {
+    return next(Forbidden("User has no organization context"));
+  }
+  next();
+};
+
+const requireRole = (...roles) => (req, _res, next) => {
+  if (!req.auth?.role || !roles.includes(req.auth.role)) {
+    return next(Forbidden(`Requires role: ${roles.join(", ")}`));
+  }
+  next();
+};
+
+module.exports = { requireAuth, requireOrg, requireRole };
