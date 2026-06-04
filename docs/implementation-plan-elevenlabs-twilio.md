@@ -118,7 +118,7 @@ The customer builds the agent. We do not write personas for them. Every field be
   <Textarea label="Persona"     placeholder="Describe how the agent should talk
                                               and what it should do" rows={5} />
   <VoicePicker  source="elevenlabs"  preview />
-  <LanguagePicker options={["en","es"]} />
+  <LanguagePicker languages={ELEVENLABS_FLASH_V2_5_LANGUAGES} />
   <Input label="Opening message — inbound"
          placeholder="e.g. Hi, thanks for calling Acme Dental. How can I help?" />
   <Input label="Opening message — outbound"
@@ -181,6 +181,109 @@ A Clinic-vertical org gets:
 
 Same agent runtime in both cases. The vertical is purely the bag of tools + integration triggers + recommended skeleton names. This is what the existing `vertical_configs` migration is designed for — we just need to populate the two seed rows.
 
+### 4.5 Voice Library — categorised, previewable, not robotic
+
+This is the surface a non-technical owner spends the most time on. It needs to feel like picking a voice in a streaming app, not like reading a CSV.
+
+**Data sources** (we hit both):
+
+| Tab | API | Notes |
+|---|---|---|
+| **Aurora curated** | `GET /v2/voices` against our workspace | Voices we've pre-vetted and added to our ElevenLabs workspace. Top of the list because we own quality control. |
+| **Browse all** | `GET /v1/shared-voices` against the public marketplace | All 5,000+ community + professional voices. Filters sent as query params; backend caches results in Redis with 24h TTL so we don't hammer ElevenLabs. |
+
+**Filters (left rail):**
+
+| Filter | Source field | Options |
+|---|---|---|
+| Language | `language` (top-level on shared, `verified_languages[].language` on workspace) | the 32 Flash v2.5 codes (`en`, `es`, `de`, `fr`, `ja`, `zh`, `hi`, `ar`, `pt`, `it`, `ko`, `nl`, `tr`, `pl`, `sv`, `id`, `fil`, `bg`, `ro`, `cs`, `el`, `fi`, `hr`, `ms`, `sk`, `da`, `ta`, `uk`, `ru`, `hu`, `no`, `vi`) |
+| Gender | `gender` / `labels.gender` | male · female · neutral · non-binary |
+| Age | `age` / `labels.age` | young · middle-aged · old |
+| Accent | `accent` / `labels.accent` | American · British · Australian · Indian · Irish · Scottish · South African · Canadian · etc. |
+| Use case | `use_cases` / `labels.use_case` | conversational · narration · news · social · characters · advertising |
+| Style descriptive | `descriptives` | calm · confident · warm · authoritative · friendly · excited · soothing · raspy · deep |
+| Category (shared tab only) | `category` query param | `professional` · `famous` · `high_quality` |
+
+**Aurora-added curated rails (above the filters):**
+
+- **Best for your vertical** — voices we tag in our workspace metadata as `aurora_recommended_for: ["shopify"]` or `["clinic"]`
+- **Recently used in your org** — last 10 voices anyone in the org picked
+- **Favorites** — per-user starred list (new tiny table `voice_favorites(org_id, user_id, voice_id, created_at)`)
+
+**Voice card UI** (each row in the grid):
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ ●▶  Bella       [American · Young · Conversational]    │
+│     "Hi, I'm Bella. I can help you book that appoi…"   │
+│                                          [★] [Use this] │
+└─────────────────────────────────────────────────────────┘
+```
+
+- **▶ Preview button** plays `voice.preview_url` inline (browser `<audio>`, no streaming complexity). Cached in IndexedDB on first play so re-listening is instant.
+- **"Hear in your language" toggle** generates a fresh preview by calling our backend: `POST /v1/voices/{voice_id}/preview` with `{ language, text }` → backend calls `POST https://api.elevenlabs.io/v1/text-to-speech/{voice_id}` with a vertical-appropriate sample line ("Hi, thanks for calling — how can I help you today?" for clinic, "Hi! I have your cart from earlier, want me to walk you through checkout?" for Shopify). Returns base64 mp3, plays inline. **Cached per (voice_id, language, sample_id)** in our DB so subsequent same-preview is free.
+- **★ Favorite** toggles the row in `voice_favorites`.
+- **"Use this"** writes to `agents.voice_id` and closes the modal.
+
+**Search bar:** free-text search across name + descriptives + use_cases (debounced, sent as `?search=` query param on shared tab, client-side filter on curated tab).
+
+**Pagination:** infinite scroll on shared tab (page=N), single-page on curated (workspaces are bounded).
+
+**Defaults:**
+- When a customer opens the picker without prior selection, we surface 12 "Aurora picks" first — a hand-curated list per vertical of voices we know work well over the phone (we maintain this list in `vertical_configs.config.recommended_voices`).
+- New agent without a voice chosen at save time → defaults to a neutral curated pick (`Bella` for EN, `Mateo` for ES, etc., per language). Banner under the agent says "Voice: Bella · change anytime".
+
+### 4.6 Test-call-yourself — polished end-to-end
+
+Capability #18 in the Build Contract. The thing every demo opens with.
+
+**Flow:**
+
+1. Customer clicks **"Test call"** on any agent (button visible on `AgentDetail`, `AgentsList` row hover, and in `AgentNew` after save).
+2. First-time per user: SMS-verify their personal phone number. Aurora sends a 6-digit code via Twilio Verify (separate from main telephony — uses Aurora's master Twilio account, not the tenant subaccount), stores verified number on `users.phone_e164`. After verify, subsequent test calls one-click.
+3. On click, Aurora:
+   - Creates a `calls` row with `direction='outbound'`, `outcome.test=true`, no `campaign_id`.
+   - **Bypasses `can_dial()` consent gate** — the verified user is consenting to their own test by clicking the button. Logged as `consent_event` with `kind='test_call'`, `evidence={ user_id, button_clicked_at }`.
+   - Calls `ElevenLabsProvider.startOutboundCall({ agentRef, phoneNumberRef, toE164: user.phone_e164, dynamicVariables, firstMessageOverride })`.
+   - Returns the `call_id` to the frontend immediately.
+4. Frontend opens a **live transcript drawer** (right-side `Sheet` from shadcn). Subscribes to ElevenLabs conversation events via a WebSocket relay on our backend (`/v1/calls/{id}/events` → SSE that forwards ElevenLabs webhooks the moment they arrive). Shows:
+   - Live transcript (agent vs caller, alternating bubbles)
+   - Tool calls as they fire (`📞 lookup_order(order_id=12345) → returned`)
+   - Cost ticker (estimated, refreshes every 5s from duration × rate)
+   - "End call" button (calls `ElevenLabsProvider.endCall(conversationId)`)
+5. When call ends:
+   - The `conversation_completed` webhook lands → `calls` row is finalised with `recording_url`, `transcript`, `cost_usd`, `cost_breakdown`.
+   - Drawer flips to a "Call complete" state with the play button, full transcript, cost summary, and a "View full details" link to `/calls/{id}`.
+   - **Ticks `onboarding_state.steps.test_and_golive = true`** — the checklist on the dashboard reflects it immediately via Supabase Realtime subscription.
+6. If the call **fails** (no answer, voicemail, agent error):
+   - Drawer shows what happened with a "Try again" button.
+   - Does NOT tick the onboarding step — failed test ≠ tested.
+
+**Why this matters:** the first test call is the moment a customer either believes Aurora works or churns. Polishing this single flow is worth 10× any other UX investment in Phase 1.
+
+### 4.7 Multilingual strategy
+
+ElevenLabs supports 32 languages on Flash v2.5 (real-time, ~75 ms TTFA) and 70+ on Eleven v3 (expressive, slower, not viable for real-time). For Aurora's voice-agent use case:
+
+| Default | Real-time inbound + outbound | **Flash v2.5** (32 languages, 75 ms latency) |
+| Fallback for unsupported langs | None in v1 — picker only shows the 32 Flash v2.5 languages |
+| Voice cloning across langs | Out of v1 scope |
+
+**Per-agent language model:**
+- `agents.languages text[]` already in schema.
+- `agents.languages[0]` = primary language → mapped to `agent.conversation_config.agent.language` on ElevenLabs.
+- If `agents.languages.length > 1`, we enable `agent.language_detection: true` on the ElevenLabs config — the agent will detect the caller's spoken language on inbound and switch. Useful for a clinic with bilingual EN/ES staff who want one agent answering in either.
+- Outbound calls always use the contact's preferred language if `contacts.preferred_language` is set (new optional column), else the agent's `languages[0]`.
+
+**Voice × language compatibility:**
+
+A voice trained primarily on English will still synthesise Spanish text via Flash v2.5, but the accent may sound forced. To avoid this, the voice picker filters voices by the agent's primary language by default — if a voice has `verified_languages` and the agent's language isn't in it, the voice is hidden unless the customer toggles "Show all voices for any language" (with a small warning).
+
+**UI affordances:**
+- Language picker shows native name + ISO code: "Español (es)", "中文 (zh)", "हिन्दी (hi)".
+- Default order: customer's browser language first, then English, then alphabetical.
+- For agents with `languages.length > 1`: small badge on the agent card "🌐 EN · ES (auto-detect)".
+
 ---
 
 ## 5. Mapping Aurora data → ElevenLabs CAI
@@ -190,7 +293,7 @@ Same agent runtime in both cases. The vertical is purely the bag of tools + inte
 | `agents.id` (Aurora) | `agent_id` (ElevenLabs) — stored in `agents.provider_ref` | created on agent insert, deleted on agent soft-delete |
 | `agents.persona` (JSONB) | `agent.conversation_config.agent.prompt.prompt` | `generateSystemPrompt(persona)` already exists in `utils/promptBuilder.js` |
 | `agents.voice_id` | `agent.conversation_config.tts.voice_id` | ElevenLabs voice catalogue |
-| `agents.languages[0]` | `agent.conversation_config.agent.language` | EN/ES for v1 |
+| `agents.languages` (text[]) | primary → `agent.conversation_config.agent.language`; rest enable `agent.language_detection` for auto-detect on inbound | 32 languages via Flash v2.5; see §4.7 |
 | `agents.persona.opening_message_inbound` | `agent.conversation_config.agent.first_message` | shown when inbound |
 | `agents.persona.opening_message_outbound` | passed via `conversation_initiation_client_data.conversation_config_override.agent.first_message` per outbound call | so we can interpolate `{first_name}` per contact |
 | `agents.business_hours` + `timezone` | enforced **by Aurora** in `can_dial()` before initiating outbound; for inbound we route out-of-hours calls to voicemail behaviour via agent config | capability #19 |
@@ -346,6 +449,32 @@ alter table calls add column cost_breakdown jsonb not null default '{}';
 -- §10 — provider abstraction in DB enum
 -- already supports vapi/retell/pipecat; add 'elevenlabs'
 alter type voice_provider add value if not exists 'elevenlabs';
+
+-- §4.5 — voice picker favorites + custom preview cache
+create table voice_favorites (
+  org_id     uuid not null references orgs(id) on delete cascade,
+  user_id    uuid not null references users(id) on delete cascade,
+  voice_id   text not null,
+  created_at timestamptz not null default now(),
+  primary key (org_id, user_id, voice_id)
+);
+create index on voice_favorites (org_id, user_id);
+
+create table voice_preview_cache (
+  voice_id   text not null,
+  language   text not null,
+  sample_id  text not null,           -- e.g. "shopify_recovery_1" / "clinic_greeting_1"
+  audio_b64  text not null,           -- mp3 base64, ~20-50 KB per sample
+  created_at timestamptz not null default now(),
+  primary key (voice_id, language, sample_id)
+);
+
+-- §4.6 — test-call flow needs verified personal phone per user
+alter table users add column phone_e164 text;
+alter table users add column phone_verified_at timestamptz;
+
+-- §4.7 — optional per-contact language preference for outbound
+alter table contacts add column preferred_language text;
 ```
 
 That's it. **No new tables. No pgvector. No `knowledge_chunks` table** (we delete that one from the prior knowledge_base migration plan — ElevenLabs owns the chunks).
@@ -371,6 +500,9 @@ Phased by what unblocks the next thing.
 | 1.7 | Frontend: AgentNew form per §4.1 (shadcn migrate this page first), VoicePicker (lists ElevenLabs voices), KnowledgeUploader (4 source types), Test-call button | medium |
 | 1.8 | Voicemail support: `agents.voicemail_message` + push to ElevenLabs agent config | shallow |
 | 1.9 | Transfer to human via agent tool (capability §21) | shallow |
+| 1.10 | **Voice Library page** — two tabs (Aurora curated + Browse all), 7 filters, pagination, preview audio, favorites, "hear in your language" custom preview generator. Backend: Redis cache layer for `/v1/shared-voices`, new `voice_favorites` table, `POST /v1/voices/{id}/preview` endpoint with sample cache | medium |
+| 1.11 | **Test-call-yourself polished flow** — SMS verify on first use (`users.phone_e164`), one-click subsequent calls, live transcript drawer with SSE relay of ElevenLabs conversation events, cost ticker, "End call" button, completion ticks `onboarding_state.steps.test_and_golive` | medium |
+| 1.12 | **Multilingual support across 32 languages** — language picker uses native names + ISO codes, defaults to browser locale, voice filtering by `verified_languages`, multi-language agent support via `agent.language_detection` flag, optional `contacts.preferred_language` column | shallow |
 
 ### Phase 2 — Campaigns, billing, spend guards (closes 10, 12, 13, 14, 15, 16, 17, 20, 24, 25)
 
@@ -452,7 +584,8 @@ A milestone counts as done when:
 - ❌ ElevenLabs HIPAA mode (Phase 4 when we have a clinic deal that requires it).
 - ❌ Per-customer BYO API keys (we own the ElevenLabs + Twilio billing entirely).
 - ❌ Asking customers anything about LLM / TTS / STT / "models" / "prompts" / "webhooks" in the default UI.
-- ❌ More than 2 languages (EN/ES). Customers asking for more get a "coming soon" note.
+- ❌ Voice cloning (custom voices from customer audio). Out of v1 — Phase 4. We expose ElevenLabs catalogue only.
+- ❌ Eleven v3 (the 70+ language expressive model) — its latency disqualifies it for real-time voice calls. We stick to Flash v2.5's 32 languages.
 
 ---
 
@@ -461,8 +594,10 @@ A milestone counts as done when:
 1. Default voice when customer hasn't picked one? Recommendation: a neutral Eleven default (`Bella` / `Rachel`) with a "you can change this anytime" hint.
 2. Default opening message when customer leaves it blank? Recommendation: "Hi, how can I help you today?" for inbound; reject save for outbound (require explicit message per agent because dynamic-variable interpolation needs it).
 3. Knowledge base size cap per tenant? Recommendation: 50 docs / 10MB total on Starter, 500 docs / 100MB on Growth, unlimited on Scale.
-4. Voice library curation: surface all 200+ ElevenLabs voices or curate to ~30 high-quality ones per language? Recommendation: curate to ~12 EN + ~6 ES voices to reduce choice paralysis; expose "more voices" link for power users.
+4. Voice library curation: §4.5 resolves this — show **two tabs**: Aurora curated (12 hand-picked per language, top of UI) + Browse all (full shared library with filters). Best of both worlds; analytics will tell us if anyone leaves the curated tab.
 5. Recording always-on vs opt-in per agent? Recommendation: always-on for compliance/QA (capability §14), with a tenant-level "Don't store recordings" setting for HIPAA-leaning clinics.
+6. Aurora curated voice list: who maintains it? Recommendation: backend team seeds 12 EN + 6 ES at launch in `vertical_configs.config.recommended_voices`; revisit quarterly based on adoption metrics. We add a voice to the curated list by tagging it in our ElevenLabs workspace metadata.
+7. Custom preview sample lines per vertical: who writes them? Recommendation: product + design write 2-3 vertical-appropriate sample sentences per vertical, stored in `vertical_configs.config.preview_samples`. Customer never sees the sample list — they just click ▶ Preview and hear the right thing for their vertical.
 
 ---
 
