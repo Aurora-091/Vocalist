@@ -1,8 +1,10 @@
 # Implementation Plan — Vapi + Twilio integration & Aurora billing
 
-**Status:** Proposal · **Owner:** Backend team · **Updated:** 2026-06-04
-**Replaces / supersedes:** nothing yet
-**Targets:** `backend/src/{modules,workers,providers,services}`, `supabase/migrations`, `src/pages`
+**Status:** **DEFERRED to Phase 4** (post-seed). Kept as the audit-trail of analysis and as the reference for the eventual cost-optimisation swap.
+**Active plan for Phase 1:** [`implementation-plan-elevenlabs-twilio.md`](./implementation-plan-elevenlabs-twilio.md)
+**Owner:** Backend team · **Updated:** 2026-06-04
+
+> **Why deferred:** Aurora is a no-code product where customers never bring API keys, and we are pre-seed. The engineering velocity of pre-built agent runtime + KB + voice library (ElevenLabs CAI) beats the ~15% per-minute cost optimisation of Vapi-with-BYO during the runway-extension phase. The ElevenLabs Startup Grant (33M characters / 12 months) further tilts the math. We keep the Vapi provider code in the repo, compiled and tested, behind the same `VoiceProvider` abstraction — flipping back is a one-line factory change plus a data migration. See `implementation-plan-elevenlabs-twilio.md` §15.
 
 ---
 
