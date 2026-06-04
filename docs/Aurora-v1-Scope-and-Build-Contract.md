@@ -4,7 +4,11 @@
 
 **Launch verticals:** Shopify merchant · Clinic (appointment SMB). Verticals are **config rows** (`vertical_configs`), never hardcoded — model is tenant-ready, only these two ship in v1 UI.
 
-**Stack (binding):** Bun + Hono + TS · Supabase (Postgres/RLS/Auth/Realtime/Edge/Storage) · Vapi (MVP voice runtime) behind a `VoiceProvider` seam → Pipecat (Phase 4) · Stripe (subscriptions + metered) · Twilio (numbers + SMS).
+**Phase-1 moat (red-team item #3):** We do **not** ship a generic no-code voice-agent wrapper — that's a same-day bolt.new clone with zero pricing power. **One deep vertical leads Phase 1: Shopify** — an *Automated Cart-Recovery + Order-Modifier* agent with **native Shopify tools day one** (`lookup_order`, `cancel_order`, `apply_discount_code`, `update_address`) + abandoned-checkout trigger. Data gravity from this single deep integration is what makes us sticky enough to survive pre-seed→seed. Clinic + the rest of the integration bags follow in Phase 3.
+
+**Stack (binding):** Node + Express + CommonJS for v1 · Supabase (Postgres/RLS/Auth/Realtime/Storage) · **ElevenLabs Conversational AI (Phase-1 voice runtime + native RAG + Twilio telephony)** behind a `VoiceProvider` seam · **Vapi kept compiled behind the seam but inactive** (Phase-4 swap, ~200-line migration) → Pipecat self-host (Phase 4) · Stripe (subscriptions + metered) · Twilio (numbers + SMS, per-tenant subaccount).
+
+**Voice runtime decision (binding):** Phase 1 ships on **ElevenLabs CAI** — it provides agent CRUD, 5k+ voices/31 langs, **native low-latency RAG** (we do not run our own pgvector in Phase 1), function-calling tools, native Twilio inbound/outbound, batch calls, post-call webhooks, and a shadcn React component lib. We build the thin orchestration + integration moat on top, not the runtime. Apply for the **ElevenLabs Startup Grant** (33M chars / 680 hrs / ~$4K / 12 mo, <25 employees) **before workstream 1**.
 
 **Companion docs:**
 [Black Book](Aurora-BlackBook.md) · [Database Guide](database-guide.md) · [UI/UX Spec](Aurora-UIUX-Spec.md) · [User-Flow & Knowledge](Aurora-UserFlow-and-Knowledge.md) · [Agent Template Library](Aurora-AgentTemplateLibrary.md) · Product PRD · Red-Team Review.
@@ -21,7 +25,8 @@
 | 4 | Integrations connect (Shopify / Cal.com / Google / Outlook / CRM / Zapier / Stripe / Twilio) | ✅ | UI §6.8, BB | specced |
 | 5 | No-code Agent Builder (+ Advanced toggle) | ✅ | User-Flow §4, UI §6.3 | specced |
 | 6 | Agent Template Library (17 templates) | ✅ | Template Library | specced |
-| 7 | Knowledge Base (upload / website / integration · pgvector RAG · org-wide, subscribe) | ✅ | User-Flow §5, DB §3.1 | specced |
+| 7 | Knowledge Base (PDF / DOCX / URL / text · **CAI-native RAG** · org-wide, subscribe; our DB is a thin mirror) | ✅ | User-Flow §5, DB §3.1 | specced |
+| 7b | **Spend guards** (meter every minute + hard cost ceiling from call #1; Twilio UsageTrigger backstop) | ✅ | **this doc §E.1**, DB §3.1 | **specced here** |
 | 8 | Phone numbers (per-tenant Twilio subaccount OR BYO) | ✅ | User-Flow §6, DB §3.1 | specced |
 | 9 | Local CRM (contacts) import (Excel/CSV/Sheets) + export (Excel/CSV) | ✅ | User-Flow §7 | specced |
 | 10 | Consent + DNC + `can_dial()` gate (TCPA core) | ✅ | DB §4, §4.3 | specced |
@@ -74,9 +79,11 @@ Everything not in this table → **§B Out of scope** or **§H Deferred / fast-f
 - 17 templates seedable; pre-fill the builder; per-vertical recommended set.
 - AC: picking a template fills name/goal/personality/first-message/voice/tools/consent; outbound templates carry opt-out handling.
 
-**7. Knowledge Base**
-- Sources: document upload, website crawl, integration pull → chunk → embed (pgvector); org-wide; agents subscribe via `agent_knowledge`.
-- AC: retrieval is scoped to `org_id` **AND** the agent's subscribed sources; below-threshold → agent defers to human (never fabricates); status lifecycle processing→ready/error shown; re-sync works.
+**7. Knowledge Base (CAI-native RAG)**
+- Sources: PDF/DOCX upload, website URL, raw text → pushed to **ElevenLabs CAI Knowledge Base API**; CAI owns chunking/embeddings/RAG. Our `knowledge_sources` is a thin mirror (title, status, `cai_doc_id`); org-wide; agents subscribe via `agent_knowledge` (we attach the subscribed `cai_doc_id`s to the CAI agent).
+- AC: an agent is configured with **only** its subscribed sources' `cai_doc_id`s; tenant library is RLS-scoped (no cross-org); status lifecycle processing→ready/error shown; re-sync/delete propagates to CAI; agent defers to human when KB has no answer (CAI RAG behavior + system prompt guardrail). **No pgvector / `knowledge_chunks` in Phase 1.**
+
+**7b. Spend guards** — see §E.1.
 
 **8. Phone numbers**
 - Aurora-managed = per-tenant **Twilio subaccount** (isolation, multi-number, per-tenant billing rollup); BYO = connect own Twilio, pick/port number.
@@ -91,8 +98,8 @@ Everything not in this table → **§B Out of scope** or **§H Deferred / fast-f
 - AC: no `dialing` transition without an immediately-prior `can_dial()=true`; opt-out (voice/SMS STOP) flips cache+DNC+queued targets in one transaction, honored same run + all future runs; `consent_events`/`dnc_list` never updated/deleted via API.
 
 **11. Inbound**
-- Call routes to the bound agent's playbook; tools fire to integrations; recording + transcript + outcome persisted.
-- AC: a test inbound call answered by the right agent; transcript + recording viewable; outcome logged.
+- Inbound DID is owned by **us** (Twilio), not bound natively to CAI. Twilio webhook hits **our Hono** first → admission gate (`check_inbound_rate()` + `can_spend()`) → on pass, return TwiML that hands off to the CAI agent; on fail, TwiML plays a graceful busy/voicemail. Then call routes to the bound agent's playbook; tools fire to integrations; recording + transcript + outcome persisted. See **§J**.
+- AC: a test inbound call answered by the right agent **only after** the Hono admission gate passes; a rate-/spend-blocked inbound never reaches CAI and is logged with reason; transcript + recording viewable; outcome logged.
 
 **12. Triggered outbound**
 - Trigger (e.g. abandoned checkout) → enqueue → `can_dial()` → dial via provider; retries + voicemail per config.
@@ -140,8 +147,10 @@ Straight from the PRD — do **not** build these in v1:
 - ❌ Languages beyond EN/ES.
 - ❌ White-label **reseller** program (basic logo/color UI **is** in — see §F.4; reseller/multi-brand resale is not).
 - ❌ Community template marketplace.
-- ❌ Self-hosted voice runtime (Pipecat) — Phase 4; v1 is Vapi behind the seam.
+- ❌ Self-hosted voice runtime (Pipecat) — Phase 4; v1 is **ElevenLabs CAI** behind the seam (Vapi kept inactive behind the same seam).
+- ❌ **Self-hosted pgvector RAG** — CAI owns RAG in Phase 1. `knowledge_chunks`/`vector` extension deferred to Phase 4 *only if* CAI RAG limits bite.
 - ❌ Third+ verticals in the UI (model is ready; UI ships Shopify + Clinic only).
+- ❌ **Native CAI number binding for inbound** — inbound MUST pass our Hono admission gate first (see §J). Native binding is the bug, not the feature.
 
 ---
 
@@ -195,23 +204,41 @@ Straight from the PRD — do **not** build these in v1:
 
 ---
 
-## E. Billing — default tiers  *(placeholder, confirm before launch)*
+## E. Billing — default tiers  *(COGS-real placeholders, confirm before launch)*
 
 Stripe **subscriptions + metered usage** off the append-only `usage_ledger` (DB §11). `plan_id`-driven so tiers are config, not code.
 
-| Tier | Monthly (placeholder) | Bundled minutes | Overage / min | Numbers incl. | Notes |
-|---|---|---|---|---|---|
-| **Starter** | $49 | 300 | $0.18 | 1 | 1 agent live, core templates |
-| **Growth** | $149 | 1,200 | $0.15 | 3 | unlimited agents, campaigns, knowledge |
-| **Pro** | $399 | 4,000 | $0.12 | 10 | priority concurrency, webhook-out, whitelabel |
+**True COGS floor ≈ $0.15/min** = CAI ~$0.10 (voice/min) + ~$0.02 (pass-through LLM) + ~$0.014 (Twilio) + headroom. Tiers price *above* this; **overage is the margin engine** (priced ~2× COGS).
 
-> ⚠️ **Placeholder numbers** — pricing not finalized. The *mechanism* is the contract; the *values* are config (Stripe prices + `subscriptions.included_minutes`). Don't hardcode amounts.
+| Tier | Monthly | Bundled min | Eff. $/min | Overage $/min | Numbers incl. | Notes |
+|---|---|---|---|---|---|---|
+| **Starter** | $99 | 400 | $0.25 | **$0.30** | 1 | 1 agent live, core templates |
+| **Growth** | $299 | 1,500 | $0.20 | **$0.32** | 3 | unlimited agents, campaigns, knowledge |
+| **Scale** | $799 | 5,000 | $0.16 | **$0.35** | 10 | priority concurrency, webhook-out, whitelabel |
+
+> ⚠️ **Placeholder numbers** — the *mechanism* is the contract; *values* are config (Stripe prices mirrored into `subscriptions.included_minutes`/`included_numbers`/`overage_rate_usd`). Don't hardcode amounts.
+> 💡 **Grant arbitrage:** during the ElevenLabs grant, CAI COGS ≈ $0 for the first ~25 customer-months → near-pure margin pre-seed. Bank it; don't discount. Outcome pricing (per-booking / per-recovered-cart) is the **Phase-2 upsell** that decouples price from per-minute COGS (bundled-min+overage stays the v1 primary — see Critique-Response doc, item #2).
 
 **AC:**
 - Subscription created on signup/upgrade; metered minutes pushed to Stripe idempotently (unique on period+org).
-- Live usage meter; **80% amber / 100% danger** alerts; overage line begins at 100%; cap behavior per plan.
+- Live usage meter; **80% amber / 100% danger** alerts; overage begins at 100%; cap behavior per plan.
 - Payment failure → blocking banner; never bill from `calls.cost_usd` (that's COGS, not price).
 - No call segment billed twice (`usage_ledger` idempotency key).
+
+### E.1 Spend guards  *(Phase 1 — meter + hard cap from call #1)*
+
+Billing (Stripe) is Phase 2, but the grant only zeroes **CAI** COGS — **Twilio + LLM fees are real money from the first call.** So metering + a hard ceiling ship in **Phase 1**, independent of billing.
+
+- **Meter:** every call segment's COGS inserts into `usage_ledger` on the call-end webhook (idempotent) and increments `spend_counters` (DB §3.1).
+- **Gate:** `can_spend(org, scope, scope_id, now)` runs alongside `can_dial()` before *every* call. False → call not placed.
+- **Guards:** per-org (and optional per-agent/per-campaign) daily/monthly `limit_usd` in `spend_guards`. 80% → `notifications` (billing); 100% → pause the scope (campaign→`paused`, agent stops dialing).
+- **Backstop:** a **Twilio UsageTrigger** on the subaccount as a provider-side hard stop if our worker is wedged.
+
+**AC:**
+- No call is placed when its scope is at/over the ceiling.
+- A runaway loop cannot exceed the configured daily cap (tested: fire N calls, assert spend ≤ limit + one in-flight).
+- 80% alert fires once; 100% pause is immediate and idempotent.
+- Counters reconcile with `usage_ledger` nightly (drift pages a human).
 
 ---
 
@@ -274,11 +301,35 @@ Documented so dev leaves room — cheap to add later because the model already s
 2. **Consent/DNC ledgers are append-only**, never mutated via API; opt-out propagates in one transaction.
 3. **RLS on every tenant table** + `rls-coverage` CI green; no cross-org read ever.
 4. **Secrets via `secret_ref`** (Vault/KMS), never plaintext columns.
-5. **No vendor SDK imported directly** — all voice goes through `VoiceProvider`.
+5. **No vendor SDK imported directly** — all voice goes through `VoiceProvider`. Phase 1 = **ElevenLabs CAI** registered; **Vapi compiled but NOT registered** in the factory.
 6. **No call billed twice**; billing computed from `usage_ledger`, never COGS.
 7. **No technical jargon in the no-code UI**; power lives behind Advanced.
 8. **Verticals are config, never hardcoded.**
+9. **No call placed without `can_spend()`=true** at call time — COGS is real from call #1 even on the grant. (Spend guard)
+10. **KB is CAI-native** in Phase 1 — no self-hosted embeddings; agents are scoped to their subscribed `cai_doc_id`s only.
+11. **Inbound passes our Hono admission gate first** — `check_inbound_rate()` + `can_spend()` before any TwiML handoff to CAI. **No native CAI number binding for inbound, ever.** (§J)
+12. **Spend guards meter on `cost_usd`, not minutes** — `usage_ledger` records `tokens_in`/`tokens_out`/`cost_usd` per call; LLM/token COGS (`meter_kind = llm_tokens`) is first-class, so token bloat can't silently blow the unit economics.
+
 
 ---
 
-*Aurora handbook — this is the master scope contract. Detailed designs: [Black Book](Aurora-BlackBook.md) · [Database Guide](database-guide.md) · [UI/UX Spec](Aurora-UIUX-Spec.md) · [User-Flow & Knowledge](Aurora-UserFlow-and-Knowledge.md) · [Agent Template Library](Aurora-AgentTemplateLibrary.md). Build against this; if it's not here, it's not v1.*
+## J. Inbound admission flow  *(binding — red-team item #1)*
+
+**Why:** native CAI number binding answers inbound calls **before** any of our guards run — a free bypass of `can_spend()` and any abuse rate-limit. COGS is real from the first answered second, so an unmetered inbound path is a direct money leak and a DoS vector. We therefore **own the DID and the front door.**
+
+**Flow (every inbound call):**
+1. Caller dials our Twilio DID → Twilio POSTs the inbound webhook to **our Hono** (`POST /webhooks/twilio/inbound`).
+2. Hono resolves `org_id` + bound `agent_id` from the called number.
+3. **`check_inbound_rate(org_id, caller_e164, now)`** — sliding-window counter in `inbound_rate_counters` (per-org and per-caller). Over limit → return TwiML that politely declines / drops to voicemail; log `blocked_rate`.
+4. **`can_spend(org_id, now)`** — same spend guard as outbound, metered on `cost_usd`. Over budget / grant exhausted → TwiML voicemail or "we'll call you back" message; log `blocked_spend`.
+5. Both pass → return **`<Connect>`/`<Dial>` TwiML that hands the media to the CAI agent's SIP/stream endpoint**. CAI runs the playbook; tools fire; post-call webhook lands back on Hono → writes `calls` + `usage_ledger` (with `tokens_in/out`, `cost_usd`).
+
+**Hard rules:**
+- **No native CAI number binding for inbound.** The DID's voice webhook always points at Hono. (See §B out-of-scope.)
+- Admission decision is logged either way (admit / `blocked_rate` / `blocked_spend`) so abuse and budget events are auditable.
+- Outbound is unaffected — we already gate (`can_dial()` + `can_spend()`) **before** initiating, so outbound needs no TwiML front door.
+- TwiML handoff adds one signaling hop (~tens of ms), not a media proxy — we are **not** in the audio path, so latency cost is negligible.
+
+---
+
+*Aurora handbook — this is the master scope contract. Detailed designs: [Black Book](Aurora-BlackBook.md) · [Database Guide](database-guide.md) · [UI/UX Spec](Aurora-UIUX-Spec.md) · [User-Flow & Knowledge](Aurora-UserFlow-and-Knowledge.md) · [Agent Template Library](Aurora-AgentTemplateLibrary.md) · [Critique-Response & Decisions](Aurora-Critique-Response-and-Decisions.md). Build against this; if it's not here, it's not v1.*
