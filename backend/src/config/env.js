@@ -23,6 +23,8 @@ const schema = z.object({
   TWILIO_VOICE_BASE_URL: z.string().optional(),
   TWILIO_SANDBOX_MODE: z.coerce.boolean().default(true),
 
+  ELEVENLABS_API_KEY: z.string().optional(),
+
   CALLING_HOUR_START: z.coerce.number().int().min(0).max(23).default(9),
   CALLING_HOUR_END: z.coerce.number().int().min(0).max(23).default(19),
 
@@ -45,6 +47,7 @@ const raw = {
   TWILIO_REGION: process.env.TWILIO_REGION,
   TWILIO_VOICE_BASE_URL: process.env.TWILIO_VOICE_BASE_URL,
   TWILIO_SANDBOX_MODE: process.env.TWILIO_SANDBOX_MODE,
+  ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY,
   CALLING_HOUR_START: process.env.CALLING_HOUR_START,
   CALLING_HOUR_END: process.env.CALLING_HOUR_END,
   RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,
