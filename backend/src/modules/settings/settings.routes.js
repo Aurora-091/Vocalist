@@ -46,14 +46,43 @@ router.get(
       .eq("user_id", req.auth.userId)
       .maybeSingle();
     if (error) throw error;
-    res.json(data || { email: {}, in_app: {} });
+
+    const email = data?.email || {};
+    const in_app = data?.in_app || {};
+
+    res.json({
+      email,
+      in_app,
+      updated_at: data?.updated_at,
+      prefs: {
+        usage_alerts: email.billing !== false,
+        failed_calls: email.missed_call !== false,
+        campaign_completed: email.campaign_done !== false,
+      }
+    });
   })
 );
 
 router.put(
   "/notification-prefs",
   asyncHandler(async (req, res) => {
-    const { email = {}, in_app = {} } = req.body || {};
+    const { usage_alerts, failed_calls, campaign_completed } = req.body || {};
+
+    const email = {
+      billing: usage_alerts !== false,
+      missed_call: failed_calls !== false,
+      campaign_done: campaign_completed !== false,
+      voicemail: true,
+      integration_broken: true,
+    };
+    const in_app = {
+      billing: usage_alerts !== false,
+      missed_call: failed_calls !== false,
+      campaign_done: campaign_completed !== false,
+      voicemail: true,
+      integration_broken: true,
+    };
+
     const { data, error } = await req.supabase
       .from("user_notification_prefs")
       .upsert({
@@ -66,7 +95,16 @@ router.put(
       .select("email, in_app")
       .maybeSingle();
     if (error) throw error;
-    res.json(data);
+
+    res.json({
+      email: data.email,
+      in_app: data.in_app,
+      prefs: {
+        usage_alerts: data.email.billing,
+        failed_calls: data.email.missed_call,
+        campaign_completed: data.email.campaign_done,
+      }
+    });
   })
 );
 

@@ -23,7 +23,7 @@ router.get(
       .eq("org_id", req.auth.orgId)
       .order("created_at", { ascending: false });
     if (error) throw error;
-    res.json({ endpoints: data });
+    res.json({ endpoints: data, webhooks: data });
   })
 );
 

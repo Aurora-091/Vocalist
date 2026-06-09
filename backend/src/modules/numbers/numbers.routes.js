@@ -23,9 +23,10 @@ router.get(
 router.post(
   "/byo",
   asyncHandler(async (req, res) => {
-    const { e164, agent_id, default_country } = req.body || {};
-    if (!e164) throw BadRequest("e164 required");
-    const normalized = toE164(e164, default_country || "US");
+    const { e164, phone_number, agent_id, default_country } = req.body || {};
+    const inputNumber = e164 || phone_number;
+    if (!inputNumber) throw BadRequest("e164 or phone_number required");
+    const normalized = toE164(inputNumber, default_country || "US");
     if (!normalized) throw BadRequest("invalid phone number");
 
     const { data, error } = await req.supabase

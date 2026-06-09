@@ -128,6 +128,7 @@ router.post(
   "/twilio/voice",
   express.urlencoded({ extended: false }),
   asyncHandler(async (req, res) => {
+    const crypto = require("crypto");
     const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
     const sig = req.headers["x-twilio-signature"];
     const signatureOk = verifyTwilioSignature(env.TWILIO_AUTH_TOKEN, url, req.body, sig);
@@ -136,21 +137,100 @@ router.post(
     }
 
     const called = req.body.Called || req.body.To;
+    const caller = req.body.From;
     const { requireAdmin } = require("../../config/supabase");
     const admin = requireAdmin();
 
-    let agentName = null;
-    if (called) {
-      const { data: number } = await admin
-        .from("phone_numbers")
-        .select("agent_id, agents:agent_id(name, persona)")
-        .eq("e164", called)
-        .maybeSingle();
-      agentName =
-        number?.agents?.persona?.business_name ||
-        number?.agents?.name ||
-        null;
+    if (!called) {
+      return res.type("text/xml").send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Invalid call parameters.</Say><Hangup/></Response>`
+      );
     }
+
+    // 1. Resolve org_id and bound agent_id
+    const { data: number, error: numErr } = await admin
+      .from("phone_numbers")
+      .select("org_id, agent_id, agents:agent_id(name, persona, provider)")
+      .eq("e164", called)
+      .maybeSingle();
+
+    if (numErr || !number || !number.agent_id) {
+      logger.warn({ called, caller }, "Inbound call to unassigned/unknown number");
+      return res.type("text/xml").send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">The number you dialed is not associated with an active agent.</Say><Hangup/></Response>`
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    // 2. Check Inbound Rate Limit
+    const { data: rateStatus, error: rateErr } = await admin.rpc("check_inbound_rate", {
+      p_org: number.org_id,
+      p_from_e164: caller || "",
+      p_to_e164: called,
+      p_now: now
+    });
+    if (rateErr) throw rateErr;
+
+    if (rateStatus === "blocked_rate") {
+      logger.warn({ called, caller, orgId: number.org_id }, "Inbound call blocked by rate limit");
+      await admin.from("call_events").insert({
+        org_id: number.org_id,
+        kind: "blocked_rate",
+        payload: { called, caller, now }
+      });
+      return res.type("text/xml").send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">We are experiencing a high volume of calls. Please try again later.</Say><Hangup/></Response>`
+      );
+    }
+
+    // 3. Check Spend Guard
+    const { data: allowedToSpend, error: spendErr } = await admin.rpc("can_spend", {
+      p_org: number.org_id,
+      p_scope: "agent",
+      p_scope_id: number.agent_id,
+      p_projected_usd: 0.15,
+      p_now: now
+    });
+    if (spendErr) throw spendErr;
+
+    if (!allowedToSpend) {
+      logger.warn({ called, caller, orgId: number.org_id }, "Inbound call blocked by spend guard");
+      await admin.from("call_events").insert({
+        org_id: number.org_id,
+        kind: "blocked_spend",
+        payload: { called, caller, now }
+      });
+      return res.type("text/xml").send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">The service limit has been reached. Please try again later.</Say><Hangup/></Response>`
+      );
+    }
+
+    // 4. Create Call Record & Log event
+    const callId = crypto.randomUUID();
+    const { error: callErr } = await admin.from("calls").insert({
+      id: callId,
+      org_id: number.org_id,
+      agent_id: number.agent_id,
+      direction: "inbound",
+      status: "ringing",
+      provider: number.agents?.provider || "mock",
+      provider_call_id: req.body.CallSid,
+      started_at: now
+    });
+    if (callErr) throw callErr;
+
+    await admin.from("call_events").insert({
+      org_id: number.org_id,
+      call_id: callId,
+      kind: "twilio.ringing",
+      payload: req.body
+    });
+
+    const agentName =
+      number.agents?.persona?.business_name ||
+      number.agents?.name ||
+      null;
 
     const greeting = agentName
       ? `Thanks for calling ${agentName}. This call may be recorded for quality and training.`
@@ -161,7 +241,7 @@ router.post(
       .send(
         `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">${escapeXml(
           greeting
-        )}</Say><Pause length="60"/></Response>`
+        )}</Say><Connect><Stream url="wss://${req.get("host")}/v1/twilio/stream/${callId}" /></Connect><Say voice="alice">Thank you for calling. Goodbye.</Say><Hangup/></Response>`
       );
   })
 );

@@ -1,8 +1,11 @@
 const { createClient } = require("@supabase/supabase-js");
 const env = require("./env");
 
+const { fetchWithRetry } = require("../utils/retry");
+
 const baseOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
+  global: { fetch: fetchWithRetry },
 };
 
 const adminClient = env.SUPABASE_SERVICE_ROLE_KEY
@@ -15,7 +18,10 @@ function clientForToken(jwt) {
   if (!jwt) return anonClient;
   return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
     ...baseOptions,
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
+    global: {
+      ...baseOptions.global,
+      headers: { Authorization: `Bearer ${jwt}` },
+    },
   });
 }
 

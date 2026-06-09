@@ -95,6 +95,7 @@ CREATE POLICY spend_guards_delete ON spend_guards FOR DELETE TO authenticated
 -- 2. spend_counters
 ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS spend_counters (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id        uuid NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
   scope         text NOT NULL CHECK (scope IN ('org','agent','campaign')),
   scope_id      uuid,
@@ -102,14 +103,15 @@ CREATE TABLE IF NOT EXISTS spend_counters (
   period_start  date NOT NULL,
   spent_usd     numeric(12,4) NOT NULL DEFAULT 0 CHECK (spent_usd    >= 0),
   reserved_usd  numeric(12,4) NOT NULL DEFAULT 0 CHECK (reserved_usd >= 0),
-  updated_at    timestamptz   NOT NULL DEFAULT now(),
-  PRIMARY KEY (
-    org_id,
-    scope,
-    coalesce(scope_id, '00000000-0000-0000-0000-000000000000'::uuid),
-    period,
-    period_start
-  )
+  updated_at    timestamptz   NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS spend_counters_unique_idx ON spend_counters (
+  org_id,
+  scope,
+  coalesce(scope_id, '00000000-0000-0000-0000-000000000000'::uuid),
+  period,
+  period_start
 );
 
 CREATE INDEX IF NOT EXISTS spend_counters_org_period_idx
