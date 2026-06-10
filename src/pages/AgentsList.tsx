@@ -5,6 +5,7 @@ import { listAgents, createAgent } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 import { Badge } from "../components/legacy-ui/Badge";
+import { AgentPresetPicker } from "../components/AgentPresetPicker";
 
 type Agent = {
   id: string;
@@ -17,9 +18,11 @@ type Agent = {
   created_at: string;
 };
 
+type CreateMode = "idle" | "preset" | "manual";
+
 export default function AgentsList() {
   const [agents, setAgents] = useState<Agent[] | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [mode, setMode] = useState<CreateMode>("idle");
   const [name, setName] = useState("");
   const [direction, setDirection] = useState<"inbound" | "outbound" | "both">("inbound");
 
@@ -42,7 +45,26 @@ export default function AgentsList() {
       consent_required: direction !== "inbound",
     });
     setName("");
-    setCreating(false);
+    setMode("idle");
+    load();
+  }
+
+  async function createFromPreset(preset: any) {
+    await createAgent({
+      name: preset.name,
+      persona: {
+        direction: preset.direction,
+        objective: preset.persona?.objective || "",
+        tone: preset.persona?.tone || "",
+        system_prompt: preset.persona?.system_prompt || "",
+        first_message: preset.persona?.first_message || "",
+        guardrails: preset.persona?.guardrails || [],
+        tools: preset.tools || [],
+      },
+      consent_required: preset.consent_required,
+      provider: "elevenlabs",
+    });
+    setMode("idle");
     load();
   }
 
@@ -55,13 +77,22 @@ export default function AgentsList() {
             One per role. Inbound, outbound, or both.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
+        <Button onClick={() => setMode("preset")}>
           <Plus className="w-4 h-4 mr-2" />
           New agent
         </Button>
       </div>
 
-      {creating && (
+      {mode === "preset" && (
+        <div className="bg-surface border border-border rounded-md shadow-card p-6">
+          <AgentPresetPicker
+            onSelect={createFromPreset}
+            onSkip={() => setMode("manual")}
+          />
+        </div>
+      )}
+
+      {mode === "manual" && (
         <div className="bg-surface border border-border rounded-md shadow-card">
           <div className="px-6 py-4">
             <form onSubmit={create} className="space-y-4">
@@ -98,7 +129,7 @@ export default function AgentsList() {
                 )}
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="ghost" type="button" onClick={() => setCreating(false)}>
+                <Button variant="ghost" type="button" onClick={() => setMode("idle")}>
                   Cancel
                 </Button>
                 <Button type="submit">Create</Button>
@@ -115,7 +146,7 @@ export default function AgentsList() {
           title="Create your first agent"
           description="Pick a template and place a real test call in under five minutes."
           cta={
-            <Button onClick={() => setCreating(true)}>
+            <Button onClick={() => setMode("preset")}>
               <Plus className="w-4 h-4 mr-2" />
               New agent
             </Button>

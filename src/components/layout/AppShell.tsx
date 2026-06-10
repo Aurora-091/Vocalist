@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  Volume2,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useEffect, useState } from "react";
@@ -23,6 +24,7 @@ const items = [
   { to: "/campaigns", label: "Campaigns", icon: Megaphone },
   { to: "/calls", label: "Calls", icon: Phone },
   { to: "/contacts", label: "Contacts", icon: Users },
+  { to: "/voices", label: "Voices", icon: Volume2 },
   { to: "/integrations", label: "Integrations", icon: Plug },
   { to: "/outcomes", label: "Outcomes", icon: TrendingUp },
   { to: "/billing", label: "Billing", icon: CreditCard },

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   ShoppingBag,
   Stethoscope,
@@ -13,6 +14,7 @@ import {
   listKnowledgeSources,
   listPhoneNumbers,
   createKnowledgeSource,
+  getShopifyConnection,
 } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody } from "../components/legacy-ui/Card";
@@ -37,16 +39,19 @@ export default function Integrations() {
   const [installed, setInstalled] = useState<Integration[] | null>(null);
   const [sources, setSources] = useState<any[] | null>(null);
   const [numbers, setNumbers] = useState<any[] | null>(null);
+  const [shopifyConn, setShopifyConn] = useState<any>(null);
 
   async function load() {
-    const [i, k, n] = await Promise.all([
+    const [i, k, n, sc] = await Promise.all([
       listIntegrations(),
       listKnowledgeSources(),
       listPhoneNumbers(),
+      getShopifyConnection(),
     ]);
     setInstalled(i);
     setSources(k);
     setNumbers(n);
+    setShopifyConn(sc);
   }
 
   useEffect(() => {
@@ -54,6 +59,7 @@ export default function Integrations() {
   }, []);
 
   const installedSet = new Set((installed || []).map((i) => i.provider));
+  const shopifyActive = shopifyConn?.status === "active" || installedSet.has("shopify");
 
   return (
     <div className="space-y-8">
@@ -70,10 +76,10 @@ export default function Integrations() {
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {TILES.map((t) => {
-            const isOn = installedSet.has(t.provider);
-            return (
+            const isOn = t.provider === "shopify" ? shopifyActive : installedSet.has(t.provider);
+            const linkTo = t.provider === "shopify" ? "/integrations/shopify" : undefined;
+            const card = (
               <div
-                key={t.provider}
                 className="bg-surface border border-border rounded-md p-5 shadow-card"
               >
                 <div className="flex items-center justify-between">
@@ -95,6 +101,10 @@ export default function Integrations() {
                 </div>
               </div>
             );
+            if (linkTo) {
+              return <Link key={t.provider} to={linkTo}>{card}</Link>;
+            }
+            return <div key={t.provider}>{card}</div>;
           })}
         </div>
       </section>

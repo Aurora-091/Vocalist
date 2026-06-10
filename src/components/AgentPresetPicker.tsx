@@ -1,0 +1,146 @@
+import { useEffect, useState } from "react";
+import { Bot, Phone, PhoneOutgoing, ArrowRight } from "lucide-react";
+import { listAgentPresets } from "../lib/db";
+import { Badge } from "./legacy-ui/Badge";
+import { Button } from "./legacy-ui/Button";
+import { Skeleton } from "./legacy-ui/States";
+
+type Preset = {
+  id: string;
+  vertical_key: string;
+  preset_key: string;
+  name: string;
+  description: string;
+  direction: string;
+  persona: any;
+  tools: any[];
+  voice_id: string | null;
+  voice_name: string | null;
+  languages: string[];
+  consent_required: boolean;
+};
+
+export function AgentPresetPicker({
+  verticalKey,
+  onSelect,
+  onSkip,
+}: {
+  verticalKey?: string;
+  onSelect: (preset: Preset) => void;
+  onSkip: () => void;
+}) {
+  const [presets, setPresets] = useState<Preset[] | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await listAgentPresets(verticalKey);
+        setPresets(data);
+      } catch {
+        setPresets([]);
+      }
+    })();
+  }, [verticalKey]);
+
+  function confirm() {
+    const preset = presets?.find((p) => p.id === selected);
+    if (preset) onSelect(preset);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-medium">Choose a template</div>
+          <p className="text-sm text-text-muted mt-0.5">
+            Pre-built agent personas with tools and voice configured.
+            {verticalKey && (
+              <span className="ml-1">
+                Showing <span className="capitalize font-medium text-text">{verticalKey}</span> templates.
+              </span>
+            )}
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onSkip}>
+          Start from scratch
+        </Button>
+      </div>
+
+      {presets === null ? (
+        <div className="grid md:grid-cols-2 gap-3">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+        </div>
+      ) : presets.length === 0 ? (
+        <div className="text-center py-8 text-sm text-text-muted">
+          No templates available for this vertical.
+        </div>
+      ) : (
+        <>
+          <div className="grid md:grid-cols-2 gap-3">
+            {presets.map((p) => {
+              const isSelected = selected === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelected(p.id)}
+                  className={`text-left p-4 rounded-md border transition-all ${
+                    isSelected
+                      ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20"
+                      : "border-border bg-surface hover:border-text/20"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                        <Bot className="w-4 h-4" />
+                      </span>
+                      <div className="font-medium text-sm">{p.name}</div>
+                    </div>
+                    <Badge
+                      tone={p.direction === "inbound" ? "info" : p.direction === "outbound" ? "warning" : "neutral"}
+                    >
+                      {p.direction === "inbound" && <Phone className="w-3 h-3 mr-1" />}
+                      {p.direction === "outbound" && <PhoneOutgoing className="w-3 h-3 mr-1" />}
+                      {p.direction}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-text-muted leading-relaxed line-clamp-2">
+                    {p.description}
+                  </p>
+                  <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+                    {p.voice_name && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-text-muted">
+                        Voice: {p.voice_name}
+                      </span>
+                    )}
+                    {p.consent_required && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success">
+                        Consent enforced
+                      </span>
+                    )}
+                    {p.tools.length > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-text-muted">
+                        {p.tools.length} tool{p.tools.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={onSkip}>
+              Skip
+            </Button>
+            <Button onClick={confirm} disabled={!selected}>
+              Use template
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

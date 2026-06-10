@@ -20,6 +20,8 @@ const Outcomes = lazy(() => import("./pages/Outcomes"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Settings = lazy(() => import("./pages/Settings"));
 const SetupNumberPage = lazy(() => import("./pages/SetupNumber"));
+const VoiceLibrary = lazy(() => import("./pages/VoiceLibrary"));
+const ShopifyConnect = lazy(() => import("./pages/ShopifyConnect"));
 
 function PageLoader() {
   return (
@@ -62,6 +64,8 @@ export default function App() {
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/integrations/numbers" element={<SetupNumberPage />} />
+          <Route path="/integrations/shopify" element={<ShopifyConnect />} />
+          <Route path="/voices" element={<VoiceLibrary />} />
           <Route path="/outcomes" element={<Outcomes />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/settings" element={<Settings />} />

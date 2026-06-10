@@ -443,3 +443,91 @@ export async function updateNotificationPrefs(prefs: Record<string, boolean>) {
     .from("user_notification_prefs")
     .upsert({ user_id: userId, prefs }, { onConflict: "user_id" });
 }
+
+// ───── Agent Presets ─────
+
+export async function listAgentPresets(verticalKey?: string) {
+  let query = supabase
+    .from("agent_presets")
+    .select("*")
+    .eq("enabled", true)
+    .order("sort_order", { ascending: true });
+  if (verticalKey) {
+    query = query.eq("vertical_key", verticalKey);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getAgentPreset(id: string) {
+  const { data, error } = await supabase
+    .from("agent_presets")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// ───── Voice Catalog ─────
+
+export async function listVoices(opts?: { gender?: string; language?: string; search?: string }) {
+  let query = supabase
+    .from("voice_catalog")
+    .select("*")
+    .order("name", { ascending: true });
+  if (opts?.gender) {
+    query = query.eq("gender", opts.gender);
+  }
+  if (opts?.language) {
+    query = query.contains("language_codes", [opts.language]);
+  }
+  if (opts?.search) {
+    query = query.or(`name.ilike.%${opts.search}%,description.ilike.%${opts.search}%`);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+// ───── Shopify Connections ─────
+
+export async function getShopifyConnection() {
+  const orgId = await getOrgId();
+  if (!orgId) return null;
+  const { data, error } = await supabase
+    .from("shopify_connections")
+    .select("*")
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+export async function createShopifyConnection(fields: { shop_domain: string }) {
+  const orgId = await getOrgId();
+  if (!orgId) throw new Error("Not authenticated");
+  const { data, error } = await supabase
+    .from("shopify_connections")
+    .insert({
+      org_id: orgId,
+      shop_domain: fields.shop_domain,
+      status: "pending",
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateShopifyConnection(id: string, fields: Record<string, any>) {
+  const { data, error } = await supabase
+    .from("shopify_connections")
+    .update(fields)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
