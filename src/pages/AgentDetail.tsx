@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Play, Save } from "lucide-react";
-import { api } from "../lib/api";
+import { getAgent, updateAgent } from "../lib/db";
+import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
@@ -22,7 +23,7 @@ type Agent = {
   provider_agent_id?: string | null;
   voice_id?: string | null;
   conversation_config_id?: string | null;
-  sync_status?: "pending" | "synced" | "failed" | null;
+  sync_status?: string | null;
 };
 
 export default function AgentDetail() {
@@ -41,14 +42,9 @@ export default function AgentDetail() {
   const [timezone, setTimezone] = useState("");
   const [languagesText, setLanguagesText] = useState("");
 
-  const [testTo, setTestTo] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
-
   async function load() {
     try {
-      const r = await api<{ agent: Agent }>(`/v1/agents/${id}`);
-      const a = r.agent;
+      const a = await getAgent(id!);
       setAgent(a);
       setName(a.name || "");
       setObjective(a.persona?.objective || "");
@@ -58,9 +54,13 @@ export default function AgentDetail() {
       setTimezone(a.timezone || "America/New_York");
       setLanguagesText((a.languages || ["en"]).join(", "));
 
-      // Load linked knowledge sources
-      const kr = await api<{ subscriptions: any[] }>(`/v1/knowledge/agents/${id}`);
-      setKnowledge(kr.subscriptions || []);
+      const { data: kb } = await supabase
+        .from("agent_knowledge")
+        .select("*, knowledge_sources(*)")
+        .eq("agent_id", id!);
+      setKnowledge(kb || []);
+    } catch {
+      setAgent(null);
     } finally {
       setLoading(false);
     }
@@ -85,15 +85,12 @@ export default function AgentDetail() {
         .split(",")
         .map((l) => l.trim())
         .filter(Boolean);
-      await api(`/v1/agents/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          name,
-          persona,
-          transfer_number: transferNumber || undefined,
-          timezone: timezone || undefined,
-          languages,
-        }),
+      await updateAgent(id!, {
+        name,
+        persona,
+        transfer_number: transferNumber || null,
+        timezone: timezone || "America/New_York",
+        languages,
       });
       setSavedMsg("Saved.");
       load();
@@ -101,23 +98,6 @@ export default function AgentDetail() {
       setSavedMsg(e.message || "Couldn't save.");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function placeTest() {
-    if (!testTo) return;
-    setTesting(true);
-    setTestResult(null);
-    try {
-      await api(`/v1/agents/${id}/test-call`, {
-        method: "POST",
-        body: JSON.stringify({ to: testTo }),
-      });
-      setTestResult("Test call queued. You should be receiving a call shortly.");
-    } catch (e: any) {
-      setTestResult(e.message || "Couldn't queue the test call.");
-    } finally {
-      setTesting(false);
     }
   }
 
@@ -232,48 +212,48 @@ export default function AgentDetail() {
 
       <Card>
         <CardHeader>
-          <div className="font-medium">Deployment & Sync (ElevenLabs CAI)</div>
+          <div className="font-medium">Deployment (ElevenLabs CAI)</div>
         </CardHeader>
         <CardBody>
           <div className="grid sm:grid-cols-2 gap-4 text-sm">
-            <Field label="Agent Provider ID (provider_ref)">
-              <div className="h-10 px-3 rounded-md border border-border bg-surface flex items-center font-mono text-xs select-all">
-                {agent.provider_ref || "None"}
+            <Field label="Provider Agent ID">
+              <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs">
+                {agent.provider_ref || agent.provider_agent_id || "Not provisioned"}
               </div>
             </Field>
             <Field label="Voice ID">
-              <div className="h-10 px-3 rounded-md border border-border bg-surface flex items-center font-mono text-xs select-all">
-                {agent.voice_id || "None (Default Rachel)"}
+              <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs">
+                {agent.voice_id || "Default (Rachel)"}
               </div>
             </Field>
             <Field label="Conversation Config ID">
-              <div className="h-10 px-3 rounded-md border border-border bg-surface flex items-center font-mono text-xs select-all">
+              <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs">
                 {agent.conversation_config_id || "None"}
               </div>
             </Field>
             <Field label="Sync Status">
-              <div className="h-10 px-3 rounded-md border border-border bg-surface flex items-center gap-2">
+              <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center gap-2">
                 {agent.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
                 {agent.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
                 {agent.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
-                {!agent.sync_status && <Badge tone="neutral">Not Synced</Badge>}
+                {!agent.sync_status && <Badge tone="neutral">Not synced</Badge>}
               </div>
             </Field>
-            <Field label="Linked Knowledge Sources" full>
-              <div className="border border-border rounded-md divide-y divide-border bg-surface">
+            <Field label="Linked Knowledge" full>
+              <div className="border border-border rounded-md divide-y divide-border bg-surface-2">
                 {knowledge.length === 0 ? (
                   <div className="p-3 text-xs text-text-muted">
-                    No knowledge sources linked to this agent. Go to Knowledge Base page to attach sources.
+                    No knowledge sources linked. Attach sources from the Integrations page.
                   </div>
                 ) : (
                   knowledge.map((k: any) => (
-                    <div key={k.source_id} className="p-3 flex items-center justify-between text-xs">
+                    <div key={k.source_id || k.id} className="p-3 flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-medium">{k.knowledge_sources?.title}</div>
+                        <div className="font-medium">{k.knowledge_sources?.title || "Source"}</div>
                         <div className="text-text-muted capitalize">{k.knowledge_sources?.kind}</div>
                       </div>
                       <Badge tone={k.knowledge_sources?.status === "ready" ? "success" : "warning"}>
-                        {k.knowledge_sources?.status || "unknown"}
+                        {k.knowledge_sources?.status || "pending"}
                       </Badge>
                     </div>
                   ))
@@ -290,24 +270,24 @@ export default function AgentDetail() {
         </CardHeader>
         <CardBody>
           <p className="text-sm text-text-muted mb-4">
-            Aurora calls a phone you control so you can hear the agent before
-            going live.
+            Test calls require the ElevenLabs provider integration to be active.
+            Once configured, Aurora will call a phone you control so you can hear
+            the agent before going live.
           </p>
           <div className="flex flex-wrap gap-3">
             <input
-              value={testTo}
-              onChange={(e) => setTestTo(e.target.value)}
+              disabled
               placeholder="+1 415 555 0199"
-              className="h-10 px-3 rounded-md border border-border bg-surface flex-1 min-w-[240px]"
+              className="h-10 px-3 rounded-md border border-border bg-surface-2 flex-1 min-w-[240px] text-text-muted"
             />
-            <Button onClick={placeTest} disabled={testing || !testTo}>
+            <Button disabled>
               <Play className="w-4 h-4 mr-2" />
-              {testing ? "Queuing…" : "Test call"}
+              Test call
             </Button>
           </div>
-          {testResult && (
-            <div className="mt-3 text-sm text-text-muted">{testResult}</div>
-          )}
+          <p className="mt-2 text-xs text-text-muted">
+            Requires active provider_ref. Connect ElevenLabs API key in Settings to enable.
+          </p>
         </CardBody>
       </Card>
     </div>

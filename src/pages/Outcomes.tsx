@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { getOverview } from "../lib/db";
+import { supabase } from "../lib/supabase";
+import { getOrgId } from "../lib/db";
 import { StatCard } from "../components/legacy-ui/StatCard";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Skeleton } from "../components/legacy-ui/States";
@@ -7,23 +9,32 @@ import { Skeleton } from "../components/legacy-ui/States";
 export default function Outcomes() {
   const [overview, setOverview] = useState<any>(null);
   const [outcomes, setOutcomes] = useState<any[] | null>(null);
-  const [optouts, setOptouts] = useState<any[] | null>(null);
 
   useEffect(() => {
     (async () => {
-      const today = new Date();
-      const from = new Date(today.getTime() - 30 * 86400_000)
-        .toISOString()
-        .slice(0, 10);
-      const to = today.toISOString().slice(0, 10);
-      const [o, b, op] = await Promise.all([
-        api<any>(`/v1/analytics/overview?from=${from}&to=${to}`).catch(() => null),
-        api<any>(`/v1/analytics/outcomes?from=${from}&to=${to}`).catch(() => null),
-        api<any>(`/v1/analytics/optouts?from=${from}&to=${to}`).catch(() => null),
-      ]);
+      const o = await getOverview();
       setOverview(o || {});
-      setOutcomes(b?.outcomes || []);
-      setOptouts(op?.opt_outs || []);
+
+      const orgId = await getOrgId();
+      if (!orgId) {
+        setOutcomes([]);
+        return;
+      }
+
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
+      const { data: calls } = await supabase
+        .from("calls")
+        .select("status")
+        .eq("org_id", orgId)
+        .gte("created_at", thirtyDaysAgo);
+
+      const grouped: Record<string, number> = {};
+      for (const c of calls || []) {
+        grouped[c.status] = (grouped[c.status] || 0) + 1;
+      }
+      setOutcomes(
+        Object.entries(grouped).map(([outcome, count]) => ({ outcome, count }))
+      );
     })();
   }, []);
 
@@ -47,41 +58,22 @@ export default function Outcomes() {
         />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="font-medium">Outcome breakdown</div>
-          </CardHeader>
-          <CardBody>
-            {outcomes === null ? (
-              <Skeleton className="h-32" />
-            ) : outcomes.length === 0 ? (
-              <div className="text-sm text-text-muted">
-                No outcomes recorded yet.
-              </div>
-            ) : (
-              <Bars items={outcomes} valueKey="count" labelKey="outcome" />
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="font-medium">Opt-out reasons</div>
-          </CardHeader>
-          <CardBody>
-            {optouts === null ? (
-              <Skeleton className="h-32" />
-            ) : optouts.length === 0 ? (
-              <div className="text-sm text-text-muted">
-                No opt-outs in this window.
-              </div>
-            ) : (
-              <Bars items={optouts} valueKey="count" labelKey="reason" />
-            )}
-          </CardBody>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <div className="font-medium">Call status breakdown</div>
+        </CardHeader>
+        <CardBody>
+          {outcomes === null ? (
+            <Skeleton className="h-32" />
+          ) : outcomes.length === 0 ? (
+            <div className="text-sm text-text-muted">
+              No calls recorded yet. Data will appear here once calls start flowing.
+            </div>
+          ) : (
+            <Bars items={outcomes} valueKey="count" labelKey="outcome" />
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }
@@ -104,7 +96,7 @@ function Bars({
         return (
           <div key={i}>
             <div className="flex items-center justify-between text-sm">
-              <span>{it[labelKey] || "—"}</span>
+              <span className="capitalize">{it[labelKey] || "—"}</span>
               <span className="font-mono text-text-muted">{v}</span>
             </div>
             <div className="mt-1 h-2 rounded-full bg-surface-2 overflow-hidden">

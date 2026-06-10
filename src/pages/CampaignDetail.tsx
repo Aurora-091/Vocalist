@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Play, Pause, X } from "lucide-react";
-import { api } from "../lib/api";
+import { getCampaign } from "../lib/db";
+import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
@@ -20,31 +21,37 @@ const STATUS_TONE: Record<string, "success" | "info" | "neutral" | "warning" | "
 export default function CampaignDetail() {
   const { id } = useParams();
   const [campaign, setCampaign] = useState<any>(null);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<Record<string, number>>({});
   const [acting, setActing] = useState(false);
 
   async function load() {
-    const [c, s] = await Promise.all([
-      api<any>(`/v1/campaigns/${id}`),
-      api<any>(`/v1/campaigns/${id}/stats`).catch(() => null),
-    ]);
-    setCampaign(c.campaign);
-    setStats(s);
+    try {
+      const c = await getCampaign(id!);
+      setCampaign(c);
+
+      const { data: targets } = await supabase
+        .from("campaign_targets")
+        .select("state")
+        .eq("campaign_id", id!);
+      const grouped: Record<string, number> = {};
+      for (const t of targets || []) {
+        grouped[t.state] = (grouped[t.state] || 0) + 1;
+      }
+      setStats(grouped);
+    } catch {}
   }
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
   }, [id]);
 
   async function setStatus(status: string) {
     setActing(true);
     try {
-      await api(`/v1/campaigns/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      });
+      await supabase
+        .from("campaigns")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", id!);
       await load();
     } finally {
       setActing(false);
@@ -58,8 +65,7 @@ export default function CampaignDetail() {
   const canPause = status === "running";
   const canCancel = !["completed", "canceled"].includes(status);
 
-  const byState = stats?.by_state || {};
-  const total = stats?.total || 0;
+  const total = Object.values(stats).reduce((s: number, v) => s + (v as number), 0);
 
   return (
     <div className="space-y-6">
@@ -115,10 +121,10 @@ export default function CampaignDetail() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total" value={total} />
-        <StatCard label="Queued" value={byState.queued ?? 0} />
-        <StatCard label="In progress" value={byState.in_progress ?? 0} />
-        <StatCard label="Completed" value={byState.completed ?? 0} />
+        <StatCard label="Total targets" value={total} />
+        <StatCard label="Queued" value={stats.queued ?? 0} />
+        <StatCard label="In progress" value={stats.in_progress ?? 0} />
+        <StatCard label="Completed" value={stats.completed ?? 0} />
       </div>
 
       <Card>
@@ -127,18 +133,18 @@ export default function CampaignDetail() {
         </CardHeader>
         <CardBody>
           <div className="grid sm:grid-cols-2 gap-3">
-            {Object.entries(byState).map(([k, v]) => (
+            {Object.entries(stats).map(([k, v]) => (
               <div
                 key={k}
                 className="flex items-center justify-between py-2 border-b border-border last:border-0"
               >
-                <span className="text-sm text-text-muted">{k}</span>
+                <span className="text-sm text-text-muted capitalize">{k.replace(/_/g, " ")}</span>
                 <span className="font-mono text-sm">{v as number}</span>
               </div>
             ))}
-            {Object.keys(byState).length === 0 && (
-              <div className="text-sm text-text-muted">
-                No targets yet. Add contacts from the contacts page or import a CSV.
+            {Object.keys(stats).length === 0 && (
+              <div className="text-sm text-text-muted sm:col-span-2">
+                No targets yet. Add contacts from the contacts page, then assign them to this campaign.
               </div>
             )}
           </div>

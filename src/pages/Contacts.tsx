@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Plus, Upload, Search } from "lucide-react";
-import { api } from "../lib/api";
+import { listContacts, createContact } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody } from "../components/legacy-ui/Card";
 import { ConsentBadge } from "../components/legacy-ui/Badge";
@@ -24,10 +24,7 @@ export default function Contacts() {
 
   async function load() {
     try {
-      const params = new URLSearchParams({ limit: "100" });
-      if (q) params.set("q", q);
-      const r = await api<{ contacts: Contact[] }>(`/v1/contacts?${params}`);
-      setContacts(r.contacts || []);
+      setContacts(await listContacts({ q: q || undefined, limit: 100 }));
     } catch {
       setContacts([]);
     }
@@ -157,10 +154,7 @@ function CreateForm({
     setBusy(true);
     setErr(null);
     try {
-      await api("/v1/contacts", {
-        method: "POST",
-        body: JSON.stringify({ phone, name, email, source: "manual" }),
-      });
+      await createContact({ phone, name, email, source: "manual" });
       onSaved();
       onClose();
     } catch (e: any) {
@@ -230,22 +224,20 @@ function ImportForm({
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean);
-    const contacts = lines.map((line) => {
+    let inserted = 0;
+    let skipped = 0;
+    for (const line of lines) {
       const [phone, name, email] = line.split(",").map((s) => (s || "").trim());
-      return { phone, name, email };
-    });
-    try {
-      const r = await api<any>("/v1/contacts/bulk", {
-        method: "POST",
-        body: JSON.stringify({ contacts, source: "csv" }),
-      });
-      setResult(`Inserted ${r.inserted}. Skipped ${r.skipped?.length || 0}.`);
-      onDone();
-    } catch (e: any) {
-      setResult(e.message);
-    } finally {
-      setBusy(false);
+      try {
+        await createContact({ phone, name, email, source: "csv" });
+        inserted++;
+      } catch {
+        skipped++;
+      }
     }
+    setResult(`Inserted ${inserted}. Skipped ${skipped}.`);
+    onDone();
+    setBusy(false);
   }
 
   return (

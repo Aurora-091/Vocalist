@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import {
+  getOrg,
+  updateOrg,
+  getNotificationPrefs,
+  updateNotificationPrefs,
+  listWebhookEndpoints,
+  createWebhookEndpoint,
+} from "../lib/db";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Button } from "../components/legacy-ui/Button";
 import { Skeleton } from "../components/legacy-ui/States";
 
 const TABS = ["Organization", "Compliance", "Notifications", "Webhooks"] as const;
-type Tab = typeof TABS[number];
+type Tab = (typeof TABS)[number];
 
 export default function Settings() {
   const [tab, setTab] = useState<Tab>("Organization");
@@ -44,16 +51,16 @@ export default function Settings() {
 }
 
 function OrgPanel() {
-  const [org, setOrg] = useState<any>(null);
+  const [org, setOrgData] = useState<any>(null);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const r = await api<{ org: any }>("/v1/settings/org");
-      setOrg(r.org);
-      setName(r.org?.name || "");
+      const o = await getOrg();
+      setOrgData(o);
+      setName(o?.name || "");
     })();
   }, []);
 
@@ -61,10 +68,7 @@ function OrgPanel() {
     setBusy(true);
     setSaved(false);
     try {
-      await api("/v1/settings/org", {
-        method: "PATCH",
-        body: JSON.stringify({ name }),
-      });
+      await updateOrg({ name });
       setSaved(true);
     } finally {
       setBusy(false);
@@ -103,56 +107,6 @@ function OrgPanel() {
 }
 
 function CompliancePanel() {
-  const [phone, setPhone] = useState("");
-  const [busy, setBusy] = useState<"export" | "erase" | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
-
-  async function exportData() {
-    if (!phone) return;
-    setBusy("export");
-    setMsg(null);
-    try {
-      const r = await api<any>("/v1/gdpr/export", {
-        method: "POST",
-        body: JSON.stringify({ phone }),
-      });
-      const blob = new Blob([JSON.stringify(r, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `gdpr-export-${r.e164 || "contact"}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setMsg("Export downloaded.");
-    } catch (e: any) {
-      setMsg(e.message || "Couldn't export.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function eraseData() {
-    if (!phone) return;
-    setBusy("erase");
-    setMsg(null);
-    try {
-      const r = await api<any>("/v1/gdpr/erase", {
-        method: "POST",
-        body: JSON.stringify({ phone, reason: "manual_request" }),
-      });
-      setMsg(`Erased ${r.e164}. Consent revoked and DNC entry written.`);
-      setConfirming(false);
-      setPhone("");
-    } catch (e: any) {
-      setMsg(e.message || "Couldn't erase.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return (
     <div className="space-y-6">
       <Card>
@@ -165,6 +119,20 @@ function CompliancePanel() {
             instantly across active campaigns. Recording disclosure is part of
             every outbound persona by default.
           </p>
+          <div className="mt-4 grid sm:grid-cols-3 gap-4">
+            <div className="border border-border rounded-md p-4">
+              <div className="text-xs uppercase tracking-widest text-text-muted mb-1">Consent gate</div>
+              <div className="text-sm font-medium text-success">Active</div>
+            </div>
+            <div className="border border-border rounded-md p-4">
+              <div className="text-xs uppercase tracking-widest text-text-muted mb-1">DNC enforcement</div>
+              <div className="text-sm font-medium text-success">Active</div>
+            </div>
+            <div className="border border-border rounded-md p-4">
+              <div className="text-xs uppercase tracking-widest text-text-muted mb-1">Recording disclosure</div>
+              <div className="text-sm font-medium text-success">Auto-prepended</div>
+            </div>
+          </div>
         </CardBody>
       </Card>
 
@@ -173,49 +141,11 @@ function CompliancePanel() {
           <div className="font-medium">GDPR / data subject requests</div>
         </CardHeader>
         <CardBody>
-          <p className="text-sm text-text-muted mb-4">
-            Look up by phone number. Export returns contact, consent, and call
-            history as JSON. Erase revokes consent, deletes contact data, and
-            adds the number to your DNC list.
+          <p className="text-sm text-text-muted">
+            Use the Compliance API to export or erase contact data. Look up by phone
+            number. Export returns contact, consent, and call history as JSON. Erase
+            revokes consent, deletes contact data, and adds the number to your DNC list.
           </p>
-          <div className="flex flex-wrap gap-3">
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 415 555 0199"
-              className="h-10 px-3 rounded-md border border-border bg-surface font-mono text-sm flex-1 min-w-[240px]"
-            />
-            <Button
-              variant="secondary"
-              onClick={exportData}
-              disabled={!phone || busy !== null}
-            >
-              {busy === "export" ? "Exporting…" : "Export"}
-            </Button>
-            {!confirming ? (
-              <Button
-                variant="danger"
-                onClick={() => setConfirming(true)}
-                disabled={!phone || busy !== null}
-              >
-                Erase
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" onClick={() => setConfirming(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={eraseData}
-                  disabled={busy !== null}
-                >
-                  {busy === "erase" ? "Erasing…" : "Confirm erase"}
-                </Button>
-              </>
-            )}
-          </div>
-          {msg && <div className="mt-3 text-sm text-text-muted">{msg}</div>}
         </CardBody>
       </Card>
     </div>
@@ -229,22 +159,8 @@ function NotificationsPanel() {
 
   useEffect(() => {
     (async () => {
-      try {
-        const r = await api<{ prefs: any }>("/v1/settings/notification-prefs");
-        setPrefs(
-          r.prefs || {
-            usage_alerts: true,
-            failed_calls: true,
-            campaign_completed: true,
-          }
-        );
-      } catch {
-        setPrefs({
-          usage_alerts: true,
-          failed_calls: true,
-          campaign_completed: true,
-        });
-      }
+      const p = await getNotificationPrefs();
+      setPrefs(p || { usage_alerts: true, failed_calls: true, campaign_completed: true });
     })();
   }, []);
 
@@ -252,10 +168,7 @@ function NotificationsPanel() {
     setBusy(true);
     setSaved(false);
     try {
-      await api("/v1/settings/notification-prefs", {
-        method: "PUT",
-        body: JSON.stringify(prefs),
-      });
+      await updateNotificationPrefs(prefs);
       setSaved(true);
     } finally {
       setBusy(false);
@@ -335,12 +248,7 @@ function WebhooksPanel() {
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    try {
-      const r = await api<{ webhooks: any[] }>("/v1/webhooks-out");
-      setHooks(r.webhooks || []);
-    } catch {
-      setHooks([]);
-    }
+    setHooks(await listWebhookEndpoints());
   }
 
   useEffect(() => {
@@ -350,12 +258,9 @@ function WebhooksPanel() {
   async function add() {
     setBusy(true);
     try {
-      await api("/v1/webhooks-out", {
-        method: "POST",
-        body: JSON.stringify({
-          url,
-          events: ["call.completed", "call.failed"],
-        }),
+      await createWebhookEndpoint({
+        url,
+        events: ["call.completed", "call.failed"],
       });
       setUrl("");
       await load();

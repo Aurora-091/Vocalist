@@ -3,15 +3,19 @@ import {
   ShoppingBag,
   Stethoscope,
   Calendar,
-  Plug,
   Phone,
   BookOpen,
   Plus,
   Check,
 } from "lucide-react";
-import { api } from "../lib/api";
+import {
+  listIntegrations,
+  listKnowledgeSources,
+  listPhoneNumbers,
+  createKnowledgeSource,
+} from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
+import { Card, CardBody } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
 import { Skeleton } from "../components/legacy-ui/States";
 
@@ -35,22 +39,14 @@ export default function Integrations() {
   const [numbers, setNumbers] = useState<any[] | null>(null);
 
   async function load() {
-    try {
-      const [i, k, n] = await Promise.all([
-        api<{ integrations: Integration[] }>("/v1/integrations").catch(() => ({
-          integrations: [],
-        })),
-        api<{ sources: any[] }>("/v1/knowledge/sources").catch(() => ({ sources: [] })),
-        api<{ numbers: any[] }>("/v1/numbers").catch(() => ({ numbers: [] })),
-      ]);
-      setInstalled(i.integrations || []);
-      setSources(k.sources || []);
-      setNumbers(n.numbers || []);
-    } catch {
-      setInstalled([]);
-      setSources([]);
-      setNumbers([]);
-    }
+    const [i, k, n] = await Promise.all([
+      listIntegrations(),
+      listKnowledgeSources(),
+      listPhoneNumbers(),
+    ]);
+    setInstalled(i);
+    setSources(k);
+    setNumbers(n);
   }
 
   useEffect(() => {
@@ -108,7 +104,6 @@ export default function Integrations() {
           <h2 className="text-sm font-medium text-text-muted uppercase tracking-widest">
             Phone numbers
           </h2>
-          <AddNumber onAdded={load} />
         </div>
         <Card>
           <CardBody>
@@ -116,8 +111,8 @@ export default function Integrations() {
               <Skeleton className="h-16" />
             ) : numbers.length === 0 ? (
               <div className="text-sm text-text-muted">
-                No numbers yet. Add an Aurora-managed number or bring your own
-                Twilio number.
+                No numbers yet. Numbers are provisioned through the Twilio integration
+                once your account is connected.
               </div>
             ) : (
               <div className="divide-y divide-border">
@@ -201,58 +196,6 @@ export default function Integrations() {
   );
 }
 
-function AddNumber({ onAdded }: { onAdded: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [e164, setE164] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function add() {
-    setBusy(true);
-    setErr(null);
-    try {
-      await api("/v1/numbers/byo", {
-        method: "POST",
-        body: JSON.stringify({ e164 }),
-      });
-      onAdded();
-      setOpen(false);
-      setE164("");
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!open) {
-    return (
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-        <Plus className="w-4 h-4 mr-2" />
-        Add number
-      </Button>
-    );
-  }
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        value={e164}
-        onChange={(e) => setE164(e.target.value)}
-        placeholder="+14155550199"
-        className="h-9 px-3 rounded-md border border-border bg-surface text-sm font-mono"
-      />
-      <Button size="sm" onClick={add} disabled={busy || !e164}>
-        <Check className="w-4 h-4 mr-1" />
-        Save
-      </Button>
-      <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
-        Cancel
-      </Button>
-      {err && <span className="text-xs text-danger">{err}</span>}
-    </div>
-  );
-}
-
 function AddKnowledge({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [uri, setUri] = useState("");
@@ -262,10 +205,7 @@ function AddKnowledge({ onAdded }: { onAdded: () => void }) {
   async function add() {
     setBusy(true);
     try {
-      await api("/v1/knowledge/sources", {
-        method: "POST",
-        body: JSON.stringify({ kind: "website", uri, title }),
-      });
+      await createKnowledgeSource({ kind: "website", uri, title });
       onAdded();
       setOpen(false);
       setUri("");

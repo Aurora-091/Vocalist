@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Phone, X } from "lucide-react";
-import { api } from "../lib/api";
+import { listCalls, getCall } from "../lib/db";
 import { Badge } from "../components/legacy-ui/Badge";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 
@@ -14,6 +14,7 @@ type Call = {
   cost_usd: number | null;
   recording_url: string | null;
   provider: string;
+  transcript: any;
 };
 
 const STATUS_TONE: Record<string, "success" | "info" | "neutral" | "warning" | "danger"> = {
@@ -34,10 +35,7 @@ export default function Calls() {
 
   async function load() {
     try {
-      const params = new URLSearchParams({ limit: "50" });
-      if (filter) params.set("direction", filter);
-      const r = await api<{ calls: Call[] }>(`/v1/calls?${params}`);
-      setCalls(r.calls || []);
+      setCalls(await listCalls({ direction: filter || undefined, limit: 50 }));
     } catch {
       setCalls([]);
     }
@@ -175,20 +173,19 @@ function Td({
 
 function CallDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const [call, setCall] = useState<any>(null);
-  const [transcript, setTranscript] = useState<any[] | null>(null);
 
   useEffect(() => {
     (async () => {
-      const [c, t] = await Promise.all([
-        api<{ call: any }>(`/v1/calls/${id}`),
-        api<{ transcript: any[] }>(`/v1/calls/${id}/transcript`).catch(
-          () => ({ transcript: [] })
-        ),
-      ]);
-      setCall(c.call);
-      setTranscript(t.transcript || []);
+      try {
+        const c = await getCall(id);
+        setCall(c);
+      } catch {
+        setCall(null);
+      }
     })();
   }, [id]);
+
+  const transcript = call?.transcript || [];
 
   return (
     <div className="fixed inset-0 z-40 flex">
@@ -254,9 +251,7 @@ function CallDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 <div className="text-xs uppercase tracking-widest text-text-muted mb-2">
                   Transcript
                 </div>
-                {transcript === null ? (
-                  <Skeleton className="h-24" />
-                ) : transcript.length === 0 ? (
+                {!Array.isArray(transcript) || transcript.length === 0 ? (
                   <div className="text-sm text-text-muted">No transcript yet.</div>
                 ) : (
                   <div className="space-y-3">

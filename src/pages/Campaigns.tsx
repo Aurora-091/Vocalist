@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Megaphone } from "lucide-react";
-import { api } from "../lib/api";
+import { listCampaigns } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 import { Badge } from "../components/legacy-ui/Badge";
@@ -31,8 +31,7 @@ export default function Campaigns() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await api<{ campaigns: Campaign[] }>("/v1/campaigns");
-        setCampaigns(r.campaigns || []);
+        setCampaigns(await listCampaigns());
       } catch {
         setCampaigns([]);
       }

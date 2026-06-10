@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Bot } from "lucide-react";
-import { api } from "../lib/api";
+import { listAgents, createAgent } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
-import { Card, CardBody } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
 
 type Agent = {
@@ -14,7 +13,7 @@ type Agent = {
   inbound_number?: string;
   provider: string;
   consent_required: boolean;
-  sync_status?: "pending" | "synced" | "failed";
+  sync_status?: string | null;
   created_at: string;
 };
 
@@ -26,8 +25,7 @@ export default function AgentsList() {
 
   async function load() {
     try {
-      const r = await api<{ agents: Agent[] }>("/v1/agents");
-      setAgents(r.agents || []);
+      setAgents(await listAgents());
     } catch {
       setAgents([]);
     }
@@ -38,12 +36,10 @@ export default function AgentsList() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    await api("/v1/agents", {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        persona: { direction, objective: "" },
-      }),
+    await createAgent({
+      name,
+      persona: { direction, objective: "" },
+      consent_required: direction !== "inbound",
     });
     setName("");
     setCreating(false);
@@ -66,8 +62,8 @@ export default function AgentsList() {
       </div>
 
       {creating && (
-        <Card>
-          <CardBody>
+        <div className="bg-surface border border-border rounded-md shadow-card">
+          <div className="px-6 py-4">
             <form onSubmit={create} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-text-muted mb-1">
@@ -108,8 +104,8 @@ export default function AgentsList() {
                 <Button type="submit">Create</Button>
               </div>
             </form>
-          </CardBody>
-        </Card>
+          </div>
+        </div>
       )}
 
       {agents === null ? (
@@ -131,7 +127,7 @@ export default function AgentsList() {
             <Link
               key={a.id}
               to={`/agents/${a.id}`}
-              className="bg-surface border border-border rounded-md shadow-card p-5 hover:bg-surface-2"
+              className="bg-surface border border-border rounded-md shadow-card p-5 hover:bg-surface-2 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <span className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center">
@@ -142,7 +138,7 @@ export default function AgentsList() {
                   <div className="text-xs text-text-muted">{a.provider}</div>
                 </div>
               </div>
-              <div className="mt-4 flex items-center gap-2">
+              <div className="mt-4 flex items-center gap-2 flex-wrap">
                 {a.consent_required && <Badge tone="success" dot>consent on</Badge>}
                 {a.inbound_number && <Badge tone="info">{a.inbound_number}</Badge>}
                 {a.sync_status === "synced" && <Badge tone="success">Synced</Badge>}

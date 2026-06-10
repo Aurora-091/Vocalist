@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { getUsageSummary, getOrg } from "../../lib/db";
 import { NotificationsBell } from "./NotificationsBell";
 
 const items = [
@@ -37,18 +37,17 @@ export function AppShell() {
   useEffect(() => {
     (async () => {
       try {
-        const today = new Date().toISOString().slice(0, 10);
-        const u = await api<any>(`/v1/analytics/usage?period=${today}`);
-        setUsage({
-          used: Math.round(Number(u.used_minutes) || 0),
-          included: Number(u.included_minutes) || 0,
-        });
-      } catch {
-        /* not signed in or no usage yet */
-      }
+        const u = await getUsageSummary();
+        if (u) {
+          setUsage({
+            used: Math.round(u.used_minutes),
+            included: u.included_minutes,
+          });
+        }
+      } catch {}
       try {
-        const o = await api<any>("/v1/settings/org");
-        setOrgName(o.org?.name || "");
+        const o = await getOrg();
+        setOrgName(o?.name || "");
       } catch {}
     })();
   }, []);

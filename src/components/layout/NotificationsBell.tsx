@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
-import { api } from "../../lib/api";
+import { supabase } from "../../lib/supabase";
+import { getOrgId } from "../../lib/db";
 
 type Notification = {
   id: string;
@@ -20,15 +21,19 @@ const KIND_LABEL: Record<string, string> = {
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[] | null>(null);
-  const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
   async function load() {
     try {
-      const r = await api<{ notifications: Notification[] }>(
-        "/v1/notifications?limit=20"
-      );
-      setItems(r.notifications || []);
+      const orgId = await getOrgId();
+      if (!orgId) { setItems([]); return; }
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setItems(data || []);
     } catch {
       setItems([]);
     }
@@ -36,8 +41,6 @@ export function NotificationsBell() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 30_000);
-    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
@@ -52,17 +55,21 @@ export function NotificationsBell() {
   const unread = (items || []).filter((n) => !n.read_at).length;
 
   async function markAll() {
-    setBusy(true);
-    try {
-      await api("/v1/notifications/read-all", { method: "POST" });
-      await load();
-    } finally {
-      setBusy(false);
-    }
+    const orgId = await getOrgId();
+    if (!orgId) return;
+    await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("org_id", orgId)
+      .is("read_at", null);
+    load();
   }
 
   async function markOne(id: string) {
-    await api(`/v1/notifications/${id}/read`, { method: "POST" });
+    await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", id);
     load();
   }
 
@@ -88,8 +95,7 @@ export function NotificationsBell() {
             {unread > 0 && (
               <button
                 onClick={markAll}
-                disabled={busy}
-                className="text-xs text-primary hover:text-primary-700 disabled:opacity-50"
+                className="text-xs text-primary hover:text-primary-700"
               >
                 Mark all read
               </button>
@@ -97,7 +103,7 @@ export function NotificationsBell() {
           </div>
           <div className="max-h-96 overflow-y-auto">
             {items === null ? (
-              <div className="px-4 py-6 text-sm text-text-muted">Loading…</div>
+              <div className="px-4 py-6 text-sm text-text-muted">Loading...</div>
             ) : items.length === 0 ? (
               <div className="px-4 py-6 text-sm text-text-muted text-center">
                 You're all caught up.

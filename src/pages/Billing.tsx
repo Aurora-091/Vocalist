@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { listPlanTiers, getUsageSummary, getSubscription } from "../lib/db";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Button } from "../components/legacy-ui/Button";
 import { Badge } from "../components/legacy-ui/Badge";
@@ -7,11 +7,13 @@ import { Skeleton } from "../components/legacy-ui/States";
 
 type Tier = {
   id: string;
-  name: string;
-  monthly_price_usd: number;
+  key: string;
+  label: string;
+  monthly_usd: number;
   included_minutes: number;
   included_numbers: number;
   overage_rate_usd: number;
+  features: any;
 };
 
 export default function Billing() {
@@ -21,25 +23,21 @@ export default function Billing() {
 
   useEffect(() => {
     (async () => {
-      const today = new Date().toISOString().slice(0, 10);
       const [u, t, s] = await Promise.all([
-        api<any>(`/v1/analytics/usage?period=${today}`).catch(() => null),
-        api<{ tiers: Tier[] }>("/v1/settings/plan-tiers").catch(() => ({
-          tiers: [],
-        })),
-        api<{ subscription: any }>("/v1/billing/subscription").catch(() => null),
+        getUsageSummary(),
+        listPlanTiers(),
+        getSubscription(),
       ]);
       setUsage(u);
-      setTiers(t.tiers || []);
-      setSubscription(s?.subscription || null);
+      setTiers(t);
+      setSubscription(s);
     })();
   }, []);
 
   const pct = usage ? Math.min(100, Number(usage.pct_used) || 0) : 0;
   const used = Math.round(Number(usage?.used_minutes) || 0);
   const included = Number(usage?.included_minutes) || 0;
-  const tone =
-    pct >= 100 ? "danger" : pct >= 80 ? "warning" : "primary";
+  const tone = pct >= 100 ? "danger" : pct >= 80 ? "warning" : "primary";
 
   return (
     <div className="space-y-8">
@@ -110,11 +108,11 @@ export default function Billing() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="font-medium">{t.name}</div>
+                      <div className="font-medium">{t.label}</div>
                       {isCurrent && <Badge tone="primary">current</Badge>}
                     </div>
                     <div className="mt-4 font-mono text-3xl font-bold">
-                      ${t.monthly_price_usd}
+                      ${Number(t.monthly_usd)}
                       <span className="text-text-muted text-sm font-sans"> / mo</span>
                     </div>
                     <ul className="mt-4 space-y-2 text-sm">

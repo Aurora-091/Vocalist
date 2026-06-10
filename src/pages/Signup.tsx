@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { api } from "../lib/api";
 import { Button } from "../components/legacy-ui/Button";
 
 export default function Signup() {
@@ -17,24 +16,22 @@ export default function Signup() {
     setErr(null);
     setLoading(true);
     try {
-      const response = await api<any>("/v1/auth/signup", {
-        method: "POST",
-        body: JSON.stringify({
-          email,
-          password,
-          org_name: orgName,
-        }),
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { org_name: orgName },
+        },
       });
-
-      const { session } = response;
-      if (session) {
-        await supabase.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-        });
+      if (error) {
+        setErr(error.message);
+        return;
       }
-
-      navigate("/onboarding");
+      if (data.session) {
+        navigate("/onboarding");
+      } else {
+        navigate("/login");
+      }
     } catch (error: any) {
       setErr(error.message || "Couldn't create your account.");
     } finally {
@@ -54,6 +51,7 @@ export default function Signup() {
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
               className="w-full h-10 px-3 rounded-md border border-border bg-surface"
+              placeholder="Your company name"
             />
           </Field>
           <Field label="Email">
@@ -63,6 +61,7 @@ export default function Signup() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full h-10 px-3 rounded-md border border-border bg-surface"
+              placeholder="you@company.com"
             />
           </Field>
           <Field label="Password">
@@ -73,6 +72,7 @@ export default function Signup() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full h-10 px-3 rounded-md border border-border bg-surface"
+              placeholder="8+ characters"
             />
           </Field>
           {err && <div className="text-sm text-danger">{err}</div>}
@@ -80,6 +80,9 @@ export default function Signup() {
             {loading ? "Creating…" : "Create account"}
           </Button>
         </form>
+        <p className="mt-3 text-xs text-text-muted text-center">
+          No credit card required. TCPA-aware out of the box.
+        </p>
         <div className="mt-6 text-sm text-text-muted">
           Have an account?{" "}
           <Link to="/login" className="text-primary hover:text-primary-700">

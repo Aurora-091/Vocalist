@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ArrowRight, Loader as Loader2 } from "lucide-react";
-import { api } from "../lib/api";
+import { listVerticals, updateOnboardingStep, getOnboardingSteps, createAgent, createKnowledgeSource } from "../lib/db";
+import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
-import { SetupNumber } from "./SetupNumber";
 
-type Vertical = { id: string; key: string; label: string; config: any };
+type Vertical = { id: string; key: string; label: string; config: any; enabled: boolean };
 
 const STEP_KEYS = [
   "pick_vertical",
@@ -35,26 +35,21 @@ export default function Onboarding() {
   useEffect(() => {
     (async () => {
       try {
-        const [v, ob] = await Promise.all([
-          api<{ verticals: Vertical[] }>("/v1/verticals"),
-          api<{ steps: Record<string, boolean> }>("/v1/onboarding"),
+        const [v, s] = await Promise.all([
+          listVerticals(),
+          getOnboardingSteps(),
         ]);
-        setVerticals(v.verticals || []);
-        setSteps(ob.steps || {});
-        const firstUndone = STEP_KEYS.findIndex((k) => !ob.steps?.[k]);
+        setVerticals(v || []);
+        setSteps(s || {});
+        const firstUndone = STEP_KEYS.findIndex((k) => !s?.[k]);
         if (firstUndone > 0) setStepIndex(firstUndone);
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
   }, []);
 
   function markDone(key: StepKey) {
     setSteps((s) => ({ ...s, [key]: true }));
-    api("/v1/onboarding", {
-      method: "PATCH",
-      body: JSON.stringify({ steps: { [key]: true } }),
-    }).catch(() => {});
+    updateOnboardingStep(key, true);
   }
 
   function next() {
@@ -130,7 +125,7 @@ export default function Onboarding() {
             )}
 
             {currentKey === "create_agent" && (
-              <CreateAgent
+              <CreateAgentStep
                 onDone={() => {
                   markDone("create_agent");
                   next();
@@ -140,9 +135,8 @@ export default function Onboarding() {
             )}
 
             {currentKey === "get_number" && (
-              <SetupNumber
-                embedded
-                onComplete={() => {
+              <GetNumber
+                onDone={() => {
                   markDone("get_number");
                   next();
                 }}
@@ -197,10 +191,12 @@ function PickVertical({
     setSelected(id);
     setBusy(true);
     try {
-      await api("/v1/verticals/select", {
-        method: "POST",
-        body: JSON.stringify({ vertical_config_id: id }),
-      });
+      const { data: session } = await supabase.auth.getSession();
+      const meta = session.session?.user.app_metadata as any;
+      const orgId = meta?.org_id;
+      if (orgId) {
+        await supabase.from("orgs").update({ vertical_config_id: id }).eq("id", orgId);
+      }
       onDone();
     } finally {
       setBusy(false);
@@ -214,25 +210,48 @@ function PickVertical({
         industry.
       </p>
       <div className="grid sm:grid-cols-2 gap-4">
-        {verticals.map((v) => (
-          <button
-            key={v.id}
-            onClick={() => pick(v.id)}
-            disabled={busy}
-            className={`text-left p-5 rounded-md border transition-colors ${
-              selected === v.id
-                ? "border-primary bg-primary/5"
-                : "border-border bg-surface hover:bg-surface-2"
-            }`}
-          >
-            <div className="font-medium">{v.label}</div>
-            <p className="mt-2 text-sm text-text-muted">
-              {v.key === "shopify"
-                ? "Recover carts, support orders, run promo blasts."
-                : "Book appointments, send reminders, recover no-shows."}
-            </p>
-          </button>
-        ))}
+        {verticals.length === 0 ? (
+          <>
+            <button
+              onClick={() => onDone()}
+              className="text-left p-5 rounded-md border border-border bg-surface hover:bg-surface-2"
+            >
+              <div className="font-medium">E-commerce (Shopify)</div>
+              <p className="mt-2 text-sm text-text-muted">
+                Recover carts, support orders, run promo blasts.
+              </p>
+            </button>
+            <button
+              onClick={() => onDone()}
+              className="text-left p-5 rounded-md border border-border bg-surface hover:bg-surface-2"
+            >
+              <div className="font-medium">Healthcare / Clinic</div>
+              <p className="mt-2 text-sm text-text-muted">
+                Book appointments, send reminders, recover no-shows.
+              </p>
+            </button>
+          </>
+        ) : (
+          verticals.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => pick(v.id)}
+              disabled={busy}
+              className={`text-left p-5 rounded-md border transition-colors ${
+                selected === v.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-surface hover:bg-surface-2"
+              }`}
+            >
+              <div className="font-medium">{v.label}</div>
+              <p className="mt-2 text-sm text-text-muted">
+                {v.key === "shopify"
+                  ? "Recover carts, support orders, run promo blasts."
+                  : "Book appointments, send reminders, recover no-shows."}
+              </p>
+            </button>
+          ))
+        )}
       </div>
       {done && (
         <div className="mt-4 text-sm text-success flex items-center gap-1.5">
@@ -298,10 +317,7 @@ function AddKnowledge({
     setBusy(true);
     setError(null);
     try {
-      await api("/v1/knowledge/sources", {
-        method: "POST",
-        body: JSON.stringify({ kind: "website", title, uri }),
-      });
+      await createKnowledgeSource({ kind: "website", title, uri });
       onDone();
     } catch (e: any) {
       setError(e.message || "Couldn't add source");
@@ -343,7 +359,7 @@ function AddKnowledge({
   );
 }
 
-function CreateAgent({
+function CreateAgentStep({
   onDone,
   onSkip,
 }: {
@@ -362,14 +378,11 @@ function CreateAgent({
     setBusy(true);
     setError(null);
     try {
-      await api("/v1/agents", {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          provider: "elevenlabs",
-          persona: { direction, objective, tone: "warm and professional" },
-          consent_required: direction === "outbound",
-        }),
+      await createAgent({
+        name,
+        persona: { direction, objective, tone: "warm and professional" },
+        consent_required: direction === "outbound",
+        provider: "elevenlabs",
       });
       onDone();
     } catch (e: any) {
@@ -441,6 +454,32 @@ function CreateAgent({
         </Button>
         <Button variant="ghost" onClick={onSkip}>
           Skip
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function GetNumber({
+  onDone,
+  onSkip,
+}: {
+  onDone: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-text-muted">
+        Phone numbers are provisioned through Twilio once your account is
+        connected. You can bring your own (BYO) number or get a new one from Aurora.
+      </p>
+      <p className="text-sm text-text-muted">
+        This step requires your Twilio credentials to be configured in Settings.
+        You can skip for now and come back later.
+      </p>
+      <div className="flex gap-2">
+        <Button variant="ghost" onClick={onSkip}>
+          Skip for now
         </Button>
       </div>
     </div>

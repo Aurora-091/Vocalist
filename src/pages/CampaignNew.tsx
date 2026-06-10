@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { api } from "../lib/api";
+import { listAgents, createCampaign } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 
@@ -12,22 +12,18 @@ export default function CampaignNew() {
   const [agentId, setAgentId] = useState("");
   const [concurrency, setConcurrency] = useState(5);
   const [maxRetries, setMaxRetries] = useState(2);
-  const [callingTz, setCallingTz] = useState("America/New_York");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      try {
-        const r = await api<{ agents: any[] }>("/v1/agents");
-        const eligible = (r.agents || []).filter(
-          (a) => a.persona?.direction !== "inbound"
-        );
-        setAgents(eligible);
-        if (eligible[0]) setAgentId(eligible[0].id);
-      } catch {
-        setAgents([]);
-      }
+      const all = await listAgents();
+      const eligible = all.filter(
+        (a: any) => a.persona?.direction !== "inbound"
+      );
+      setAgents(eligible.length > 0 ? eligible : all);
+      if (eligible[0]) setAgentId(eligible[0].id);
+      else if (all[0]) setAgentId(all[0].id);
     })();
   }, []);
 
@@ -36,17 +32,13 @@ export default function CampaignNew() {
     setErr(null);
     setSubmitting(true);
     try {
-      const r = await api<{ campaign: any }>("/v1/campaigns", {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          agent_id: agentId,
-          concurrency,
-          max_retries: maxRetries,
-          calling_tz: callingTz,
-        }),
+      const campaign = await createCampaign({
+        name,
+        agent_id: agentId,
+        concurrency,
+        max_retries: maxRetries,
       });
-      navigate(`/campaigns/${r.campaign.id}`);
+      navigate(`/campaigns/${campaign.id}`);
     } catch (e: any) {
       setErr(e.message || "Couldn't create campaign.");
     } finally {
@@ -78,8 +70,7 @@ export default function CampaignNew() {
         <CardBody>
           {agents.length === 0 ? (
             <div className="text-sm text-text-muted">
-              You need an outbound or both-direction agent before creating a
-              campaign.{" "}
+              You need an agent before creating a campaign.{" "}
               <Link to="/agents" className="text-primary hover:text-primary-700">
                 Create one
               </Link>
@@ -102,7 +93,7 @@ export default function CampaignNew() {
                   onChange={(e) => setAgentId(e.target.value)}
                   className="w-full h-10 px-3 rounded-md border border-border bg-surface"
                 >
-                  {agents.map((a) => (
+                  {agents.map((a: any) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
                     </option>
@@ -131,13 +122,6 @@ export default function CampaignNew() {
                   />
                 </Field>
               </div>
-              <Field label="Calling timezone">
-                <input
-                  value={callingTz}
-                  onChange={(e) => setCallingTz(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface"
-                />
-              </Field>
               {err && <div className="text-sm text-danger">{err}</div>}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
