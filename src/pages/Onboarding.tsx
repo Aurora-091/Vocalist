@@ -366,7 +366,7 @@ function CreateAgent({
         method: "POST",
         body: JSON.stringify({
           name,
-          provider: "vapi",
+          provider: "elevenlabs",
           persona: { direction, objective, tone: "warm and professional" },
           consent_required: direction === "outbound",
         }),
@@ -425,7 +425,7 @@ function CreateAgent({
       </div>
       <div>
         <label className="block text-xs font-medium text-text-muted mb-1">
-          Objective
+          Context (Objective)
         </label>
         <textarea
           value={objective}

@@ -14,6 +14,7 @@ type Agent = {
   inbound_number?: string;
   provider: string;
   consent_required: boolean;
+  sync_status?: "pending" | "synced" | "failed";
   created_at: string;
 };
 
@@ -144,6 +145,9 @@ export default function AgentsList() {
               <div className="mt-4 flex items-center gap-2">
                 {a.consent_required && <Badge tone="success" dot>consent on</Badge>}
                 {a.inbound_number && <Badge tone="info">{a.inbound_number}</Badge>}
+                {a.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
+                {a.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
+                {a.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
               </div>
             </Link>
           ))}

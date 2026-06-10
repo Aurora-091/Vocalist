@@ -186,6 +186,13 @@ router.post(
       .maybeSingle();
     if (error) throw error;
 
+    if (req.body.agent_id && row) {
+      const agentService = require("../agents/agent.service");
+      await agentService.assignNumber(req.supabase, req.auth.orgId, req.body.agent_id, row.id).catch(err => {
+        logger.error({ err: err.message }, "Failed to auto-assign phone number to provider agent");
+      });
+    }
+
     await req.supabase
       .from("onboarding_state")
       .update({ steps: { get_number: true }, updated_at: new Date().toISOString() })
@@ -257,6 +264,13 @@ router.post(
       .select("*")
       .maybeSingle();
     if (error) throw error;
+
+    if (req.body.agent_id && row) {
+      const agentService = require("../agents/agent.service");
+      await agentService.assignNumber(req.supabase, req.auth.orgId, req.body.agent_id, row.id).catch(err => {
+        logger.error({ err: err.message }, "Failed to auto-assign BYO phone number to provider agent");
+      });
+    }
 
     await req.supabase
       .from("onboarding_state")

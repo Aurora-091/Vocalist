@@ -3,13 +3,14 @@ const Stripe = require("stripe");
 const env = require("../../config/env");
 const logger = require("../../config/logger");
 const asyncHandler = require("../../utils/asyncHandler");
-const { verifyVapiSignature, verifyTwilioSignature } = require("../../utils/signature");
+const { verifyVapiSignature, verifyTwilioSignature, verifyHmacSha256 } = require("../../utils/signature");
 const { logWebhookEvent, markProcessed } = require("./webhook.service");
 const { webhookLimiter } = require("../../middleware/rate-limit.middleware");
 
 const vapiHandler = require("./handlers/vapi.handler");
 const stripeHandler = require("./handlers/stripe.handler");
 const twilioHandler = require("./handlers/twilio.handler");
+const elevenlabsHandler = require("./handlers/elevenlabs.handler");
 
 const router = express.Router();
 router.use(webhookLimiter);
@@ -53,6 +54,50 @@ router.post(
       res.json({ received: true, ...result });
     } catch (err) {
       logger.error({ err: err.message }, "Vapi handler failed");
+      res.status(500).json({ error: { code: "handler_failed" } });
+    }
+  })
+);
+
+router.post(
+  "/elevenlabs",
+  express.raw({ type: "application/json" }),
+  asyncHandler(async (req, res) => {
+    const raw = req.body;
+    const rawString = raw instanceof Buffer ? raw.toString("utf8") : JSON.stringify(raw || {});
+    const sigHeader = req.headers["elevenlabs-signature"] || req.headers["x-signature"];
+    const webhookSecret = process.env.ELEVENLABS_WEBHOOK_SECRET;
+
+    const signatureOk = verifyHmacSha256(webhookSecret, rawString, sigHeader);
+    if (webhookSecret && !signatureOk && env.NODE_ENV === "production") {
+      logger.warn("Invalid ElevenLabs signature");
+      return res.status(401).json({ error: { code: "invalid_signature" } });
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(rawString);
+    } catch {
+      return res.status(400).json({ error: { code: "invalid_json" } });
+    }
+
+    const data = payload.data || payload;
+    const externalId = payload.event_id || data?.conversation_id || `elevenlabs-${Date.now()}-${Math.random()}`;
+
+    const logged = await logWebhookEvent({
+      source: "elevenlabs",
+      externalId,
+      signatureOk: webhookSecret ? signatureOk : true,
+      payload,
+    });
+    if (logged.duplicate) return res.json({ duplicate: true });
+
+    try {
+      const result = await elevenlabsHandler.handle(payload);
+      await markProcessed(logged);
+      res.json({ received: true, ...result });
+    } catch (err) {
+      logger.error({ err: err.message }, "ElevenLabs handler failed");
       res.status(500).json({ error: { code: "handler_failed" } });
     }
   })

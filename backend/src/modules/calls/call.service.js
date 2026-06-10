@@ -1,21 +1,6 @@
-const VapiProvider = require("../../services/providers/vapi.provider");
-const RetellProvider = require("../../services/providers/retell.provider");
-const PipecatProvider = require("../../services/providers/pipecat.provider");
+const { buildVoiceProvider } = require("../../providers/voice/factory");
 
 class CallService {
-  getProviderInstance(providerName, orgId) {
-    switch (providerName) {
-      case "vapi":
-        return new VapiProvider({ orgId });
-      case "retell":
-        return new RetellProvider({ orgId });
-      case "pipecat":
-        return new PipecatProvider({ orgId });
-      default:
-        return new VapiProvider({ orgId });
-    }
-  }
-
   /**
    * Starts an outbound call utilizing the agent's voice provider.
    */
@@ -32,7 +17,14 @@ class CallService {
     if (!agent.provider_ref) throw new Error("Agent missing provider_ref, cannot place call");
 
     // 2. Setup Provider
-    const providerInstance = this.getProviderInstance(agent.provider, orgId);
+    const { data: intRow } = await supabase
+      .from("integrations")
+      .select("config")
+      .eq("org_id", orgId)
+      .eq("type", "twilio")
+      .maybeSingle();
+    const integrationConfig = intRow?.config || {};
+    const providerInstance = buildVoiceProvider({ agent, integrationConfig });
 
     // 3. Initiate Call
     const metadata = {
@@ -41,7 +33,7 @@ class CallService {
       campaign_id: campaignId
     };
 
-    const callResult = await providerInstance.startOutboundCall({
+    const callResult = await providerInstance.startCall({
       toE164,
       fromE164: agent.inbound_number, // Outbound caller ID
       leaseToken,

@@ -20,14 +20,11 @@
  * See backend/src/providers/voice/README.md for the full architecture.
  */
 
-const VapiProvider = require("./vapi.provider");
-const RetellProvider = require("./retell.provider");
+const ElevenLabsProvider = require("./elevenlabs.provider");
 const MockProvider = require("./mock.provider");
 
 const PROVIDERS = {
-  // ↓ PR #9 will remove these two and add 'elevenlabs' instead.
-  vapi: VapiProvider,
-  retell: RetellProvider,
+  elevenlabs: ElevenLabsProvider,
   // Aliases / placeholders kept so agent.provider='pipecat' (a v0 enum
   // value) does not crash; routes to mock until Phase 4.
   pipecat: MockProvider,
@@ -39,7 +36,7 @@ function buildVoiceProvider({ agent, integrationConfig = {}, force } = {}) {
     force ||
     (process.env.VOICE_PROVIDER_FORCE_MOCK === "1" ? "mock" : agent?.provider) ||
     process.env.VOICE_PROVIDER ||
-    "vapi";
+    "elevenlabs";
 
   const Cls = PROVIDERS[name];
   if (!Cls) {

@@ -15,7 +15,7 @@ const createSchema = z.object({
   persona: z.record(z.string(), z.any()).optional(),
   voice_id: z.string().max(120).optional(),
   inbound_number: z.string().max(40).optional(),
-  provider: z.enum(["vapi", "retell", "pipecat"]).default("vapi"),
+  provider: z.enum(["vapi", "retell", "pipecat", "elevenlabs"]).default("elevenlabs"),
   languages: z.array(z.string()).optional(),
   business_hours: z.record(z.string(), z.any()).optional(),
   timezone: z.string().max(80).optional(),

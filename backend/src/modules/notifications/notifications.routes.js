@@ -3,11 +3,14 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { requireAuth, requireOrg } = require("../../middleware/auth.middleware");
 
 const router = express.Router();
-router.use(requireAuth, requireOrg);
+router.use(requireAuth);
 
 router.get(
   "/",
   asyncHandler(async (req, res) => {
+    if (!req.auth?.orgId) {
+      return res.json({ notifications: [] });
+    }
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
     const { data, error } = await req.supabase
       .from("notifications")
@@ -23,6 +26,9 @@ router.get(
 router.post(
   "/:id/read",
   asyncHandler(async (req, res) => {
+    if (!req.auth?.orgId) {
+      return res.json({ ok: true });
+    }
     const { error } = await req.supabase
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
@@ -36,6 +42,9 @@ router.post(
 router.post(
   "/read-all",
   asyncHandler(async (req, res) => {
+    if (!req.auth?.orgId) {
+      return res.json({ ok: true });
+    }
     const { error } = await req.supabase
       .from("notifications")
       .update({ read_at: new Date().toISOString() })

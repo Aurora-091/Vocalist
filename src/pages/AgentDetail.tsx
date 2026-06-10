@@ -18,6 +18,11 @@ type Agent = {
   timezone: string | null;
   transfer_number: string | null;
   business_hours: any;
+  provider_ref?: string | null;
+  provider_agent_id?: string | null;
+  voice_id?: string | null;
+  conversation_config_id?: string | null;
+  sync_status?: "pending" | "synced" | "failed" | null;
 };
 
 export default function AgentDetail() {
@@ -26,6 +31,7 @@ export default function AgentDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [knowledge, setKnowledge] = useState<any[]>([]);
 
   const [name, setName] = useState("");
   const [objective, setObjective] = useState("");
@@ -51,6 +57,10 @@ export default function AgentDetail() {
       setTransferNumber(a.transfer_number || "");
       setTimezone(a.timezone || "America/New_York");
       setLanguagesText((a.languages || ["en"]).join(", "));
+
+      // Load linked knowledge sources
+      const kr = await api<{ subscriptions: any[] }>(`/v1/knowledge/agents/${id}`);
+      setKnowledge(kr.subscriptions || []);
     } finally {
       setLoading(false);
     }
@@ -134,6 +144,9 @@ export default function AgentDetail() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {agent.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
+            {agent.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
+            {agent.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
             {agent.consent_required && (
               <Badge tone="success" dot>
                 consent locked on
@@ -164,7 +177,7 @@ export default function AgentDetail() {
                 className="w-full h-10 px-3 rounded-md border border-border bg-surface"
               />
             </Field>
-            <Field label="Objective" full>
+            <Field label="Context (Objective)" full>
               <textarea
                 value={objective}
                 onChange={(e) => setObjective(e.target.value)}
@@ -213,6 +226,60 @@ export default function AgentDetail() {
             {savedMsg && (
               <span className="text-sm text-text-muted">{savedMsg}</span>
             )}
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="font-medium">Deployment & Sync (ElevenLabs CAI)</div>
+        </CardHeader>
+        <CardBody>
+          <div className="grid sm:grid-cols-2 gap-4 text-sm">
+            <Field label="Agent Provider ID (provider_ref)">
+              <div className="h-10 px-3 rounded-md border border-border bg-surface flex items-center font-mono text-xs select-all">
+                {agent.provider_ref || "None"}
+              </div>
+            </Field>
+            <Field label="Voice ID">
+              <div className="h-10 px-3 rounded-md border border-border bg-surface flex items-center font-mono text-xs select-all">
+                {agent.voice_id || "None (Default Rachel)"}
+              </div>
+            </Field>
+            <Field label="Conversation Config ID">
+              <div className="h-10 px-3 rounded-md border border-border bg-surface flex items-center font-mono text-xs select-all">
+                {agent.conversation_config_id || "None"}
+              </div>
+            </Field>
+            <Field label="Sync Status">
+              <div className="h-10 px-3 rounded-md border border-border bg-surface flex items-center gap-2">
+                {agent.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
+                {agent.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
+                {agent.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
+                {!agent.sync_status && <Badge tone="neutral">Not Synced</Badge>}
+              </div>
+            </Field>
+            <Field label="Linked Knowledge Sources" full>
+              <div className="border border-border rounded-md divide-y divide-border bg-surface">
+                {knowledge.length === 0 ? (
+                  <div className="p-3 text-xs text-text-muted">
+                    No knowledge sources linked to this agent. Go to Knowledge Base page to attach sources.
+                  </div>
+                ) : (
+                  knowledge.map((k: any) => (
+                    <div key={k.source_id} className="p-3 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-medium">{k.knowledge_sources?.title}</div>
+                        <div className="text-text-muted capitalize">{k.knowledge_sources?.kind}</div>
+                      </div>
+                      <Badge tone={k.knowledge_sources?.status === "ready" ? "success" : "warning"}>
+                        {k.knowledge_sources?.status || "unknown"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Field>
           </div>
         </CardBody>
       </Card>

@@ -11,12 +11,24 @@ class PersonaService {
    */
   generateSystemPrompt(persona = {}) {
     const {
-      identity = "You are a helpful AI assistant.",
       tone = "Professional and concise.",
-      goals = "Assist the user with their queries.",
       guardrails = "Do not provide harmful or dangerous information.",
-      opening_message = "Hello, how can I help you today?"
+      opening_message = "Hello, how can I help you today?",
+      business_name = ""
     } = persona;
+
+    // Use persona.context, persona.objective, or persona.goals as the main goals/context
+    const goals = persona.context || persona.objective || persona.goals || "Assist the user with their queries.";
+
+    // Use persona.identity, or build one using business_name
+    let identity = persona.identity;
+    if (!identity) {
+      if (business_name) {
+        identity = `You are a helpful voice AI assistant representing ${business_name}.`;
+      } else {
+        identity = "You are a helpful AI assistant.";
+      }
+    }
 
     return `
 You are a voice AI assistant. You must adhere to the following persona strictly.
