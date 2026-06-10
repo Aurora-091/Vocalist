@@ -491,6 +491,97 @@ export async function listVoices(opts?: { gender?: string; language?: string; se
   return data || [];
 }
 
+// ───── Integration Catalog ─────
+
+export async function listIntegrationCatalog(opts?: { category?: string; vertical?: string }) {
+  let query = supabase
+    .from("integration_catalog")
+    .select("*")
+    .eq("enabled", true)
+    .order("sort_order", { ascending: true });
+  if (opts?.category) {
+    query = query.eq("category", opts.category);
+  }
+  if (opts?.vertical) {
+    query = query.contains("verticals", [opts.vertical]);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getIntegrationCatalogEntry(providerKey: string) {
+  const { data, error } = await supabase
+    .from("integration_catalog")
+    .select("*")
+    .eq("provider_key", providerKey)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// ───── Integration Bridge Config ─────
+
+export async function listBridgeConfigs() {
+  const { data, error } = await supabase
+    .from("integration_bridge_config")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+export async function getBridgeConfig(providerKey: string) {
+  const orgId = await getOrgId();
+  if (!orgId) return null;
+  const { data, error } = await supabase
+    .from("integration_bridge_config")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("provider_key", providerKey)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+export async function upsertBridgeConfig(providerKey: string, fields: {
+  status?: string;
+  config?: Record<string, any>;
+  secret_ref?: string;
+  scopes_granted?: string[];
+  error_message?: string | null;
+}) {
+  const orgId = await getOrgId();
+  if (!orgId) throw new Error("Not authenticated");
+  const { data, error } = await supabase
+    .from("integration_bridge_config")
+    .upsert(
+      {
+        org_id: orgId,
+        provider_key: providerKey,
+        ...fields,
+        connected_at: fields.status === "active" ? new Date().toISOString() : undefined,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "org_id,provider_key" }
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function disconnectIntegration(providerKey: string) {
+  const orgId = await getOrgId();
+  if (!orgId) throw new Error("Not authenticated");
+  const { error } = await supabase
+    .from("integration_bridge_config")
+    .update({ status: "disconnected", updated_at: new Date().toISOString() })
+    .eq("org_id", orgId)
+    .eq("provider_key", providerKey);
+  if (error) throw error;
+}
+
 // ───── Shopify Connections ─────
 
 export async function getShopifyConnection() {

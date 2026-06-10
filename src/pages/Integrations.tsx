@@ -1,259 +1,301 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ShoppingBag,
-  Stethoscope,
+  MessageCircle,
   Calendar,
-  Phone,
-  BookOpen,
-  Plus,
+  Table,
+  CircleDot,
+  GitBranch,
+  Sparkles,
+  Database,
+  Cloud,
+  Stethoscope,
+  HeartPulse,
+  Activity,
+  CalendarCheck,
+  Search,
   Check,
+  Plug,
+  ExternalLink,
+  Filter,
 } from "lucide-react";
 import {
-  listIntegrations,
-  listKnowledgeSources,
-  listPhoneNumbers,
-  createKnowledgeSource,
-  getShopifyConnection,
+  listIntegrationCatalog,
+  listBridgeConfigs,
+  getOrg,
 } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
-import { Card, CardBody } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
 import { Skeleton } from "../components/legacy-ui/States";
 
-type Integration = {
+type CatalogEntry = {
   id: string;
-  provider: string;
-  status: string;
-  created_at: string;
+  provider_key: string;
+  name: string;
+  description: string;
+  icon_key: string;
+  category: string;
+  auth_type: string;
+  verticals: string[];
+  tier_required: string;
+  sort_order: number;
 };
 
-const TILES = [
-  { provider: "shopify", label: "Shopify", icon: ShoppingBag, copy: "Sync customers and abandoned carts." },
-  { provider: "hubspot", label: "HubSpot", icon: Stethoscope, copy: "Two-way contact sync and call notes." },
-  { provider: "calcom", label: "Cal.com", icon: Calendar, copy: "Book directly to your team's calendar." },
-  { provider: "google", label: "Google Calendar", icon: Calendar, copy: "Read availability and create events." },
+type BridgeConfig = {
+  id: string;
+  provider_key: string;
+  status: string;
+  connected_at: string | null;
+};
+
+const ICON_MAP: Record<string, React.ElementType> = {
+  "shopping-bag": ShoppingBag,
+  "message-circle": MessageCircle,
+  calendar: Calendar,
+  table: Table,
+  "circle-dot": CircleDot,
+  "git-branch": GitBranch,
+  sparkles: Sparkles,
+  database: Database,
+  cloud: Cloud,
+  stethoscope: Stethoscope,
+  "heart-pulse": HeartPulse,
+  activity: Activity,
+  "calendar-check": CalendarCheck,
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  ecommerce: "E-Commerce",
+  messaging: "Messaging",
+  calendar: "Calendar & Scheduling",
+  spreadsheet: "Data Export",
+  crm: "CRM",
+  ehr: "Healthcare / EHR",
+  automation: "Automation",
+};
+
+const VERTICAL_LABELS: Record<string, string> = {
+  ecommerce: "E-Commerce",
+  retail: "Retail",
+  clinic: "Healthcare",
+  services: "Services",
+};
+
+const TABS = [
+  { key: "recommended", label: "Recommended" },
+  { key: "all", label: "All integrations" },
+  { key: "connected", label: "Connected" },
 ];
 
 export default function Integrations() {
-  const [installed, setInstalled] = useState<Integration[] | null>(null);
-  const [sources, setSources] = useState<any[] | null>(null);
-  const [numbers, setNumbers] = useState<any[] | null>(null);
-  const [shopifyConn, setShopifyConn] = useState<any>(null);
-
-  async function load() {
-    const [i, k, n, sc] = await Promise.all([
-      listIntegrations(),
-      listKnowledgeSources(),
-      listPhoneNumbers(),
-      getShopifyConnection(),
-    ]);
-    setInstalled(i);
-    setSources(k);
-    setNumbers(n);
-    setShopifyConn(sc);
-  }
+  const navigate = useNavigate();
+  const [catalog, setCatalog] = useState<CatalogEntry[] | null>(null);
+  const [connections, setConnections] = useState<BridgeConfig[]>([]);
+  const [orgVertical, setOrgVertical] = useState<string | null>(null);
+  const [tab, setTab] = useState("recommended");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   useEffect(() => {
-    load();
+    (async () => {
+      const [cat, conns, org] = await Promise.all([
+        listIntegrationCatalog(),
+        listBridgeConfigs(),
+        getOrg(),
+      ]);
+      setCatalog(cat);
+      setConnections(conns);
+      const vKey = org?.vertical_config_id ? await getVerticalKey(org.vertical_config_id) : null;
+      setOrgVertical(vKey);
+    })();
   }, []);
 
-  const installedSet = new Set((installed || []).map((i) => i.provider));
-  const shopifyActive = shopifyConn?.status === "active" || installedSet.has("shopify");
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
-        <p className="text-sm text-text-muted mt-1">
-          Connect tools, sources, and phone numbers.
-        </p>
-      </div>
-
-      <section>
-        <h2 className="text-sm font-medium text-text-muted uppercase tracking-widest mb-3">
-          Tools
-        </h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {TILES.map((t) => {
-            const isOn = t.provider === "shopify" ? shopifyActive : installedSet.has(t.provider);
-            const linkTo = t.provider === "shopify" ? "/integrations/shopify" : undefined;
-            const card = (
-              <div
-                className="bg-surface border border-border rounded-md p-5 shadow-card"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                    <t.icon className="w-4 h-4" />
-                  </span>
-                  {isOn && (
-                    <Badge tone="success" dot>
-                      connected
-                    </Badge>
-                  )}
-                </div>
-                <div className="mt-4 font-medium">{t.label}</div>
-                <p className="mt-1 text-sm text-text-muted">{t.copy}</p>
-                <div className="mt-4">
-                  <Button variant={isOn ? "secondary" : "primary"} size="sm">
-                    {isOn ? "Manage" : "Connect"}
-                  </Button>
-                </div>
-              </div>
-            );
-            if (linkTo) {
-              return <Link key={t.provider} to={linkTo}>{card}</Link>;
-            }
-            return <div key={t.provider}>{card}</div>;
-          })}
-        </div>
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-text-muted uppercase tracking-widest">
-            Phone numbers
-          </h2>
-        </div>
-        <Card>
-          <CardBody>
-            {numbers === null ? (
-              <Skeleton className="h-16" />
-            ) : numbers.length === 0 ? (
-              <div className="text-sm text-text-muted">
-                No numbers yet. Numbers are provisioned through the Twilio integration
-                once your account is connected.
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {numbers.map((n) => (
-                  <div
-                    key={n.id}
-                    className="py-3 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-4 h-4 text-text-muted" />
-                      <div>
-                        <div className="font-mono text-sm">{n.e164}</div>
-                        <div className="text-xs text-text-muted">
-                          {n.byo ? "BYO" : "Aurora-managed"} · {n.status || "active"}
-                        </div>
-                      </div>
-                    </div>
-                    {n.agent_id ? (
-                      <Badge tone="info">bound</Badge>
-                    ) : (
-                      <Badge tone="neutral">unassigned</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-text-muted uppercase tracking-widest">
-            Knowledge sources
-          </h2>
-          <AddKnowledge onAdded={load} />
-        </div>
-        <Card>
-          <CardBody>
-            {sources === null ? (
-              <Skeleton className="h-16" />
-            ) : sources.length === 0 ? (
-              <div className="text-sm text-text-muted">
-                Add a website or document. Aurora will use it for grounded answers.
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {sources.map((s) => (
-                  <div
-                    key={s.id}
-                    className="py-3 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <BookOpen className="w-4 h-4 text-text-muted" />
-                      <div>
-                        <div className="text-sm font-medium">{s.title || s.uri}</div>
-                        <div className="text-xs text-text-muted">
-                          {s.kind} · {s.status}
-                        </div>
-                      </div>
-                    </div>
-                    <Badge
-                      tone={
-                        s.status === "ready"
-                          ? "success"
-                          : s.status === "failed"
-                          ? "danger"
-                          : "info"
-                      }
-                    >
-                      {s.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      </section>
-    </div>
-  );
-}
-
-function AddKnowledge({ onAdded }: { onAdded: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [uri, setUri] = useState("");
-  const [title, setTitle] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function add() {
-    setBusy(true);
+  async function getVerticalKey(verticalId: string) {
     try {
-      await createKnowledgeSource({ kind: "website", uri, title });
-      onAdded();
-      setOpen(false);
-      setUri("");
-      setTitle("");
-    } finally {
-      setBusy(false);
+      const { supabase } = await import("../lib/supabase");
+      const { data } = await supabase
+        .from("vertical_configs")
+        .select("key")
+        .eq("id", verticalId)
+        .single();
+      return data?.key || null;
+    } catch {
+      return null;
     }
   }
 
-  if (!open) {
-    return (
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-        <Plus className="w-4 h-4 mr-2" />
-        Add source
-      </Button>
-    );
+  const connectedSet = new Map(
+    connections
+      .filter((c) => c.status === "active")
+      .map((c) => [c.provider_key, c])
+  );
+
+  function getFilteredCatalog(): CatalogEntry[] {
+    if (!catalog) return [];
+    let items = [...catalog];
+
+    if (tab === "connected") {
+      items = items.filter((c) => connectedSet.has(c.provider_key));
+    } else if (tab === "recommended" && orgVertical) {
+      items = items.filter((c) => c.verticals.includes(orgVertical));
+    }
+
+    if (categoryFilter) {
+      items = items.filter((c) => c.category === categoryFilter);
+    }
+
+    if (search) {
+      const q = search.toLowerCase();
+      items = items.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          c.category.toLowerCase().includes(q)
+      );
+    }
+
+    return items;
   }
+
+  const filteredCatalog = getFilteredCatalog();
+  const categories = catalog ? [...new Set(catalog.map((c) => c.category))] : [];
+
+  function getProviderRoute(providerKey: string): string {
+    if (providerKey === "shopify") return "/integrations/shopify";
+    return `/integrations/connect/${providerKey}`;
+  }
+
   return (
-    <div className="flex items-center gap-2">
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="FAQ"
-        className="h-9 px-3 rounded-md border border-border bg-surface text-sm w-32"
-      />
-      <input
-        value={uri}
-        onChange={(e) => setUri(e.target.value)}
-        placeholder="https://example.com/faq"
-        className="h-9 px-3 rounded-md border border-border bg-surface text-sm w-72"
-      />
-      <Button size="sm" onClick={add} disabled={busy || !uri || !title}>
-        <Check className="w-4 h-4 mr-1" />
-        Save
-      </Button>
-      <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
-        Cancel
-      </Button>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
+          <p className="text-sm text-text-muted mt-1">
+            Connect your tools so agents can access live data during calls.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge tone="info">{connections.filter((c) => c.status === "active").length} connected</Badge>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-6 border-b border-border">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+              tab === t.key
+                ? "border-primary text-primary"
+                : "border-transparent text-text-muted hover:text-text"
+            }`}
+          >
+            {t.label}
+            {t.key === "connected" && connections.filter((c) => c.status === "active").length > 0 && (
+              <span className="ml-1.5 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                {connections.filter((c) => c.status === "active").length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search integrations..."
+            className="w-full h-10 pl-9 pr-3 rounded-md border border-border bg-surface text-sm"
+          />
+        </div>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="h-10 px-3 rounded-md border border-border bg-surface text-sm"
+        >
+          <option value="">All categories</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>{CATEGORY_LABELS[cat] || cat}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Grid */}
+      {catalog === null ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-44" />)}
+        </div>
+      ) : filteredCatalog.length === 0 ? (
+        <div className="text-center py-16">
+          <Plug className="w-8 h-8 text-text-muted mx-auto mb-3" />
+          <div className="text-sm text-text-muted">
+            {tab === "connected"
+              ? "No integrations connected yet."
+              : "No integrations match your filters."}
+          </div>
+          {tab === "connected" && (
+            <Button variant="secondary" size="sm" className="mt-3" onClick={() => setTab("all")}>
+              Browse all integrations
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCatalog.map((entry) => {
+            const Icon = ICON_MAP[entry.icon_key] || Plug;
+            const isConnected = connectedSet.has(entry.provider_key);
+            const route = getProviderRoute(entry.provider_key);
+
+            return (
+              <Link
+                key={entry.id}
+                to={route}
+                className={`group bg-surface border rounded-md p-5 shadow-card transition-all hover:border-text/20 hover:shadow-md ${
+                  isConnected ? "border-success/30" : "border-border"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <span className="w-10 h-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {isConnected && (
+                      <Badge tone="success" dot>Active</Badge>
+                    )}
+                    {entry.tier_required !== "starter" && !isConnected && (
+                      <Badge tone="warning">{entry.tier_required}</Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="font-medium flex items-center gap-2">
+                    {entry.name}
+                    <ExternalLink className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="mt-1.5 text-sm text-text-muted leading-relaxed line-clamp-2">
+                    {entry.description}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-xs text-text-muted bg-surface-2 px-2 py-0.5 rounded">
+                    {CATEGORY_LABELS[entry.category] || entry.category}
+                  </span>
+                  <span className="text-xs text-text-muted">
+                    {entry.auth_type === "oauth2" ? "One-click" : "API key"}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

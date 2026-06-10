@@ -22,6 +22,8 @@ const Settings = lazy(() => import("./pages/Settings"));
 const SetupNumberPage = lazy(() => import("./pages/SetupNumber"));
 const VoiceLibrary = lazy(() => import("./pages/VoiceLibrary"));
 const ShopifyConnect = lazy(() => import("./pages/ShopifyConnect"));
+const IntegrationConnect = lazy(() => import("./pages/IntegrationConnect"));
+const OAuthCallback = lazy(() => import("./pages/auth/OAuthCallback"));
 
 function PageLoader() {
   return (
@@ -38,6 +40,7 @@ export default function App() {
         <Route path="/welcome" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/auth/callback/:provider" element={<OAuthCallback />} />
         <Route
           path="/onboarding"
           element={
@@ -65,6 +68,7 @@ export default function App() {
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/integrations/numbers" element={<SetupNumberPage />} />
           <Route path="/integrations/shopify" element={<ShopifyConnect />} />
+          <Route path="/integrations/connect/:provider" element={<IntegrationConnect />} />
           <Route path="/voices" element={<VoiceLibrary />} />
           <Route path="/outcomes" element={<Outcomes />} />
           <Route path="/billing" element={<Billing />} />
