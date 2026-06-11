@@ -3,12 +3,12 @@ import { ReactNode } from "react";
 type Tone = "success" | "warning" | "danger" | "info" | "neutral" | "primary";
 
 const tones: Record<Tone, string> = {
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  danger: "bg-danger/10 text-danger",
-  info: "bg-info/10 text-info",
-  neutral: "bg-surface-2 text-text-muted",
-  primary: "bg-primary/10 text-primary",
+  success: "bg-success/15 text-success",
+  warning: "bg-warning/15 text-warning",
+  danger:  "bg-danger/15 text-danger",
+  info:    "bg-info/15 text-info",
+  neutral: "bg-surface-2 text-text border border-border",
+  primary: "bg-primary/15 text-primary",
 };
 
 export function Badge({

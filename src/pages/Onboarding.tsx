@@ -239,7 +239,7 @@ function PickVertical({
               disabled={busy}
               className={`text-left p-5 rounded-md border transition-colors ${
                 selected === v.id
-                  ? "border-primary bg-primary/5"
+                  ? "border-text bg-surface-2 text-text"
                   : "border-border bg-surface hover:bg-surface-2"
               }`}
             >

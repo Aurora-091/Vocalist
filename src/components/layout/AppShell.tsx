@@ -75,7 +75,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive
-                  ? "bg-primary/10 text-primary font-medium"
+                  ? "bg-surface-2 text-text font-semibold border border-border"
                   : "text-text-muted hover:text-text hover:bg-surface-2"
               }`
             }

@@ -37,7 +37,7 @@ export default function Settings() {
             onClick={() => setTab(t)}
             className={`py-3 -mb-px border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
               tab === t
-                ? "border-primary text-primary"
+                ? "border-text text-text"
                 : "border-transparent text-text-muted hover:text-text"
             }`}
           >
@@ -182,8 +182,8 @@ function AppearancePanel() {
               onClick={() => saveTheme(key)}
               className={`flex flex-col items-center gap-2 p-4 rounded-md border transition-colors ${
                 theme === key
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border hover:border-primary/40 text-text-muted hover:text-text"
+                  ? "border-text bg-surface-2 text-text"
+                  : "border-border hover:border-text/30 text-text-muted hover:text-text"
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -321,7 +321,7 @@ function SecurityPanel() {
                     <div className="text-sm font-medium flex items-center gap-2">
                       {s.device_info || "Unknown device"}
                       {i === 0 && (
-                        <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">Current</span>
+                        <span className="text-xs bg-surface-2 text-text-muted border border-border px-1.5 py-0.5 rounded">Current</span>
                       )}
                     </div>
                     <div className="text-xs text-text-muted mt-0.5">

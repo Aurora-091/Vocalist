@@ -188,13 +188,13 @@ export default function Integrations() {
             onClick={() => setTab(t.key)}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
               tab === t.key
-                ? "border-primary text-primary"
+                ? "border-text text-text"
                 : "border-transparent text-text-muted hover:text-text"
             }`}
           >
             {t.label}
             {t.key === "connected" && connections.filter((c) => c.status === "active").length > 0 && (
-              <span className="ml-1.5 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+              <span className="ml-1.5 text-xs bg-surface-2 text-text-muted border border-border px-1.5 py-0.5 rounded-full">
                 {connections.filter((c) => c.status === "active").length}
               </span>
             )}

@@ -102,10 +102,10 @@ export default function Dashboard() {
       </div>
 
       {isEmpty && !steps && (
-        <Card className="border-primary/30 bg-primary/[0.03]">
+        <Card className="border-border bg-surface-2">
           <CardBody>
             <div className="flex items-start gap-4">
-              <span className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span className="w-9 h-9 rounded-md bg-surface border border-border text-text-muted flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />
               </span>
               <div className="flex-1">
