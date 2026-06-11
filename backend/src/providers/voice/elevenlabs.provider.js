@@ -43,6 +43,10 @@ class ElevenLabsProvider extends VoiceProvider {
       .eq("org_id", this.orgId)
       .maybeSingle();
 
+    if (!sub) {
+      logger.warn({ orgId: this.orgId }, "No Twilio subaccount found for org");
+    }
+
     let authToken = process.env.TWILIO_AUTH_TOKEN;
     if (sub && sub.auth_token_ref) {
       try {
@@ -51,10 +55,15 @@ class ElevenLabsProvider extends VoiceProvider {
           authToken = secret;
         }
       } catch (err) {
-        logger.error({ err: err.message }, "Failed to read Twilio auth token from vault");
+        logger.error({ err: err.message, orgId: this.orgId }, "Failed to read Twilio auth token from vault");
       }
     }
     const accountSid = sub?.subaccount_sid || process.env.TWILIO_ACCOUNT_SID;
+
+    if (!accountSid || !authToken) {
+      throw new Error("Twilio credentials unavailable - cannot proceed with telephony operation");
+    }
+
     return { accountSid, authToken };
   }
 
@@ -171,6 +180,10 @@ class ElevenLabsProvider extends VoiceProvider {
     const agentId = this.agent?.provider_ref;
     if (!agentId) throw new Error("agent.provider_ref (ElevenLabs agent_id) is required");
 
+    // Pre-flight: verify credentials before initiating the call
+    const credentials = await this._getTwilioCredentials();
+    logger.info({ orgId: this.orgId, agentId, toE164 }, "Starting ElevenLabs outbound call");
+
     const agentPhoneNumberId = await this._getOrImportPhoneNumberId(fromE164);
 
     const payload = {
@@ -181,6 +194,8 @@ class ElevenLabsProvider extends VoiceProvider {
         lease_token: leaseToken,
         call_id: metadata.call_id || metadata.target_id,
         org_id: this.orgId,
+        agent_id: agentId,
+        from_number: fromE164,
       },
     };
 

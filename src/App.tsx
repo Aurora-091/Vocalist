@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
-import { RequireAuth } from "./components/RequireAuth";
+import { RequireAuth, PublicOnly } from "./components/RequireAuth";
 import { AppShell } from "./components/layout/AppShell";
 
 const Landing = lazy(() => import("./pages/Landing"));
@@ -38,8 +38,8 @@ export default function App() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/welcome" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+        <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
         <Route path="/auth/callback/:provider" element={<OAuthCallback />} />
         <Route
           path="/onboarding"

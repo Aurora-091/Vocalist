@@ -31,13 +31,41 @@ const notificationRoutes = require("./modules/notifications/notifications.routes
 const webhooksOutRoutes = require("./modules/webhooks-out/webhooks-out.routes");
 const twilioRoutes = require("./modules/twilio/twilio.routes");
 
+function buildCorsOptions() {
+  const allowed = (process.env.CORS_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (env.NODE_ENV === "development") {
+    allowed.push("http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173");
+  }
+
+  return {
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowed.some((o) => origin === o || (o.startsWith("*.") && origin.endsWith(o.slice(1))))) {
+        return callback(null, true);
+      }
+      if (origin.match(/^https:\/\/.*\.vercel\.app$/)) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "X-Client-Info"],
+    maxAge: 86400,
+  };
+}
+
 function createApp() {
   const app = express();
 
   app.set("trust proxy", 1);
 
   app.use(helmet());
-  app.use(cors());
+  app.use(cors(buildCorsOptions()));
 
   app.use(
     morgan(env.NODE_ENV === "production" ? "combined" : "dev", {

@@ -43,18 +43,48 @@ async function handleTwilioStream(ws, req) {
 
     if (useRealElevenLabs) {
       logger.info({ agentRef }, "Initializing ElevenLabs Conversational AI WebSocket connection");
-      elevenLabsSocket = new WebSocket(
-        `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentRef}`,
-        {
-          headers: {
-            "xi-api-key": elApiKey
-          }
-        }
-      );
 
-      elevenLabsSocket.on("open", () => {
-        logger.info({ callId }, "ElevenLabs WebSocket connection opened");
-      });
+      try {
+        elevenLabsSocket = new WebSocket(
+          `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentRef}`,
+          {
+            headers: {
+              "xi-api-key": elApiKey
+            }
+          }
+        );
+
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("ElevenLabs WebSocket connection timed out after 10s"));
+          }, 10000);
+
+          elevenLabsSocket.on("open", () => {
+            clearTimeout(timeout);
+            logger.info({ callId }, "ElevenLabs WebSocket connection opened");
+            resolve();
+          });
+          elevenLabsSocket.on("error", (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+      } catch (err) {
+        logger.error({ err: err.message, callId, agentRef }, "ElevenLabs WebSocket connection FAILED - call cannot proceed");
+        elevenLabsSocket = null;
+
+        // Write to dead letter queue for investigation
+        await admin.from("webhook_dlq").insert({
+          org_id: callRow.org_id,
+          source: "elevenlabs_stream",
+          event_type: "connection_failed",
+          payload: { call_id: callId, agent_ref: agentRef, error: err.message },
+          error_message: err.message,
+          next_retry_at: null,
+        }).catch(() => {});
+
+        throw new Error(`Voice provider unavailable: ${err.message}`);
+      }
 
       elevenLabsSocket.on("message", (data) => {
         if (isClosed || ws.readyState !== WebSocket.OPEN) return;

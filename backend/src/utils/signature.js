@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const logger = require("../config/logger");
 
 function timingSafeEqual(a, b) {
   if (typeof a !== "string" || typeof b !== "string") return false;
@@ -19,12 +20,18 @@ function verifyHmacSha256(secret, payload, providedSignature) {
 }
 
 function verifyVapiSignature(secret, payload, header) {
-  if (!secret) return process.env.NODE_ENV !== "production";
+  if (!secret) {
+    logger.warn("VAPI_WEBHOOK_SECRET not configured - rejecting webhook");
+    return false;
+  }
   return verifyHmacSha256(secret, payload, header || "");
 }
 
 function verifyTwilioSignature(authToken, url, params, providedSignature) {
-  if (!authToken) return process.env.NODE_ENV !== "production";
+  if (!authToken) {
+    logger.warn("TWILIO_AUTH_TOKEN not configured - rejecting webhook");
+    return false;
+  }
   const sortedKeys = Object.keys(params || {}).sort();
   const data = url + sortedKeys.map((k) => `${k}${params[k]}`).join("");
   const expected = crypto.createHmac("sha1", authToken).update(data).digest("base64");

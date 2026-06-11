@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import App from "./App";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -9,10 +10,12 @@ import "./index.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <TooltipProvider delayDuration={150}>
-        <App />
-        <Toaster richColors closeButton position="top-right" />
-      </TooltipProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" storageKey="aurora-theme">
+        <TooltipProvider delayDuration={150}>
+          <App />
+          <Toaster richColors closeButton position="top-right" />
+        </TooltipProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
