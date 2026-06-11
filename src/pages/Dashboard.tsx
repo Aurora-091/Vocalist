@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Check, Sparkles, Phone } from "lucide-react";
+import { Plus, Check, Sparkles, Phone, PhoneIncoming, PhoneOutgoing, Bot, Megaphone } from "lucide-react";
 import { getOverview, getUsageSummary, getOnboardingSteps } from "../lib/db";
 import { supabase } from "../lib/supabase";
 import { StatCard } from "../components/legacy-ui/StatCard";
@@ -179,6 +179,62 @@ export default function Dashboard() {
             />
           </>
         )}
+      </div>
+
+      {/* Inbound / Outbound quick-start */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Card className="hover:border-primary/30 transition-colors">
+          <CardBody>
+            <div className="flex items-start gap-4">
+              <span className="w-10 h-10 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <PhoneIncoming className="w-5 h-5" />
+              </span>
+              <div className="flex-1">
+                <div className="font-medium">Inbound Handling</div>
+                <p className="text-sm text-text-muted mt-1">
+                  Answer calls, qualify intent, route to the right person or handle autonomously.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link to="/agents">
+                    <Button size="sm" variant="secondary">
+                      <Bot className="w-3.5 h-3.5 mr-1.5" />
+                      Manage agents
+                    </Button>
+                  </Link>
+                  <Link to="/calls?filter=inbound">
+                    <Button size="sm" variant="ghost">View inbound calls</Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+        <Card className="hover:border-primary/30 transition-colors">
+          <CardBody>
+            <div className="flex items-start gap-4">
+              <span className="w-10 h-10 rounded-md bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+                <PhoneOutgoing className="w-5 h-5" />
+              </span>
+              <div className="flex-1">
+                <div className="font-medium">Outbound Campaigns</div>
+                <p className="text-sm text-text-muted mt-1">
+                  Appointment reminders, cart recovery, payment follow-ups at scale with consent enforcement.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link to="/campaigns/new">
+                    <Button size="sm" variant="secondary">
+                      <Megaphone className="w-3.5 h-3.5 mr-1.5" />
+                      New campaign
+                    </Button>
+                  </Link>
+                  <Link to="/calls?filter=outbound">
+                    <Button size="sm" variant="ghost">View outbound calls</Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

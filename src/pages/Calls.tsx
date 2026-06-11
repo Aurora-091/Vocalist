@@ -77,53 +77,88 @@ export default function Calls() {
           description="Place a test call from any agent to see it here."
         />
       ) : (
-        <div className="bg-surface border border-border rounded-md shadow-card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-2 text-text-muted">
-              <tr>
-                <Th>When</Th>
-                <Th>Direction</Th>
-                <Th>Status</Th>
-                <Th>Duration</Th>
-                <Th>Cost</Th>
-                <Th>Provider</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {calls.map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-t border-border hover:bg-surface-2 cursor-pointer"
-                  onClick={() => setSelected(c.id)}
-                >
-                  <Td>
-                    {c.started_at
-                      ? new Date(c.started_at).toLocaleString()
-                      : "—"}
-                  </Td>
-                  <Td>
-                    <span className="inline-flex items-center gap-1.5">
-                      <Phone className="w-3 h-3 text-text-muted" />
-                      {c.direction}
-                    </span>
-                  </Td>
-                  <Td>
-                    <Badge tone={STATUS_TONE[c.status] || "neutral"}>
-                      {c.status}
-                    </Badge>
-                  </Td>
-                  <Td className="font-mono">
-                    {c.duration_sec != null ? `${c.duration_sec}s` : "—"}
-                  </Td>
-                  <Td className="font-mono">
-                    {c.cost_usd != null ? `$${Number(c.cost_usd).toFixed(2)}` : "—"}
-                  </Td>
-                  <Td className="text-text-muted">{c.provider}</Td>
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-surface border border-border rounded-md shadow-card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-surface-2 text-text-muted">
+                <tr>
+                  <Th>When</Th>
+                  <Th>Direction</Th>
+                  <Th>Status</Th>
+                  <Th>Duration</Th>
+                  <Th>Cost</Th>
+                  <Th>Provider</Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {calls.map((c) => (
+                  <tr
+                    key={c.id}
+                    className="border-t border-border hover:bg-surface-2 cursor-pointer"
+                    onClick={() => setSelected(c.id)}
+                  >
+                    <Td>
+                      {c.started_at
+                        ? new Date(c.started_at).toLocaleString()
+                        : "—"}
+                    </Td>
+                    <Td>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 text-text-muted" />
+                        {c.direction}
+                      </span>
+                    </Td>
+                    <Td>
+                      <Badge tone={STATUS_TONE[c.status] || "neutral"}>
+                        {c.status}
+                      </Badge>
+                    </Td>
+                    <Td className="font-mono">
+                      {c.duration_sec != null ? `${c.duration_sec}s` : "—"}
+                    </Td>
+                    <Td className="font-mono">
+                      {c.cost_usd != null ? `$${Number(c.cost_usd).toFixed(2)}` : "—"}
+                    </Td>
+                    <Td className="text-text-muted">{c.provider}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-3">
+            {calls.map((c) => (
+              <div
+                key={c.id}
+                className="bg-surface border border-border rounded-md shadow-card p-4 active:bg-surface-2 cursor-pointer"
+                onClick={() => setSelected(c.id)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+                    <Phone className="w-3.5 h-3.5 text-text-muted" />
+                    {c.direction === "inbound" ? "Inbound" : "Outbound"}
+                  </span>
+                  <Badge tone={STATUS_TONE[c.status] || "neutral"}>
+                    {c.status}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs text-text-muted">
+                  <span>
+                    {c.started_at
+                      ? new Date(c.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                      : "—"}
+                  </span>
+                  <div className="flex items-center gap-3 font-mono">
+                    {c.duration_sec != null && <span>{c.duration_sec}s</span>}
+                    {c.cost_usd != null && <span>${Number(c.cost_usd).toFixed(2)}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {selected && <CallDrawer id={selected} onClose={() => setSelected(null)} />}
