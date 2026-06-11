@@ -38,14 +38,15 @@ async function recordCampaignCall(supabase, { orgId, callId, providerCallId }) {
 
 async function recordPhoneNumberCost(supabase, { orgId, phoneNumberId, monthlyCostUsd }) {
   if (!monthlyCostUsd || monthlyCostUsd <= 0) return { skipped: true };
-  const period = new Date().toISOString().slice(0, 7); // YYYY-MM
-  const idempotency_key = buildIdempotencyKey([phoneNumberId, "phone_number", period]);
+  const today = new Date().toISOString().slice(0, 10);
+  const month = today.slice(0, 7); // YYYY-MM — used only in idempotency key
+  const idempotency_key = buildIdempotencyKey([phoneNumberId, "phone_number", month]);
 
   const { error } = await supabase.from("usage_ledger").insert({
     org_id: orgId,
     kind: "phone_number",
     quantity: 1,
-    period: new Date().toISOString().slice(0, 10),
+    period: today,
     idempotency_key,
     cost_usd: monthlyCostUsd,
   });

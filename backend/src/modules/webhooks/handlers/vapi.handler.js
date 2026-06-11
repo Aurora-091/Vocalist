@@ -3,16 +3,6 @@ const logger = require("../../../config/logger");
 const { transition, STATES } = require("../../campaigns/state-machine");
 const { buildIdempotencyKey } = require("../../../utils/idempotency");
 
-const VAPI_TO_CALL_STATUS = {
-  "call.started": "in_progress",
-  "call.ringing": "ringing",
-  "call.completed": "completed",
-  "call.failed": "failed",
-  "call.no_answer": "no_answer",
-  "call.busy": "busy",
-  "call.voicemail": "voicemail",
-};
-
 const TARGET_STATE_FOR_CALL = {
   "call.ringing": STATES.RINGING,
   "call.started": STATES.IN_CALL,
@@ -21,6 +11,16 @@ const TARGET_STATE_FOR_CALL = {
   "call.voicemail": STATES.VOICEMAIL,
   "call.no_answer": STATES.FAILED,
   "call.busy": STATES.FAILED,
+};
+
+const EVENT_TO_CALL_STATUS = {
+  "call.started": "in_progress",
+  "call.ringing": "ringing",
+  "call.completed": "completed",
+  "call.failed": "failed",
+  "call.no_answer": "no_answer",
+  "call.busy": "busy",
+  "call.voicemail": "voicemail",
 };
 
 function extractLeaseToken(payload, callPayload) {
@@ -53,7 +53,7 @@ async function handle(payload) {
     return { skipped: true, reason: "unknown_call" };
   }
 
-  const newStatus = VAPI_TO_CALL_STATUS[eventType];
+  const newStatus = EVENT_TO_CALL_STATUS[eventType];
   const update = {};
   if (newStatus) update.status = newStatus;
   if (eventType === "call.started" && callPayload?.started_at) {
@@ -119,7 +119,7 @@ async function handle(payload) {
   }
 
   if (eventType === "call.completed" && update.duration_sec) {
-    const minutes = Math.ceil((update.duration_sec || 0) / 60);
+    const minutes = Math.ceil(update.duration_sec / 60);
     if (minutes > 0) {
       const idemKey = buildIdempotencyKey(["vapi", providerCallId, "minutes"]);
       const { error: ledgerErr } = await admin.from("usage_ledger").insert({
@@ -129,6 +129,7 @@ async function handle(payload) {
         call_id: callRow.id,
         period: new Date().toISOString().slice(0, 10),
         idempotency_key: idemKey,
+        cost_usd: update.cost_usd || null,
       });
       if (ledgerErr && ledgerErr.code !== "23505") throw ledgerErr;
     }

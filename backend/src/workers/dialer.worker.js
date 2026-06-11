@@ -3,9 +3,9 @@ const logger = require("../config/logger");
 const { transition, STATES } = require("../modules/campaigns/state-machine");
 const { buildVoiceProvider } = require("../providers/voice/factory");
 const billingService = require("../modules/billing/billing.service");
+const { DEFAULT_PROJECTED_MINUTES } = require("../modules/billing/billing.constants");
 
 const LEASE_SECONDS = 90;
-const DEFAULT_PROJECTED_MINUTES = 3;
 
 async function loadIntegrationConfig(admin, orgId, providerName) {
   if (providerName !== "vapi" && providerName !== "retell") return {};
@@ -104,7 +104,7 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     await admin.rpc("release_spend", {
       p_org: campaign.org_id,
       p_amount_usd: projectedCost,
-    }).catch((e) => logger.warn({ err: e.message }, "release_spend failed"));
+    }).catch((e) => logger.warn({ err: e.message, orgId: campaign.org_id }, "release_spend failed"));
 
     await transition(admin, {
       targetId: target.target_id,
@@ -201,8 +201,8 @@ async function runOnce() {
 
   const now = new Date();
   for (const c of campaigns || []) {
-    if (c.window_start && new Date(c.window_start) > now) continue;
-    if (c.window_end && new Date(c.window_end) < now) continue;
+    if (c.window_start && new Date(c.window_start).getTime() > now.getTime()) continue;
+    if (c.window_end && new Date(c.window_end).getTime() < now.getTime()) continue;
     try {
       await tickCampaign(c);
     } catch (err) {

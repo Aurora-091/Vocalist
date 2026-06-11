@@ -14,6 +14,14 @@ router.use(requireAuth, requireOrg);
 
 const SEARCH_TTL_MS = 10 * 60_000;
 
+function buildTwilioWebhookUrls() {
+  const base = env.TWILIO_VOICE_BASE_URL;
+  return {
+    voiceUrl: base ? `${base}/webhooks/twilio/voice` : null,
+    statusCallback: base ? `${base}/webhooks/twilio` : null,
+  };
+}
+
 router.get(
   "/subaccount",
   asyncHandler(async (req, res) => {
@@ -235,12 +243,7 @@ router.post(
     await getOrCreateSubaccount(req.auth.orgId);
     const client = await getTenantClient(req.auth.orgId);
 
-    const voiceUrl = env.TWILIO_VOICE_BASE_URL
-      ? `${env.TWILIO_VOICE_BASE_URL}/webhooks/twilio/voice`
-      : null;
-    const statusCallback = env.TWILIO_VOICE_BASE_URL
-      ? `${env.TWILIO_VOICE_BASE_URL}/webhooks/twilio`
-      : null;
+    const { voiceUrl, statusCallback } = buildTwilioWebhookUrls();
 
     let twilioRow;
     try {
@@ -323,12 +326,7 @@ router.post(
       throw BadRequest("No active Twilio account linked. Link your account or provision an Aurora-managed sub-account first.");
     }
 
-    const voiceUrl = env.TWILIO_VOICE_BASE_URL
-      ? `${env.TWILIO_VOICE_BASE_URL}/webhooks/twilio/voice`
-      : null;
-    const statusCallback = env.TWILIO_VOICE_BASE_URL
-      ? `${env.TWILIO_VOICE_BASE_URL}/webhooks/twilio`
-      : null;
+    const { voiceUrl, statusCallback } = buildTwilioWebhookUrls();
 
     let provider_ref = req.body.twilio_sid || null;
     if (!isSandbox() && provider_ref) {

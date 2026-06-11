@@ -15,13 +15,32 @@ type Tier = {
   included_minutes: number;
   included_numbers: number;
   overage_rate_usd: number;
-  features: any;
+  features: Record<string, boolean | string> | null;
+};
+
+type UsageSummary = {
+  used_minutes: number;
+  included_minutes: number;
+  pct_used: number;
+  overage_cost_usd: number;
+};
+
+type Subscription = {
+  org_id: string;
+  status: string;
+  plan_tier_key: string | null;
+  plan_tier_id: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  included_minutes: number;
 };
 
 export default function Billing() {
-  const [usage, setUsage] = useState<any>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [tiers, setTiers] = useState<Tier[] | null>(null);
-  const [subscription, setSubscription] = useState<any>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [switching, setSwitching] = useState<string | null>(null);
   const [canceling, setCanceling] = useState(false);
 

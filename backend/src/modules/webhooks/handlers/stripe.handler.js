@@ -24,7 +24,6 @@ async function handle(event) {
       const planTierKey = obj.metadata?.plan_tier_key || null;
       const includedMinutes = parseInt(obj.metadata?.included_minutes || "0", 10) || 0;
 
-      // Find the metered/overage usage item if present
       const usageItem = obj.items?.data?.find((i) => i.price?.recurring?.usage_type === "metered");
       const stripeUsageItemId = usageItem?.id || null;
 
@@ -32,14 +31,13 @@ async function handle(event) {
         org_id: orgId,
         stripe_customer_id: obj.customer,
         stripe_subscription_id: obj.id,
-        plan_id: obj.items?.data?.[0]?.price?.id || "unknown",
+        plan_id: obj.items?.data?.[0]?.price?.id || null,
         plan_tier_key: planTierKey,
         included_minutes: includedMinutes,
         status: obj.status,
         period_start: periodStart,
         period_end: periodEnd,
         stripe_usage_item_id: stripeUsageItemId,
-        // Reset overage counter at the start of each new period
         last_reported_overage_minutes: 0,
         updated_at: new Date().toISOString(),
       });
@@ -67,19 +65,22 @@ async function handle(event) {
         .maybeSingle();
 
       if (subRow?.org_id && subRow.status === "past_due") {
-        // Reactivate if previously past_due
         await admin
           .from("subscriptions")
           .update({ status: "active", updated_at: new Date().toISOString() })
           .eq("stripe_subscription_id", subId);
 
-        // Re-activate suspended Aurora-managed Twilio sub-account
+        // Reactivate suspended Aurora-managed sub-account — isolated so a Twilio
+        // failure doesn't roll back the subscription status update.
         await admin
           .from("twilio_subaccounts")
           .update({ status: "active", updated_at: new Date().toISOString() })
           .eq("org_id", subRow.org_id)
           .eq("account_type", "aurora_managed")
-          .eq("status", "suspended");
+          .eq("status", "suspended")
+          .then(({ error: tErr }) => {
+            if (tErr) logger.warn({ err: tErr.message, orgId: subRow.org_id }, "Failed to reactivate Twilio sub-account");
+          });
 
         logger.info({ orgId: subRow.org_id }, "Payment succeeded - reactivated account");
       }
@@ -101,12 +102,14 @@ async function handle(event) {
           .eq("org_id", subRow.org_id)
           .eq("status", "running");
 
-        // Suspend Aurora-managed sub-account on payment failure (not BYO - it's their own account)
         await admin
           .from("twilio_subaccounts")
           .update({ status: "suspended", updated_at: new Date().toISOString() })
           .eq("org_id", subRow.org_id)
-          .eq("account_type", "aurora_managed");
+          .eq("account_type", "aurora_managed")
+          .then(({ error: tErr }) => {
+            if (tErr) logger.warn({ err: tErr.message, orgId: subRow.org_id }, "Failed to suspend Twilio sub-account");
+          });
 
         logger.warn({ orgId: subRow.org_id }, "Payment failed - paused campaigns and suspended sub-account");
       }

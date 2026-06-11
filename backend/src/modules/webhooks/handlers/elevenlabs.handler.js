@@ -2,6 +2,7 @@ const { requireAdmin } = require("../../../config/supabase");
 const logger = require("../../../config/logger");
 const { transition, STATES } = require("../../campaigns/state-machine");
 const { buildIdempotencyKey } = require("../../../utils/idempotency");
+const { DEFAULT_COST_PER_MINUTE_USD } = require("../../billing/billing.constants");
 
 const ELEVENLABS_TO_CALL_STATUS = {
   "conversation.started": "in_progress",
@@ -80,8 +81,7 @@ async function handle(payload) {
     const duration = data?.call_duration_secs || data?.duration_sec;
     if (typeof duration === "number") {
       update.duration_sec = duration;
-      // Estimate cost at $0.15/min floor
-      update.cost_usd = parseFloat(((duration / 60) * 0.15).toFixed(4));
+      update.cost_usd = parseFloat(((duration / 60) * DEFAULT_COST_PER_MINUTE_USD).toFixed(4));
     }
 
     if (conversationId) {

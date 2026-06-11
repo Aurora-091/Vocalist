@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
 import { Phone, ShieldCheck, CircleAlert as AlertCircle, Link2, Server, Loader as Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { listAgents, listPhoneNumbers } from "../lib/db";
+import { listPhoneNumbers } from "../lib/db";
 import { api } from "../lib/api";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
 
-type Agent = { id: string; name: string };
+type PhoneNumber = {
+  id: string;
+  e164: string;
+  byo: boolean;
+  status: string | null;
+  agent_id: string | null;
+};
+
 type TwilioAccount = {
   subaccount_sid: string;
   status: string;
@@ -23,7 +30,7 @@ type SetupNumberProps = {
 };
 
 export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) {
-  const [numbers, setNumbers] = useState<any[]>([]);
+  const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
   const [account, setAccount] = useState<TwilioAccount | null | undefined>(undefined);
   const [loadingAccount, setLoadingAccount] = useState(true);
 

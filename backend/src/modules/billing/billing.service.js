@@ -1,5 +1,7 @@
 const { requireAdmin } = require("../../config/supabase");
 const { buildIdempotencyKey } = require("../../utils/idempotency");
+const logger = require("../../config/logger");
+const { DEFAULT_OVERAGE_RATE_USD } = require("./billing.constants");
 
 class BillingService {
   async processCallCompletion(supabase, { org_id, call_id, duration_seconds, provider_cost }) {
@@ -36,7 +38,10 @@ class BillingService {
       .eq("org_id", orgId)
       .maybeSingle();
 
-    if (!sub || !sub.plan_tier_key) return 0;
+    if (!sub || !sub.plan_tier_key) {
+      logger.warn({ orgId }, "calculateCostUsd: org has no plan_tier_key — billing $0");
+      return 0;
+    }
 
     const { data: tier } = await admin
       .from("plan_tiers")
@@ -44,7 +49,10 @@ class BillingService {
       .eq("key", sub.plan_tier_key)
       .maybeSingle();
 
-    if (!tier) return 0;
+    if (!tier) {
+      logger.warn({ orgId, plan_tier_key: sub.plan_tier_key }, "calculateCostUsd: plan tier not found — billing $0");
+      return 0;
+    }
 
     const periodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
       .toISOString()
@@ -74,7 +82,7 @@ class BillingService {
       .eq("org_id", orgId)
       .maybeSingle();
 
-    if (!sub?.plan_tier_key) return 0.18;
+    if (!sub?.plan_tier_key) return DEFAULT_OVERAGE_RATE_USD;
 
     const { data: tier } = await admin
       .from("plan_tiers")
@@ -82,7 +90,7 @@ class BillingService {
       .eq("key", sub.plan_tier_key)
       .maybeSingle();
 
-    return Number(tier?.overage_rate_usd) || 0.18;
+    return Number(tier?.overage_rate_usd) || DEFAULT_OVERAGE_RATE_USD;
   }
 }
 

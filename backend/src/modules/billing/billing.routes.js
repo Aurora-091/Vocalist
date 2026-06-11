@@ -160,9 +160,11 @@ router.post(
     const alreadyOnPlan = stripeSub.items.data.some((i) => i.price.id === tier.stripe_base_price_id);
 
     if (!alreadyOnPlan) {
-      const items = [{ id: stripeSub.items.data[0].id, price: tier.stripe_base_price_id }];
-      if (tier.stripe_overage_price_id && stripeSub.items.data[1]) {
-        items.push({ id: stripeSub.items.data[1].id, price: tier.stripe_overage_price_id });
+      const existingItems = stripeSub.items?.data || [];
+      if (existingItems.length === 0) throw BadRequest("Stripe subscription has no line items");
+      const items = [{ id: existingItems[0].id, price: tier.stripe_base_price_id }];
+      if (tier.stripe_overage_price_id && existingItems[1]) {
+        items.push({ id: existingItems[1].id, price: tier.stripe_overage_price_id });
       }
       await stripe.subscriptions.update(sub.stripe_subscription_id, {
         items,

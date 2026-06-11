@@ -1,7 +1,8 @@
 const { requireAdmin } = require("../config/supabase");
 const logger = require("../config/logger");
-
-const ALERT_THRESHOLDS = [80, 100];
+const Stripe = require("stripe");
+const env = require("../config/env");
+const { ALERT_THRESHOLDS } = require("../modules/billing/billing.constants");
 
 async function runOnce() {
   const admin = requireAdmin();
@@ -9,7 +10,6 @@ async function runOnce() {
   const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
   const today = now.toISOString().slice(0, 10);
 
-  // Aggregate monthly voice_minutes usage per org
   const { data: ledgerRows, error } = await admin
     .from("usage_ledger")
     .select("org_id, kind, quantity")
@@ -26,7 +26,6 @@ async function runOnce() {
   const orgIds = Object.keys(usageByOrg);
   if (orgIds.length === 0) return { orgs_seen: 0, period: today };
 
-  // Load subscriptions for those orgs
   const { data: subs } = await admin
     .from("subscriptions")
     .select("org_id, included_minutes, stripe_usage_item_id, last_reported_overage_minutes")
@@ -35,7 +34,7 @@ async function runOnce() {
   const subByOrg = {};
   for (const s of subs || []) subByOrg[s.org_id] = s;
 
-  const month = today.slice(0, 7); // YYYY-MM for idempotency key
+  const month = today.slice(0, 7);
   let alertsFired = 0;
 
   for (const orgId of orgIds) {
@@ -49,7 +48,6 @@ async function runOnce() {
     for (const threshold of ALERT_THRESHOLDS) {
       if (pct < threshold) continue;
 
-      // Insert alert (unique constraint prevents duplicates for same org+threshold+month)
       const { error: alertErr } = await admin.from("usage_alerts").insert({
         org_id: orgId,
         kind: "voice_minutes",
@@ -57,7 +55,7 @@ async function runOnce() {
         period: month,
       });
 
-      if (alertErr && alertErr.code === "23505") continue; // already fired
+      if (alertErr && alertErr.code === "23505") continue;
       if (alertErr) {
         logger.warn({ err: alertErr.message, orgId, threshold }, "Failed to insert usage_alert");
         continue;
@@ -77,28 +75,23 @@ async function runOnce() {
       }).catch((e) => logger.warn({ err: e.message, orgId }, "Failed to insert usage notification"));
     }
 
-    // Report overage to Stripe metered billing if usage item is set
-    if (sub?.stripe_usage_item_id) {
+    if (sub?.stripe_usage_item_id && env.STRIPE_SECRET_KEY) {
       const overage = Math.max(0, used - included);
       const lastReported = Number(sub.last_reported_overage_minutes) || 0;
       if (overage > lastReported) {
-        const Stripe = require("stripe");
-        const env = require("../config/env");
-        if (env.STRIPE_SECRET_KEY) {
-          const stripe = new Stripe(env.STRIPE_SECRET_KEY);
-          try {
-            await stripe.subscriptionItems.createUsageRecord(sub.stripe_usage_item_id, {
-              quantity: overage,
-              timestamp: Math.floor(Date.now() / 1000),
-              action: "set",
-            });
-            await admin
-              .from("subscriptions")
-              .update({ last_reported_overage_minutes: overage })
-              .eq("org_id", orgId);
-          } catch (e) {
-            logger.warn({ err: e.message, orgId }, "Failed to report overage to Stripe");
-          }
+        const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+        try {
+          await stripe.subscriptionItems.createUsageRecord(sub.stripe_usage_item_id, {
+            quantity: overage,
+            timestamp: Math.floor(Date.now() / 1000),
+            action: "set",
+          });
+          await admin
+            .from("subscriptions")
+            .update({ last_reported_overage_minutes: overage })
+            .eq("org_id", orgId);
+        } catch (e) {
+          logger.warn({ err: e.message, orgId }, "Failed to report overage to Stripe");
         }
       }
     }

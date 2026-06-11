@@ -200,7 +200,7 @@ export async function getSubscription() {
     .from("subscriptions")
     .select("*")
     .eq("org_id", orgId)
-    .eq("status", "active")
+    .in("status", ["active", "cancel_at_period_end", "past_due", "trialing"])
     .maybeSingle();
   if (error) throw error;
   return data;
@@ -217,7 +217,7 @@ export async function getUsageSummary() {
     .select("quantity")
     .eq("org_id", orgId)
     .eq("kind", "voice_minutes")
-    .gte("occurred_at", startOfMonth);
+    .gte("period", startOfMonth.slice(0, 10));
 
   if (error) return null;
 
@@ -229,11 +229,11 @@ export async function getUsageSummary() {
   const sub = await getSubscription();
   let includedMinutes = 0;
   let overageRate = 0;
-  if (sub?.plan_tier_id) {
+  if (sub?.plan_tier_key) {
     const { data: tier } = await supabase
       .from("plan_tiers")
       .select("included_minutes, overage_rate_usd")
-      .eq("id", sub.plan_tier_id)
+      .eq("key", sub.plan_tier_key)
       .single();
     if (tier) {
       includedMinutes = tier.included_minutes;
