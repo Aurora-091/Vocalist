@@ -130,7 +130,6 @@ class AgentService {
       .from("agents")
       .update({
         ...updateData,
-        provider_meta: newProviderMeta,
         voice_id,
         conversation_config_id,
         sync_status: syncStatus,
