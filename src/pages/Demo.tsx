@@ -25,7 +25,7 @@ const SCENARIOS = [
 
 export default function Demo() {
   return (
-    <div className="min-h-full bg-[#FAFAF8]">
+    <div className="marketing min-h-full bg-[#F8F9FB]">
       <MarketingNav />
 
       <section className="pt-32 pb-20 px-6">

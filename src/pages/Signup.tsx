@@ -56,9 +56,9 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-full bg-[#FAFAF8] flex flex-col lg:flex-row">
+    <div className="marketing min-h-full flex flex-col lg:flex-row">
       {/* Left panel - value prop */}
-      <div className="hidden lg:flex lg:w-[45%] bg-[#111] text-white p-12 flex-col justify-between">
+      <div className="hidden lg:flex lg:w-[45%] bg-[#0F172A] text-white p-12 flex-col justify-between">
         <div>
           <Link to="/" className="font-semibold text-lg tracking-tight">
             Aurora
@@ -76,7 +76,7 @@ export default function Signup() {
             <Feature icon={Zap} text="First call live in under 10 minutes" />
           </div>
         </div>
-        <div className="text-sm text-[#888]">
+        <div className="text-sm text-[#64748B]">
           Trusted by 340+ businesses. SOC 2 in progress.
         </div>
       </div>
@@ -84,21 +84,21 @@ export default function Signup() {
       {/* Right panel - form */}
       <div className="flex-1 flex items-center justify-center px-6 py-12 lg:py-0">
         <div className="w-full max-w-md">
-          <Link to="/" className="font-semibold text-lg tracking-tight text-[#111] lg:hidden mb-8 block">
+          <Link to="/" className="font-semibold text-lg tracking-tight text-[#0F172A] lg:hidden mb-8 block">
             Aurora
           </Link>
 
-          <h2 className="text-2xl font-semibold tracking-tight text-[#111] mb-1">
+          <h2 className="text-2xl font-semibold tracking-tight text-[#0F172A] mb-1">
             Create your account
           </h2>
-          <p className="text-sm text-[#555] mb-8">
+          <p className="text-sm text-[#475569] mb-8">
             Start placing real calls in under 10 minutes. No credit card.
           </p>
 
           <button
             type="button"
             onClick={signUpWithGoogle}
-            className="w-full flex items-center justify-center gap-3 h-12 px-4 border border-[#D9D5CE] bg-white hover:bg-[#F0EDE4] transition-colors text-sm font-medium text-[#111]"
+            className="w-full flex items-center justify-center gap-3 h-12 px-4 border border-[#E2E8F0] bg-white hover:bg-[#F0EDE4] transition-colors text-sm font-medium text-[#0F172A]"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -111,10 +111,10 @@ export default function Signup() {
 
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#D9D5CE]" />
+              <div className="w-full border-t border-[#E2E8F0]" />
             </div>
             <div className="relative flex justify-center">
-              <span className="px-3 bg-[#FAFAF8] text-xs text-[#888] uppercase tracking-widest">
+              <span className="px-3 bg-[#F8F9FB] text-xs text-[#64748B] uppercase tracking-widest">
                 or
               </span>
             </div>
@@ -122,19 +122,19 @@ export default function Signup() {
 
           <form className="space-y-5" onSubmit={submit}>
             <div>
-              <label className="block text-xs font-medium text-[#555] mb-1.5">
+              <label className="block text-xs font-medium text-[#475569] mb-1.5">
                 Organization name
               </label>
               <input
                 required
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                className="w-full h-12 px-4 border border-[#D9D5CE] bg-white text-[#111] text-sm placeholder:text-[#999] focus:outline-none focus:border-[#111] transition-colors"
+                className="w-full h-12 px-4 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#111] transition-colors"
                 placeholder="Bloom Dental"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#555] mb-1.5">
+              <label className="block text-xs font-medium text-[#475569] mb-1.5">
                 Work email
               </label>
               <input
@@ -142,12 +142,12 @@ export default function Signup() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-12 px-4 border border-[#D9D5CE] bg-white text-[#111] text-sm placeholder:text-[#999] focus:outline-none focus:border-[#111] transition-colors"
+                className="w-full h-12 px-4 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#111] transition-colors"
                 placeholder="you@company.com"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#555] mb-1.5">
+              <label className="block text-xs font-medium text-[#475569] mb-1.5">
                 Password
               </label>
               <input
@@ -156,7 +156,7 @@ export default function Signup() {
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-12 px-4 border border-[#D9D5CE] bg-white text-[#111] text-sm placeholder:text-[#999] focus:outline-none focus:border-[#111] transition-colors"
+                className="w-full h-12 px-4 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#111] transition-colors"
                 placeholder="8+ characters"
               />
             </div>
@@ -164,22 +164,22 @@ export default function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-[#111] text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#222] transition-colors disabled:opacity-50"
+              className="w-full h-12 bg-[#0F172A] text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#1E293B] transition-colors disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create account"}
               {!loading && <ArrowRight className="w-4 h-4" />}
             </button>
           </form>
 
-          <p className="mt-4 text-xs text-[#888] text-center">
+          <p className="mt-4 text-xs text-[#64748B] text-center">
             By creating an account you agree to our{" "}
-            <Link to="/terms" className="underline hover:text-[#555]">Terms</Link> and{" "}
-            <Link to="/privacy" className="underline hover:text-[#555]">Privacy Policy</Link>.
+            <Link to="/terms" className="underline hover:text-[#475569]">Terms</Link> and{" "}
+            <Link to="/privacy" className="underline hover:text-[#475569]">Privacy Policy</Link>.
           </p>
 
-          <div className="mt-8 pt-6 border-t border-[#D9D5CE] text-sm text-[#555]">
+          <div className="mt-8 pt-6 border-t border-[#E2E8F0] text-sm text-[#475569]">
             Already have an account?{" "}
-            <Link to="/login" className="font-medium text-[#111] hover:underline">
+            <Link to="/login" className="font-medium text-[#0F172A] hover:underline">
               Sign in
             </Link>
           </div>
@@ -191,8 +191,8 @@ export default function Signup() {
 
 function Feature({ icon: Icon, text }: { icon: any; text: string }) {
   return (
-    <div className="flex items-center gap-3 text-sm text-[#ccc]">
-      <Icon className="w-4 h-4 text-[#888] shrink-0" />
+    <div className="flex items-center gap-3 text-sm text-white/70">
+      <Icon className="w-4 h-4 text-white/40 shrink-0" />
       {text}
     </div>
   );

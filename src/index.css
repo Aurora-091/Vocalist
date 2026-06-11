@@ -47,21 +47,30 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* Legacy tokens preserved so existing pages keep rendering until migrated */
+/* Design tokens — light mode defaults, dark mode overrides in .dark */
 @theme {
-  --color-bg: #f7f8fa;
-  --color-surface: #ffffff;
-  --color-surface-2: #f1f3f6;
-  --color-text: #0e1726;
-  --color-text-muted: #5b6675;
+  /* Typography */
+  --font-sans: "Geist Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Surface palette (light) */
+  --color-bg: #F8F9FB;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F1F3F7;
+  --color-border-subtle: #E4E7EE;
+
+  /* Text palette (light) — WCAG AA or better */
+  --color-text: #0F172A;        /* slate-900  — primary heading/body */
+  --color-text-secondary: #475569;  /* slate-600  — secondary body */
+  --color-text-muted: #64748B;  /* slate-500  — captions, labels */
+  --color-text-placeholder: #94A3B8; /* slate-400 — placeholder */
+
+  /* Semantic */
   --color-success: #16a34a;
   --color-warning: #d97706;
   --color-danger: #dc2626;
   --color-info: #0891b2;
   --color-primary-700: #1d4ed8;
-
-  --font-sans: "Geist Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 @layer base {
@@ -131,6 +140,16 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+
+    /* Dark-mode overrides for legacy surface/text tokens */
+    --color-bg: #0F1117;
+    --color-surface: #161B27;
+    --color-surface-2: #1E2535;
+    --color-border-subtle: rgba(255,255,255,0.08);
+    --color-text: #F1F5F9;         /* slate-100 */
+    --color-text-secondary: #CBD5E1; /* slate-300 */
+    --color-text-muted: #94A3B8;   /* slate-400 */
+    --color-text-placeholder: #64748B; /* slate-500 */
   }
   * {
     @apply border-border outline-ring/50;
@@ -138,6 +157,23 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+}
+
+/* Marketing pages always render in light mode — never inherit dark theme */
+.marketing {
+  color-scheme: light;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --border: oklch(0.922 0 0);
+  --color-bg: #F8F9FB;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F1F3F7;
+  --color-text: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-text-placeholder: #94A3B8;
+  background-color: #F8F9FB;
+  color: #0F172A;
 }
 
 html,

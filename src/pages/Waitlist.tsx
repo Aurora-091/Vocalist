@@ -33,21 +33,21 @@ export default function Waitlist() {
   }
 
   return (
-    <div className="min-h-full bg-[#FAFAF8]">
+    <div className="marketing min-h-full">
       <MarketingNav />
 
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-[1200px] mx-auto">
           <div className="max-w-2xl">
-            <div className="text-xs font-medium tracking-widest uppercase text-[#888] mb-4">
+            <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-4">
               Early access
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold leading-[0.95] tracking-tight text-[#111]">
+            <h1 className="text-4xl md:text-6xl font-bold leading-[0.95] tracking-tight text-[#0F172A]">
               Get early access
               <br />
-              <span className="text-[#888]">to Aurora Voice AI.</span>
+              <span className="text-[#64748B]">to Aurora Voice AI.</span>
             </h1>
-            <p className="mt-6 text-lg text-[#555] leading-relaxed max-w-xl">
+            <p className="mt-6 text-lg text-[#475569] leading-relaxed max-w-xl">
               We're onboarding businesses in batches. Join the waitlist to get notified
               when your spot opens. Early members get priority support and founder pricing.
             </p>
@@ -55,7 +55,7 @@ export default function Waitlist() {
             {state === "success" ? (
               <div className="mt-10 bg-[#111] text-white p-8 rounded-none max-w-md">
                 <div className="text-lg font-semibold">You're on the list.</div>
-                <p className="mt-2 text-sm text-[#999] leading-relaxed">
+                <p className="mt-2 text-sm text-white/60 leading-relaxed">
                   We'll reach out when your spot opens. In the meantime, check out
                   our demo to see Aurora in action.
                 </p>
@@ -76,7 +76,7 @@ export default function Waitlist() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@company.com"
-                    className="flex-1 h-12 px-4 bg-white border border-[#D9D5CE] rounded-none text-sm text-[#111] placeholder:text-[#999] focus:outline-none focus:border-[#111] transition-colors"
+                    className="flex-1 h-12 px-4 bg-white border border-[#E2E8F0] rounded-none text-sm text-[#0F172A] placeholder:text-white/60 focus:outline-none focus:border-[#111] transition-colors"
                   />
                   <button
                     type="submit"
@@ -89,7 +89,7 @@ export default function Waitlist() {
                 {state === "error" && (
                   <p className="mt-3 text-sm text-red-600">{errorMsg}</p>
                 )}
-                <p className="mt-3 text-xs text-[#888]">
+                <p className="mt-3 text-xs text-[#64748B]">
                   No spam. We'll only email you when your spot opens.
                 </p>
               </form>
@@ -98,15 +98,15 @@ export default function Waitlist() {
         </div>
       </section>
 
-      <section className="border-t border-[#D9D5CE] bg-[#F0EDE4]">
+      <section className="border-t border-[#E2E8F0] bg-[#F1F5F9]">
         <div className="max-w-[1200px] mx-auto px-6 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[#D9D5CE]">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[#E2E8F0]">
             {TRACTION_STATS.map((stat) => (
               <div key={stat.label} className="px-6 first:pl-0 last:pr-0">
-                <div className="font-mono text-2xl md:text-3xl font-bold text-[#111]">
+                <div className="font-mono text-2xl md:text-3xl font-bold text-[#0F172A]">
                   {stat.value}
                 </div>
-                <div className="mt-1 text-xs text-[#888] tracking-wide uppercase">
+                <div className="mt-1 text-xs text-[#64748B] tracking-wide uppercase">
                   {stat.label}
                 </div>
               </div>
@@ -115,29 +115,29 @@ export default function Waitlist() {
         </div>
       </section>
 
-      <section className="border-t border-[#D9D5CE]">
+      <section className="border-t border-[#E2E8F0]">
         <div className="max-w-[1200px] mx-auto px-6 py-20 md:py-24">
           <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <div className="font-mono text-xs text-[#888] mb-3">01</div>
-              <h3 className="font-semibold text-[#111]">Founder pricing</h3>
-              <p className="mt-2 text-sm text-[#555] leading-relaxed">
+              <div className="font-mono text-xs text-[#64748B] mb-3">01</div>
+              <h3 className="font-semibold text-[#0F172A]">Founder pricing</h3>
+              <p className="mt-2 text-sm text-[#475569] leading-relaxed">
                 Early waitlist members lock in our lowest pricing tier permanently.
                 No price increases, ever.
               </p>
             </div>
             <div>
-              <div className="font-mono text-xs text-[#888] mb-3">02</div>
-              <h3 className="font-semibold text-[#111]">Priority onboarding</h3>
-              <p className="mt-2 text-sm text-[#555] leading-relaxed">
+              <div className="font-mono text-xs text-[#64748B] mb-3">02</div>
+              <h3 className="font-semibold text-[#0F172A]">Priority onboarding</h3>
+              <p className="mt-2 text-sm text-[#475569] leading-relaxed">
                 Skip the queue. Get a 1-on-1 setup call with our team to configure
                 your first agent in 15 minutes.
               </p>
             </div>
             <div>
-              <div className="font-mono text-xs text-[#888] mb-3">03</div>
-              <h3 className="font-semibold text-[#111]">Shape the product</h3>
-              <p className="mt-2 text-sm text-[#555] leading-relaxed">
+              <div className="font-mono text-xs text-[#64748B] mb-3">03</div>
+              <h3 className="font-semibold text-[#0F172A]">Shape the product</h3>
+              <p className="mt-2 text-sm text-[#475569] leading-relaxed">
                 Early users get a direct line to our product team. Your feedback
                 drives what we build next.
               </p>

@@ -245,7 +245,7 @@ export default function Dashboard() {
                 {liveCalls.length > 0 && (
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
                 )}
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${liveCalls.length > 0 ? "bg-success" : "bg-text-muted/30"}`} />
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${liveCalls.length > 0 ? "bg-success" : "bg-border"}`} />
               </span>
               <span className="font-medium">Live now</span>
               {liveCalls.length > 0 && (

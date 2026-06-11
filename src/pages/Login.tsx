@@ -73,8 +73,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-full bg-[#FAFAF8] flex flex-col lg:flex-row">
-      {/* Left panel - value prop */}
+    <div className="marketing min-h-full flex flex-col lg:flex-row">
+      {/* Left panel — always dark by design */}
       <div className="hidden lg:flex lg:w-[45%] bg-[#111] text-white p-12 flex-col justify-between">
         <div>
           <Link to="/" className="font-semibold text-lg tracking-tight">
@@ -85,7 +85,7 @@ export default function Login() {
           <h1 className="text-3xl xl:text-4xl font-bold leading-[1.1] tracking-tight mb-6">
             Welcome back.
             <br />
-            <span className="text-[#888]">Your agents are ready.</span>
+            <span className="text-white/50">Your agents are ready.</span>
           </h1>
           <div className="space-y-4">
             <Feature icon={Phone} text="Inbound and outbound, one platform" />
@@ -93,29 +93,29 @@ export default function Login() {
             <Feature icon={Zap} text="First call live in under 10 minutes" />
           </div>
         </div>
-        <div className="text-sm text-[#888]">
+        <div className="text-sm text-white/40">
           Trusted by 340+ businesses. SOC 2 in progress.
         </div>
       </div>
 
       {/* Right panel - form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 lg:py-0">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 lg:py-0 bg-[#F8F9FB]">
         <div className="w-full max-w-md">
-          <Link to="/" className="font-semibold text-lg tracking-tight text-[#111] lg:hidden mb-8 block">
+          <Link to="/" className="font-semibold text-lg tracking-tight text-[#0F172A] lg:hidden mb-8 block">
             Aurora
           </Link>
 
-          <h2 className="text-2xl font-semibold tracking-tight text-[#111] mb-1">
+          <h2 className="text-2xl font-semibold tracking-tight text-[#0F172A] mb-1">
             Sign in
           </h2>
-          <p className="text-sm text-[#555] mb-8">
+          <p className="text-sm text-[#475569] mb-8">
             Welcome back to Aurora.
           </p>
 
           <button
             type="button"
             onClick={signInWithGoogle}
-            className="w-full flex items-center justify-center gap-3 h-12 px-4 border border-[#D9D5CE] bg-white hover:bg-[#F0EDE4] transition-colors text-sm font-medium text-[#111]"
+            className="w-full flex items-center justify-center gap-3 h-12 px-4 border border-[#E2E8F0] bg-white hover:bg-[#F8F9FB] transition-colors text-sm font-medium text-[#0F172A] rounded-md"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -128,10 +128,10 @@ export default function Login() {
 
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#D9D5CE]" />
+              <div className="w-full border-t border-[#E2E8F0]" />
             </div>
             <div className="relative flex justify-center">
-              <span className="px-3 bg-[#FAFAF8] text-xs text-[#888] uppercase tracking-widest">
+              <span className="px-3 bg-[#F8F9FB] text-xs text-[#64748B] uppercase tracking-widest">
                 or
               </span>
             </div>
@@ -139,7 +139,7 @@ export default function Login() {
 
           <form className="space-y-5" onSubmit={submit}>
             <div>
-              <label className="block text-xs font-medium text-[#555] mb-1.5">
+              <label className="block text-xs font-medium text-[#475569] mb-1.5">
                 Email
               </label>
               <input
@@ -147,12 +147,12 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-12 px-4 border border-[#D9D5CE] bg-white text-[#111] text-sm placeholder:text-[#999] focus:outline-none focus:border-[#111] transition-colors"
+                className="w-full h-12 px-4 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#0F172A] rounded-md transition-colors"
                 placeholder="you@company.com"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#555] mb-1.5">
+              <label className="block text-xs font-medium text-[#475569] mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -161,13 +161,13 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-12 px-4 pr-12 border border-[#D9D5CE] bg-white text-[#111] text-sm placeholder:text-[#999] focus:outline-none focus:border-[#111] transition-colors"
+                  className="w-full h-12 px-4 pr-12 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#0F172A] rounded-md transition-colors"
                   placeholder="Your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#111] transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F172A] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -177,7 +177,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-[#111] text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#222] transition-colors disabled:opacity-50"
+              className="w-full h-12 bg-[#0F172A] text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#1E293B] rounded-md transition-colors disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign in"}
               {!loading && <ArrowRight className="w-4 h-4" />}
@@ -185,25 +185,25 @@ export default function Login() {
           </form>
 
           {/* Demo account card */}
-          <div className="mt-6 border border-[#D9D5CE] bg-[#F0EDE4] p-4">
-            <div className="text-xs font-medium tracking-widest uppercase text-[#888] mb-2">
+          <div className="mt-6 border border-[#E2E8F0] bg-[#F1F5F9] p-4 rounded-md">
+            <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-2">
               Try Aurora instantly
             </div>
-            <p className="text-sm text-[#555] mb-3">
+            <p className="text-sm text-[#475569] mb-3">
               Explore the full platform with pre-loaded data.
             </p>
             <button
               onClick={loginAsDemo}
               disabled={loading}
-              className="w-full h-10 border border-[#D9D5CE] bg-white text-[#111] text-sm font-medium hover:bg-[#FAFAF8] transition-colors disabled:opacity-50"
+              className="w-full h-10 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm font-medium rounded-md hover:bg-[#F8F9FB] transition-colors disabled:opacity-50"
             >
               Login as Demo Account
             </button>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-[#D9D5CE] text-sm text-[#555]">
+          <div className="mt-8 pt-6 border-t border-[#E2E8F0] text-sm text-[#475569]">
             New to Aurora?{" "}
-            <Link to="/signup" className="font-medium text-[#111] hover:underline">
+            <Link to="/signup" className="font-medium text-[#0F172A] hover:underline">
               Create an account
             </Link>
           </div>
@@ -215,8 +215,8 @@ export default function Login() {
 
 function Feature({ icon: Icon, text }: { icon: any; text: string }) {
   return (
-    <div className="flex items-center gap-3 text-sm text-[#ccc]">
-      <Icon className="w-4 h-4 text-[#888] shrink-0" />
+    <div className="flex items-center gap-3 text-sm text-white/70">
+      <Icon className="w-4 h-4 text-white/40 shrink-0" />
       {text}
     </div>
   );

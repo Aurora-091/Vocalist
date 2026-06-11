@@ -23,11 +23,11 @@ export function MarketingNav() {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-200 ${
-        scrolled ? "bg-[#FAFAF8] border-b border-[#D9D5CE]" : "bg-transparent"
+        scrolled ? "bg-[#F8F9FB] border-b border-[#E2E8F0]" : "bg-transparent"
       }`}
     >
       <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" className="font-semibold tracking-tight text-lg text-[#111]">
+        <Link to="/" className="font-semibold tracking-tight text-lg text-[#0F172A]">
           {SITE.name}
         </Link>
 
@@ -36,7 +36,7 @@ export function MarketingNav() {
             <Link
               key={link.href}
               to={link.href}
-              className="text-sm text-[#555] hover:text-[#111] transition-colors"
+              className="text-sm text-[#475569] hover:text-[#0F172A] transition-colors"
             >
               {link.label}
             </Link>
@@ -44,12 +44,12 @@ export function MarketingNav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-          <Link to="/login" className="text-sm text-[#555] hover:text-[#111] transition-colors">
+          <Link to="/login" className="text-sm text-[#475569] hover:text-[#0F172A] transition-colors">
             Sign in
           </Link>
           <Link
             to="/signup"
-            className="inline-flex items-center h-9 px-5 bg-[#111] text-white text-sm font-medium rounded-none hover:bg-[#222] transition-colors"
+            className="inline-flex items-center h-9 px-5 bg-[#0F172A] text-white text-sm font-medium rounded-md hover:bg-[#1E293B] transition-colors"
           >
             Start free
           </Link>
@@ -58,7 +58,7 @@ export function MarketingNav() {
         <button
           type="button"
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden p-2 text-[#111]"
+          className="md:hidden p-2 text-[#0F172A]"
           aria-label="Toggle menu"
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -66,25 +66,25 @@ export function MarketingNav() {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden bg-[#FAFAF8] border-b border-[#D9D5CE] px-6 pb-6">
+        <div className="md:hidden bg-[#F8F9FB] border-b border-[#E2E8F0] px-6 pb-6">
           <nav className="flex flex-col gap-4 mb-6">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
-                className="text-sm text-[#555] hover:text-[#111]"
+                className="text-sm text-[#475569] hover:text-[#0F172A]"
               >
                 {link.label}
               </Link>
             ))}
           </nav>
           <div className="flex flex-col gap-3">
-            <Link to="/login" className="text-sm text-[#555]">
+            <Link to="/login" className="text-sm text-[#475569]">
               Sign in
             </Link>
             <Link
               to="/signup"
-              className="inline-flex items-center justify-center h-10 px-5 bg-[#111] text-white text-sm font-medium rounded-none"
+              className="inline-flex items-center justify-center h-10 px-5 bg-[#0F172A] text-white text-sm font-medium rounded-md"
             >
               Start free
             </Link>

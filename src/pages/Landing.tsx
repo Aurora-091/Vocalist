@@ -3,7 +3,7 @@ import { Phone, ShieldCheck, Sparkles, Bot, Megaphone, TrendingUp, ArrowRight } 
 
 export default function Landing() {
   return (
-    <div className="min-h-full bg-bg">
+    <div className="marketing min-h-full bg-bg">
       <header className="border-b border-border bg-surface/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1280px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="font-semibold tracking-tight text-lg">Aurora</div>
