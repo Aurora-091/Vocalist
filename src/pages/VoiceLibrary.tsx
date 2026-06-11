@@ -164,7 +164,7 @@ export default function VoiceLibrary({ onSelect, selectedVoiceId }: {
                   <div>
                     <div className="font-medium flex items-center gap-2">
                       {v.name}
-                      {isSelected && <Check className="w-4 h-4 text-primary" />}
+                      {isSelected && <Check className="w-4 h-4 text-success" />}
                     </div>
                     <div className="text-xs text-text-muted mt-0.5">
                       {v.gender && <span className="capitalize">{v.gender}</span>}
@@ -176,7 +176,7 @@ export default function VoiceLibrary({ onSelect, selectedVoiceId }: {
                       onClick={() => playPreview(v)}
                       className={`w-9 h-9 rounded-md flex items-center justify-center transition-colors ${
                         isPlaying
-                          ? "bg-primary/10 text-primary"
+                          ? "bg-surface-2 text-text border border-border"
                           : "bg-surface-2 text-text-muted hover:text-text"
                       }`}
                       aria-label={isPlaying ? "Pause preview" : "Play preview"}
@@ -208,7 +208,7 @@ export default function VoiceLibrary({ onSelect, selectedVoiceId }: {
                     onClick={() => onSelect(v.voice_id, v.name)}
                     className={`mt-4 w-full h-9 rounded-md text-sm font-medium transition-colors ${
                       isSelected
-                        ? "bg-primary/10 text-primary border border-primary/30"
+                        ? "bg-surface-2 text-text border border-text/30 font-semibold"
                         : "bg-surface-2 text-text hover:bg-surface-2/80"
                     }`}
                   >

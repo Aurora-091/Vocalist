@@ -100,7 +100,7 @@ export default function ShopifyConnect() {
             <span
               className={`w-7 h-7 rounded-full text-xs font-medium inline-flex items-center justify-center ${
                 step === s || (s === "done" && step === "validating")
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-primary-foreground"
                   : (["domain", "instructions", "key", "done"].indexOf(step === "validating" ? "key" : step) > i)
                   ? "bg-success/15 text-success"
                   : "bg-surface-2 text-text-muted"
@@ -159,19 +159,19 @@ export default function ShopifyConnect() {
             <div className="bg-surface-2 rounded-md p-4 space-y-3">
               <div className="text-sm space-y-2">
                 <div className="flex gap-2">
-                  <span className="font-mono text-xs text-primary bg-primary/10 w-5 h-5 rounded flex items-center justify-center shrink-0">1</span>
+                  <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">1</span>
                   <span>Click the button below to open your Shopify admin</span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="font-mono text-xs text-primary bg-primary/10 w-5 h-5 rounded flex items-center justify-center shrink-0">2</span>
+                  <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">2</span>
                   <span>Go to <strong>Apps and sales channels</strong> &gt; <strong>Develop apps</strong></span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="font-mono text-xs text-primary bg-primary/10 w-5 h-5 rounded flex items-center justify-center shrink-0">3</span>
+                  <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">3</span>
                   <span>Create a new app (or select existing) and configure <strong>Admin API</strong> scopes: <code className="text-xs bg-surface px-1 py-0.5 rounded">read_orders, read_customers, read_checkouts, read_products</code></span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="font-mono text-xs text-primary bg-primary/10 w-5 h-5 rounded flex items-center justify-center shrink-0">4</span>
+                  <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">4</span>
                   <span>Install the app and copy the <strong>Admin API access token</strong></span>
                 </div>
               </div>

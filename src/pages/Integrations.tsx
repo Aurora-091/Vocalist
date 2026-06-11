@@ -260,7 +260,7 @@ export default function Integrations() {
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <span className="w-10 h-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="w-10 h-10 rounded-md bg-surface-2 border border-border text-text-muted flex items-center justify-center">
                     <Icon className="w-5 h-5" />
                   </span>
                   <div className="flex items-center gap-2">

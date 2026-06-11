@@ -179,7 +179,7 @@ export default function AgentsList() {
                 className="block bg-surface border border-border rounded-md shadow-card p-5 hover:bg-surface-2 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="w-9 h-9 rounded-md bg-surface-2 border border-border text-text-muted flex items-center justify-center">
                     <Bot className="w-4 h-4" />
                   </span>
                   <div>

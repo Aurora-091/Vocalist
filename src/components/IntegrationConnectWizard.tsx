@@ -103,7 +103,7 @@ export function IntegrationConnectWizard({
                 done && i === steps.length - 1
                   ? "bg-success/15 text-success"
                   : i === currentStep
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-primary-foreground"
                   : i < currentStep || done
                   ? "bg-success/15 text-success"
                   : "bg-surface-2 text-text-muted"

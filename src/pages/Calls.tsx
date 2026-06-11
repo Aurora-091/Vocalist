@@ -180,7 +180,7 @@ function FilterChip({
       onClick={onClick}
       className={`px-3 h-8 rounded-full text-xs font-medium transition-colors ${
         active
-          ? "bg-primary text-white"
+          ? "bg-primary text-primary-foreground"
           : "bg-surface border border-border text-text-muted hover:text-text"
       }`}
     >
