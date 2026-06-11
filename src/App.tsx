@@ -24,6 +24,12 @@ const VoiceLibrary = lazy(() => import("./pages/VoiceLibrary"));
 const ShopifyConnect = lazy(() => import("./pages/ShopifyConnect"));
 const IntegrationConnect = lazy(() => import("./pages/IntegrationConnect"));
 const OAuthCallback = lazy(() => import("./pages/auth/OAuthCallback"));
+const About = lazy(() => import("./pages/About"));
+const Story = lazy(() => import("./pages/Story"));
+const Funding = lazy(() => import("./pages/Funding"));
+const Demo = lazy(() => import("./pages/Demo"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const Terms = lazy(() => import("./pages/Terms"));
 
 function PageLoader() {
   return (
@@ -38,6 +44,12 @@ export default function App() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/welcome" element={<Landing />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/story" element={<Story />} />
+        <Route path="/funding" element={<Funding />} />
+        <Route path="/demo" element={<Demo />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
         <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
         <Route path="/auth/callback/:provider" element={<OAuthCallback />} />
