@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Bot } from "lucide-react";
-import { listAgents, createAgent } from "../lib/db";
+import { listAgents } from "../lib/db";
+import { api } from "../lib/api";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 import { Badge } from "../components/legacy-ui/Badge";
@@ -39,7 +40,7 @@ export default function AgentsList() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    await createAgent({
+    await api.post("/v1/agents", {
       name,
       persona: { direction, objective: "" },
       consent_required: direction !== "inbound",
@@ -50,7 +51,7 @@ export default function AgentsList() {
   }
 
   async function createFromPreset(preset: any) {
-    await createAgent({
+    await api.post("/v1/agents", {
       name: preset.name,
       persona: {
         direction: preset.direction,

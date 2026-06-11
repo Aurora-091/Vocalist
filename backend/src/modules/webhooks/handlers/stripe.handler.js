@@ -8,6 +8,49 @@ async function handle(event) {
   if (!type || !obj) return { skipped: true };
 
   switch (type) {
+    case "checkout.session.completed": {
+      const orgId = obj.metadata?.org_id;
+      const subId = obj.subscription;
+      if (!orgId || !subId) {
+        logger.warn({ sessionId: obj.id }, "Checkout session missing org_id or subscription");
+        return { skipped: true };
+      }
+
+      const Stripe = require("stripe");
+      const env = require("../../../config/env");
+      const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+      const subscription = await stripe.subscriptions.retrieve(subId, { expand: ["items.data.price"] });
+
+      const periodStart = subscription.current_period_start
+        ? new Date(subscription.current_period_start * 1000).toISOString()
+        : null;
+      const periodEnd = subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null;
+      const planTierKey = subscription.metadata?.plan_tier_key || obj.metadata?.plan_tier_key || null;
+      const includedMinutes = parseInt(subscription.metadata?.included_minutes || obj.metadata?.included_minutes || "0", 10) || 0;
+      const usageItem = subscription.items?.data?.find((i) => i.price?.recurring?.usage_type === "metered");
+
+      const { error } = await admin.from("subscriptions").upsert({
+        org_id: orgId,
+        stripe_customer_id: subscription.customer,
+        stripe_subscription_id: subId,
+        plan_id: subscription.items?.data?.[0]?.price?.id || null,
+        plan_tier_key: planTierKey,
+        included_minutes: includedMinutes,
+        status: subscription.status,
+        period_start: periodStart,
+        period_end: periodEnd,
+        stripe_usage_item_id: usageItem?.id || null,
+        last_reported_overage_minutes: 0,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+
+      logger.info({ orgId, subId, plan: planTierKey }, "Checkout completed - subscription activated");
+      return { ok: true, org_id: orgId, status: subscription.status };
+    }
+
     case "customer.subscription.created":
     case "customer.subscription.updated": {
       const orgId = obj.metadata?.org_id;

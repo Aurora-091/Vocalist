@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Play, Save } from "lucide-react";
-import { getAgent, updateAgent } from "../lib/db";
+import { ArrowLeft, Play, Save, Loader as Loader2 } from "lucide-react";
+import { getAgent } from "../lib/db";
+import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
@@ -41,6 +42,9 @@ export default function AgentDetail() {
   const [transferNumber, setTransferNumber] = useState("");
   const [timezone, setTimezone] = useState("");
   const [languagesText, setLanguagesText] = useState("");
+  const [testNumber, setTestNumber] = useState("");
+  const [calling, setCalling] = useState(false);
+  const [callMsg, setCallMsg] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -85,14 +89,14 @@ export default function AgentDetail() {
         .split(",")
         .map((l) => l.trim())
         .filter(Boolean);
-      await updateAgent(id!, {
+      await api.patch(`/v1/agents/${id}`, {
         name,
         persona,
         transfer_number: transferNumber || null,
         timezone: timezone || "America/New_York",
         languages,
       });
-      setSavedMsg("Saved.");
+      setSavedMsg("Saved and synced.");
       load();
     } catch (e: any) {
       setSavedMsg(e.message || "Couldn't save.");
@@ -270,24 +274,44 @@ export default function AgentDetail() {
         </CardHeader>
         <CardBody>
           <p className="text-sm text-text-muted mb-4">
-            Test calls require the ElevenLabs provider integration to be active.
-            Once configured, Aurora will call a phone you control so you can hear
-            the agent before going live.
+            Aurora will call the number below so you can hear your agent live.
+            Requires ElevenLabs provider to be configured.
           </p>
           <div className="flex flex-wrap gap-3">
             <input
-              disabled
+              value={testNumber}
+              onChange={(e) => setTestNumber(e.target.value)}
+              disabled={!agent.provider_ref || calling}
               placeholder="+1 415 555 0199"
-              className="h-10 px-3 rounded-md border border-border bg-surface-2 flex-1 min-w-[240px] text-text-muted"
+              className="h-10 px-3 rounded-md border border-border bg-surface flex-1 min-w-[240px] font-mono text-sm disabled:bg-surface-2 disabled:text-text-muted"
             />
-            <Button disabled>
-              <Play className="w-4 h-4 mr-2" />
-              Test call
+            <Button
+              disabled={!agent.provider_ref || !testNumber.trim() || calling}
+              onClick={async () => {
+                setCalling(true);
+                setCallMsg(null);
+                try {
+                  await api.post(`/v1/agents/${id}/test-call`, { to_number: testNumber.trim() });
+                  setCallMsg("Call initiated. Your phone should ring shortly.");
+                } catch (e: any) {
+                  setCallMsg(e.message || "Failed to place call.");
+                } finally {
+                  setCalling(false);
+                }
+              }}
+            >
+              {calling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+              {calling ? "Calling..." : "Test call"}
             </Button>
           </div>
-          <p className="mt-2 text-xs text-text-muted">
-            Requires active provider_ref. Connect ElevenLabs API key in Settings to enable.
-          </p>
+          {callMsg && (
+            <p className="mt-2 text-xs text-text-muted">{callMsg}</p>
+          )}
+          {!agent.provider_ref && (
+            <p className="mt-2 text-xs text-text-muted">
+              Agent not yet provisioned with ElevenLabs. Save the agent first to trigger provisioning.
+            </p>
+          )}
         </CardBody>
       </Card>
     </div>

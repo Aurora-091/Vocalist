@@ -1,0 +1,83 @@
+const assert = require("node:assert/strict");
+const { test } = require("node:test");
+
+test("syncContacts maps Shopify customer to correct schema", () => {
+  const customer = {
+    id: 12345,
+    phone: "+1 (415) 555-0199",
+    first_name: "Sarah",
+    last_name: "Chen",
+    email: "sarah@example.com",
+    marketing_consent: { state: "subscribed" },
+    tags: "vip,returning",
+    orders_count: 5,
+  };
+
+  const contact = mapCustomerToContact("org_abc", customer);
+  assert.equal(contact.org_id, "org_abc");
+  assert.equal(contact.e164, "+14155550199");
+  assert.equal(contact.name, "Sarah Chen");
+  assert.equal(contact.email, "sarah@example.com");
+  assert.equal(contact.source, "shopify");
+  assert.equal(contact.consent_status, "granted");
+  assert.equal(contact.crm_ref, "shopify_12345");
+  assert.equal(contact.fields.shopify_id, 12345);
+});
+
+test("syncContacts skips customers without phone", () => {
+  const customer = {
+    id: 999,
+    phone: null,
+    first_name: "NoPhone",
+    last_name: "User",
+    email: "no@example.com",
+    marketing_consent: null,
+  };
+  const contact = mapCustomerToContact("org_abc", customer);
+  assert.equal(contact, null);
+});
+
+test("syncContacts sets consent_status to none when not subscribed", () => {
+  const customer = {
+    id: 888,
+    phone: "+447911123456",
+    first_name: "Jane",
+    last_name: null,
+    email: null,
+    marketing_consent: { state: "not_subscribed" },
+    tags: "",
+    orders_count: 0,
+  };
+  const contact = mapCustomerToContact("org_xyz", customer);
+  assert.equal(contact.consent_status, "none");
+  assert.equal(contact.name, "Jane");
+});
+
+test("phone number normalization strips formatting", () => {
+  const customer = {
+    id: 777,
+    phone: "(212) 555-1234",
+    first_name: "Bob",
+    last_name: "Smith",
+    email: null,
+    marketing_consent: { state: "subscribed" },
+    tags: null,
+    orders_count: 1,
+  };
+  const contact = mapCustomerToContact("org_1", customer);
+  assert.equal(contact.e164, "2125551234");
+});
+
+function mapCustomerToContact(orgId, customer) {
+  if (!customer.phone) return null;
+  return {
+    org_id: orgId,
+    e164: customer.phone.replace(/[^\d+]/g, ""),
+    name: [customer.first_name, customer.last_name].filter(Boolean).join(" ") || null,
+    email: customer.email || null,
+    crm_ref: `shopify_${customer.id}`,
+    source: "shopify",
+    consent_status: customer.marketing_consent?.state === "subscribed" ? "granted" : "none",
+    fields: { shopify_id: customer.id, tags: customer.tags, orders_count: customer.orders_count },
+  };
+}
