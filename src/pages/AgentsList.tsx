@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Bot } from "lucide-react";
+import { Plus, Bot, Trash2 } from "lucide-react";
 import { listAgents } from "../lib/db";
 import { api } from "../lib/api";
+import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 import { Badge } from "../components/legacy-ui/Badge";
@@ -26,6 +27,8 @@ export default function AgentsList() {
   const [mode, setMode] = useState<CreateMode>("idle");
   const [name, setName] = useState("");
   const [direction, setDirection] = useState<"inbound" | "outbound" | "both">("inbound");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -67,6 +70,20 @@ export default function AgentsList() {
     });
     setMode("idle");
     load();
+  }
+
+  async function deleteAgent(id: string) {
+    setDeletingId(id);
+    try {
+      await supabase
+        .from("agents")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", id);
+      setAgents((prev) => prev?.filter((a) => a.id !== id) ?? null);
+    } finally {
+      setDeletingId(null);
+      setConfirmId(null);
+    }
   }
 
   return (
@@ -156,28 +173,56 @@ export default function AgentsList() {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {agents.map((a) => (
-            <Link
-              key={a.id}
-              to={`/agents/${a.id}`}
-              className="bg-surface border border-border rounded-md shadow-card p-5 hover:bg-surface-2 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                  <Bot className="w-4 h-4" />
-                </span>
-                <div>
-                  <div className="font-medium">{a.name}</div>
-                  <div className="text-xs text-text-muted">{a.provider}</div>
+            <div key={a.id} className="relative group">
+              <Link
+                to={`/agents/${a.id}`}
+                className="block bg-surface border border-border rounded-md shadow-card p-5 hover:bg-surface-2 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                    <Bot className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <div className="font-medium">{a.name}</div>
+                    <div className="text-xs text-text-muted">{a.provider}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2 flex-wrap">
-                {a.consent_required && <Badge tone="success" dot>consent on</Badge>}
-                {a.inbound_number && <Badge tone="info">{a.inbound_number}</Badge>}
-                {a.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
-                {a.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
-                {a.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
-              </div>
-            </Link>
+                <div className="mt-4 flex items-center gap-2 flex-wrap">
+                  {a.consent_required && <Badge tone="success" dot>consent on</Badge>}
+                  {a.inbound_number && <Badge tone="info">{a.inbound_number}</Badge>}
+                  {a.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
+                  {a.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
+                  {a.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
+                </div>
+              </Link>
+
+              {/* Delete controls */}
+              {confirmId === a.id ? (
+                <div className="absolute inset-0 bg-surface/95 rounded-md border border-danger/30 flex flex-col items-center justify-center gap-3 p-4">
+                  <p className="text-sm font-medium text-center">Delete "{a.name}"?</p>
+                  <p className="text-xs text-text-muted text-center">This cannot be undone.</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmId(null)}>Cancel</Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={deletingId === a.id}
+                      onClick={() => deleteAgent(a.id)}
+                    >
+                      {deletingId === a.id ? "Deleting…" : "Delete"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => { e.preventDefault(); setConfirmId(a.id); }}
+                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all"
+                  aria-label="Delete agent"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}

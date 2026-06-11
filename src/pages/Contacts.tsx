@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { Plus, Upload, Search } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Plus, Upload, Search, Trash2 } from "lucide-react";
 import { listContacts, createContact } from "../lib/db";
+import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody } from "../components/legacy-ui/Card";
 import { ConsentBadge } from "../components/legacy-ui/Badge";
@@ -21,10 +22,12 @@ export default function Contacts() {
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function load() {
+  async function load(query?: string) {
     try {
-      setContacts(await listContacts({ q: q || undefined, limit: 100 }));
+      setContacts(await listContacts({ q: query || undefined, limit: 100 }));
     } catch {
       setContacts([]);
     }
@@ -34,45 +37,60 @@ export default function Contacts() {
     load();
   }, []);
 
+  function handleSearch(val: string) {
+    setQ(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => load(val), 350);
+  }
+
+  async function deleteContact(id: string) {
+    setDeletingId(id);
+    try {
+      await supabase
+        .from("contacts")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", id);
+      setContacts((prev) => prev?.filter((c) => c.id !== id) ?? null);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Contacts</h1>
           <p className="text-sm text-text-muted mt-1">
             Numbers we can dial. Consent-aware by default.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button variant="secondary" onClick={() => setImporting(true)}>
             <Upload className="w-4 h-4 mr-2" />
-            Import CSV
+            <span className="hidden sm:inline">Import CSV</span>
+            <span className="sm:hidden">Import</span>
           </Button>
           <Button onClick={() => setCreating(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Add contact
+            <span className="hidden sm:inline">Add contact</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          load();
-        }}
-        className="relative max-w-md"
-      >
+      <div className="relative max-w-md">
         <Search className="w-4 h-4 absolute top-3 left-3 text-text-muted pointer-events-none" />
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search by name, email, or phone"
           className="w-full h-10 pl-9 pr-3 rounded-md border border-border bg-surface"
         />
-      </form>
+      </div>
 
-      {creating && <CreateForm onClose={() => setCreating(false)} onSaved={load} />}
-      {importing && <ImportForm onClose={() => setImporting(false)} onDone={load} />}
+      {creating && <CreateForm onClose={() => setCreating(false)} onSaved={() => load(q)} />}
+      {importing && <ImportForm onClose={() => setImporting(false)} onDone={() => load(q)} />}
 
       {contacts === null ? (
         <Skeleton className="h-64" />
@@ -88,32 +106,73 @@ export default function Contacts() {
           }
         />
       ) : (
-        <div className="bg-surface border border-border rounded-md shadow-card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-2 text-text-muted">
-              <tr>
-                <Th>Name</Th>
-                <Th>Phone</Th>
-                <Th>Email</Th>
-                <Th>Source</Th>
-                <Th>Consent</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {contacts.map((c) => (
-                <tr key={c.id} className="border-t border-border hover:bg-surface-2">
-                  <Td>{c.name || <span className="text-text-muted">—</span>}</Td>
-                  <Td className="font-mono">{c.e164}</Td>
-                  <Td>{c.email || <span className="text-text-muted">—</span>}</Td>
-                  <Td className="text-text-muted">{c.source || "—"}</Td>
-                  <Td>
-                    <ConsentBadge status={c.consent_status} />
-                  </Td>
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-surface border border-border rounded-md shadow-card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-surface-2 text-text-muted">
+                <tr>
+                  <Th>Name</Th>
+                  <Th>Phone</Th>
+                  <Th>Email</Th>
+                  <Th>Source</Th>
+                  <Th>Consent</Th>
+                  <Th><span className="sr-only">Actions</span></Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {contacts.map((c) => (
+                  <tr key={c.id} className="border-t border-border hover:bg-surface-2 group">
+                    <Td>{c.name || <span className="text-text-muted">—</span>}</Td>
+                    <Td className="font-mono">{c.e164}</Td>
+                    <Td>{c.email || <span className="text-text-muted">—</span>}</Td>
+                    <Td className="text-text-muted">{c.source || "—"}</Td>
+                    <Td><ConsentBadge status={c.consent_status} /></Td>
+                    <Td>
+                      <button
+                        onClick={() => deleteContact(c.id)}
+                        disabled={deletingId === c.id}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
+                        aria-label="Delete contact"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {contacts.map((c) => (
+              <div key={c.id} className="bg-surface border border-border rounded-md shadow-card p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{c.name || <span className="text-text-muted">No name</span>}</div>
+                    <div className="font-mono text-sm text-text-muted mt-0.5">{c.e164}</div>
+                    {c.email && <div className="text-xs text-text-muted mt-0.5 truncate">{c.email}</div>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ConsentBadge status={c.consent_status} />
+                    <button
+                      onClick={() => deleteContact(c.id)}
+                      disabled={deletingId === c.id}
+                      className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-xs text-text-muted text-right">
+            {contacts.length} contact{contacts.length !== 1 ? "s" : ""}
+          </div>
+        </>
       )}
     </div>
   );
@@ -126,23 +185,11 @@ function Th({ children }: { children: React.ReactNode }) {
     </th>
   );
 }
-function Td({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-4 py-3 ${className}`}>{children}</td>;
 }
 
-function CreateForm({
-  onClose,
-  onSaved,
-}: {
-  onClose: () => void;
-  onSaved: () => void;
-}) {
+function CreateForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -188,16 +235,10 @@ function CreateForm({
             onChange={(e) => setEmail(e.target.value)}
             className="h-10 px-3 rounded-md border border-border bg-surface"
           />
-          {err && (
-            <div className="sm:col-span-3 text-sm text-danger">{err}</div>
-          )}
+          {err && <div className="sm:col-span-3 text-sm text-danger">{err}</div>}
           <div className="sm:col-span-3 flex justify-end gap-2">
-            <Button variant="ghost" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={busy}>
-              {busy ? "Saving…" : "Save"}
-            </Button>
+            <Button variant="ghost" type="button" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
           </div>
         </form>
       </CardBody>
@@ -205,13 +246,7 @@ function CreateForm({
   );
 }
 
-function ImportForm({
-  onClose,
-  onDone,
-}: {
-  onClose: () => void;
-  onDone: () => void;
-}) {
+function ImportForm({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -220,10 +255,7 @@ function ImportForm({
     e.preventDefault();
     setBusy(true);
     setResult(null);
-    const lines = text
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     let inserted = 0;
     let skipped = 0;
     for (const line of lines) {
@@ -244,8 +276,7 @@ function ImportForm({
     <Card>
       <CardBody>
         <p className="text-sm text-text-muted mb-3">
-          Paste lines like <code className="font-mono">phone,name,email</code>.
-          One per line.
+          Paste lines like <code className="font-mono">phone,name,email</code>. One per line.
         </p>
         <form onSubmit={submit} className="space-y-3">
           <textarea
@@ -257,12 +288,8 @@ function ImportForm({
           />
           {result && <div className="text-sm text-text-muted">{result}</div>}
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" type="button" onClick={onClose}>
-              Close
-            </Button>
-            <Button type="submit" disabled={busy || !text.trim()}>
-              {busy ? "Importing…" : "Import"}
-            </Button>
+            <Button variant="ghost" type="button" onClick={onClose}>Close</Button>
+            <Button type="submit" disabled={busy || !text.trim()}>{busy ? "Importing…" : "Import"}</Button>
           </div>
         </form>
       </CardBody>
