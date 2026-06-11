@@ -19,7 +19,7 @@ const createSchema = z.object({
   languages: z.array(z.string()).optional(),
   business_hours: z.record(z.string(), z.any()).optional(),
   timezone: z.string().max(80).optional(),
-  transfer_number: z.string().max(40).optional(),
+  transfer_number: z.string().max(40).nullish().transform((v) => v || undefined),
 });
 
 const updateSchema = createSchema.partial();

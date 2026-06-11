@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Play, Save, Loader as Loader2 } from "lucide-react";
+import { ArrowLeft, Play, Save, Loader as Loader2, ChevronDown, Check } from "lucide-react";
 import { getAgent } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
@@ -120,7 +120,7 @@ export default function AgentDetail() {
       await api.patch(`/v1/agents/${id}`, {
         name,
         persona,
-        transfer_number: transferNumber || null,
+        transfer_number: transferNumber.trim() || undefined,
         timezone: timezone || "America/New_York",
         languages: selectedLanguages,
       });
@@ -225,21 +225,10 @@ export default function AgentDetail() {
               />
             </Field>
             <Field label="Languages">
-              <select
-                multiple
-                value={selectedLanguages}
-                onChange={(e) => {
-                  const chosen = Array.from(e.target.selectedOptions).map((o) => o.value);
-                  setSelectedLanguages(chosen.length ? chosen : ["en"]);
-                }}
-                className="w-full px-3 py-2 rounded-md border border-border bg-surface text-sm"
-                size={4}
-              >
-                {LANGUAGE_OPTIONS.map((l) => (
-                  <option key={l.code} value={l.code}>{l.label} ({l.code})</option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-text-muted">Hold Ctrl/Cmd to select multiple.</p>
+              <LanguagePicker
+                selected={selectedLanguages}
+                onChange={setSelectedLanguages}
+              />
             </Field>
             <Field label="Human transfer number">
               <input
@@ -364,6 +353,79 @@ export default function AgentDetail() {
           )}
         </CardBody>
       </Card>
+    </div>
+  );
+}
+
+function LanguagePicker({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (langs: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  function toggle(code: string) {
+    if (selected.includes(code)) {
+      const next = selected.filter((c) => c !== code);
+      onChange(next.length ? next : ["en"]);
+    } else {
+      onChange([...selected, code]);
+    }
+  }
+
+  const label = selected.length === 0
+    ? "Select languages"
+    : selected.map((c) => LANGUAGE_OPTIONS.find((l) => l.code === c)?.label ?? c).join(", ");
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm flex items-center justify-between gap-2 text-left"
+      >
+        <span className="truncate">{label}</span>
+        <ChevronDown className={`w-4 h-4 shrink-0 text-text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-surface shadow-elevated overflow-hidden">
+          <ul className="max-h-56 overflow-y-auto py-1">
+            {LANGUAGE_OPTIONS.map((l) => {
+              const isSelected = selected.includes(l.code);
+              return (
+                <li key={l.code}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(l.code)}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-surface-2 transition-colors text-left"
+                  >
+                    <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected ? "bg-text border-text" : "border-border"}`}>
+                      {isSelected && <Check className="w-2.5 h-2.5 text-surface" />}
+                    </span>
+                    <span className={isSelected ? "font-medium" : ""}>{l.label}</span>
+                    <span className="ml-auto font-mono text-xs text-text-muted">{l.code}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
