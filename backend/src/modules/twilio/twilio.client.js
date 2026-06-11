@@ -37,6 +37,7 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
       auth_token_ref: `sandbox:${orgId}`,
       status: "active",
       region: env.TWILIO_REGION,
+      account_type: "aurora_managed",
     };
     await admin.from("twilio_subaccounts").upsert(row);
     return row;
@@ -54,6 +55,8 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
     auth_token_ref: `vault:twilio:${orgId}:auth_token`,
     status: "active",
     region: env.TWILIO_REGION,
+    account_type: "aurora_managed",
+    friendly_name: friendlyName || null,
   };
   await admin.from("twilio_subaccounts").upsert(row);
 
@@ -63,6 +66,51 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
   }).catch(() => {});
 
   return { ...row, _authToken: sub.authToken };
+}
+
+async function linkByoAccount(orgId, { accountSid, authToken, friendlyName }) {
+  if (!accountSid || !authToken) throw new Error("accountSid and authToken are required");
+
+  // Validate credentials by fetching the account from Twilio
+  const client = twilio(accountSid, authToken);
+  const account = await client.api.v2010.accounts(accountSid).fetch();
+  if (!account) throw new Error("Invalid Twilio credentials");
+
+  const admin = requireAdmin();
+  const secretRef = `vault:twilio:byo:${orgId}:auth_token`;
+
+  await admin.rpc("vault_store", { name: secretRef, secret: authToken }).catch(() => {});
+
+  const row = {
+    org_id: orgId,
+    subaccount_sid: accountSid,
+    secret_ref: secretRef,
+    auth_token_ref: secretRef,
+    status: "active",
+    account_type: "byo_linked",
+    friendly_name: friendlyName || account.friendlyName || null,
+    verified_at: new Date().toISOString(),
+  };
+
+  const { error } = await admin.from("twilio_subaccounts").upsert(row);
+  if (error) throw error;
+
+  // Invalidate client cache
+  tenantClientCache.delete(orgId);
+  return row;
+}
+
+async function listByoNumbers(orgId) {
+  const client = await getTenantClient(orgId);
+  const numbers = await client.incomingPhoneNumbers.list({ limit: 100 });
+  return numbers.map((n) => ({
+    sid: n.sid,
+    phoneNumber: n.phoneNumber,
+    friendlyName: n.friendlyName,
+    capabilities: n.capabilities || {},
+    voiceUrl: n.voiceUrl,
+    statusCallback: n.statusCallback,
+  }));
 }
 
 async function getTenantClient(orgId) {
@@ -156,4 +204,6 @@ module.exports = {
   masterClient,
   getOrCreateSubaccount,
   getTenantClient,
+  linkByoAccount,
+  listByoNumbers,
 };

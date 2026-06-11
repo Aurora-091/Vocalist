@@ -5,8 +5,9 @@ const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
 const { BadRequest, NotFound, Conflict } = require("../../utils/errors");
 const { toE164 } = require("../../utils/phone");
+const logger = require("../../config/logger");
 const env = require("../../config/env");
-const { isSandbox, getOrCreateSubaccount, getTenantClient } = require("./twilio.client");
+const { isSandbox, getOrCreateSubaccount, getTenantClient, linkByoAccount, listByoNumbers } = require("./twilio.client");
 
 const router = express.Router();
 router.use(requireAuth, requireOrg);
@@ -18,12 +19,27 @@ router.get(
   asyncHandler(async (req, res) => {
     const { data } = await req.supabase
       .from("twilio_subaccounts")
-      .select("subaccount_sid, status, region, last_synced_at, error_count, created_at")
+      .select("subaccount_sid, status, region, last_synced_at, error_count, created_at, account_type, friendly_name")
       .eq("org_id", req.auth.orgId)
       .maybeSingle();
     res.json({
       sandbox: isSandbox(),
       subaccount: data || null,
+    });
+  })
+);
+
+router.get(
+  "/account-status",
+  asyncHandler(async (req, res) => {
+    const { data } = await req.supabase
+      .from("twilio_subaccounts")
+      .select("subaccount_sid, status, account_type, friendly_name, verified_at, created_at")
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+    res.json({
+      sandbox: isSandbox(),
+      account: data || null,
     });
   })
 );
@@ -45,8 +61,81 @@ router.post(
         subaccount_sid: sub.subaccount_sid,
         status: sub.status,
         region: sub.region,
+        account_type: sub.account_type,
       },
     });
+  })
+);
+
+const linkAccountSchema = z.object({
+  account_sid: z.string().min(10),
+  auth_token: z.string().min(10),
+  friendly_name: z.string().optional(),
+});
+
+router.post(
+  "/link-account",
+  requireRole("owner", "admin"),
+  validate({ body: linkAccountSchema }),
+  asyncHandler(async (req, res) => {
+    const { data: existing } = await req.supabase
+      .from("twilio_subaccounts")
+      .select("account_type, status")
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+
+    if (existing && existing.account_type === "aurora_managed" && existing.status === "active") {
+      throw Conflict("This org already has an Aurora-managed Twilio sub-account. Remove it before linking a BYO account.");
+    }
+
+    const row = await linkByoAccount(req.auth.orgId, {
+      accountSid: req.body.account_sid,
+      authToken: req.body.auth_token,
+      friendlyName: req.body.friendly_name,
+    });
+
+    res.status(201).json({ account: row });
+  })
+);
+
+router.delete(
+  "/link-account",
+  requireRole("owner", "admin"),
+  asyncHandler(async (req, res) => {
+    const { data: row } = await req.supabase
+      .from("twilio_subaccounts")
+      .select("account_type")
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+
+    if (!row) throw NotFound("No linked account found");
+    if (row.account_type !== "byo_linked") throw BadRequest("Only BYO-linked accounts can be unlinked");
+
+    await req.supabase
+      .from("twilio_subaccounts")
+      .delete()
+      .eq("org_id", req.auth.orgId);
+
+    res.status(204).end();
+  })
+);
+
+router.get(
+  "/numbers/existing",
+  requireRole("owner", "admin"),
+  asyncHandler(async (req, res) => {
+    if (isSandbox()) return res.json({ numbers: [] });
+
+    const { data: sub } = await req.supabase
+      .from("twilio_subaccounts")
+      .select("account_type, status")
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+
+    if (!sub || sub.status !== "active") throw NotFound("No active Twilio account linked");
+
+    const numbers = await listByoNumbers(req.auth.orgId);
+    res.json({ numbers });
   })
 );
 
@@ -224,7 +313,15 @@ router.post(
       .maybeSingle();
     if (dup) throw Conflict("number already attached");
 
-    await getOrCreateSubaccount(req.auth.orgId);
+    const { data: existingSub } = await req.supabase
+      .from("twilio_subaccounts")
+      .select("subaccount_sid, account_type, status")
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+
+    if (!existingSub || existingSub.status !== "active") {
+      throw BadRequest("No active Twilio account linked. Link your account or provision an Aurora-managed sub-account first.");
+    }
 
     const voiceUrl = env.TWILIO_VOICE_BASE_URL
       ? `${env.TWILIO_VOICE_BASE_URL}/webhooks/twilio/voice`
@@ -237,7 +334,7 @@ router.post(
     if (!isSandbox() && provider_ref) {
       const client = await getTenantClient(req.auth.orgId);
       try {
-        await client.incomingPhoneNumbers.update(provider_ref, {
+        await client.incomingPhoneNumbers(provider_ref).update({
           voiceUrl,
           statusCallback,
         });

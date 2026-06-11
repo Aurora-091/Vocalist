@@ -1,10 +1,12 @@
 const { buildIdempotencyKey } = require("../../utils/idempotency");
+const billingService = require("./billing.service");
 
 async function recordVoiceMinutes(supabase, { orgId, callId, durationSec, providerCallId }) {
   if (!durationSec || durationSec <= 0) return { skipped: true };
   const minutes = Math.ceil(durationSec / 60);
   const period = new Date().toISOString().slice(0, 10);
   const idempotency_key = buildIdempotencyKey([providerCallId || callId, "voice_minutes"]);
+  const cost_usd = await billingService.calculateCostUsd(orgId, minutes, null);
 
   const { error } = await supabase.from("usage_ledger").insert({
     org_id: orgId,
@@ -13,10 +15,11 @@ async function recordVoiceMinutes(supabase, { orgId, callId, durationSec, provid
     call_id: callId,
     period,
     idempotency_key,
+    cost_usd,
   });
 
   if (error && error.code !== "23505") throw error;
-  return { recorded: !error, minutes };
+  return { recorded: !error, minutes, cost_usd };
 }
 
 async function recordCampaignCall(supabase, { orgId, callId, providerCallId }) {
@@ -33,4 +36,21 @@ async function recordCampaignCall(supabase, { orgId, callId, providerCallId }) {
   return { recorded: !error };
 }
 
-module.exports = { recordVoiceMinutes, recordCampaignCall };
+async function recordPhoneNumberCost(supabase, { orgId, phoneNumberId, monthlyCostUsd }) {
+  if (!monthlyCostUsd || monthlyCostUsd <= 0) return { skipped: true };
+  const period = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const idempotency_key = buildIdempotencyKey([phoneNumberId, "phone_number", period]);
+
+  const { error } = await supabase.from("usage_ledger").insert({
+    org_id: orgId,
+    kind: "phone_number",
+    quantity: 1,
+    period: new Date().toISOString().slice(0, 10),
+    idempotency_key,
+    cost_usd: monthlyCostUsd,
+  });
+  if (error && error.code !== "23505") throw error;
+  return { recorded: !error, cost_usd: monthlyCostUsd };
+}
+
+module.exports = { recordVoiceMinutes, recordCampaignCall, recordPhoneNumberCost };

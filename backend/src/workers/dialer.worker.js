@@ -2,8 +2,10 @@ const { requireAdmin } = require("../config/supabase");
 const logger = require("../config/logger");
 const { transition, STATES } = require("../modules/campaigns/state-machine");
 const { buildVoiceProvider } = require("../providers/voice/factory");
+const billingService = require("../modules/billing/billing.service");
 
 const LEASE_SECONDS = 90;
+const DEFAULT_PROJECTED_MINUTES = 3;
 
 async function loadIntegrationConfig(admin, orgId, providerName) {
   if (providerName !== "vapi" && providerName !== "retell") return {};
@@ -54,6 +56,36 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     return { skipped: true, reason: "can_dial_false" };
   }
 
+  // Spend guard: check if org has budget headroom before placing the call
+  const overageRate = await billingService.getOrgOverageRate(campaign.org_id);
+  const projectedCost = DEFAULT_PROJECTED_MINUTES * overageRate;
+
+  const { data: canSpend, error: spendCheckErr } = await admin.rpc("can_spend", {
+    p_org: campaign.org_id,
+    p_amount_usd: projectedCost,
+  });
+  if (spendCheckErr) {
+    logger.warn({ err: spendCheckErr.message, orgId: campaign.org_id }, "can_spend RPC error - allowing call");
+  } else if (canSpend === false) {
+    await transition(admin, {
+      targetId: target.target_id,
+      fromState: STATES.DIALING,
+      toState: STATES.SUPPRESSED,
+      reason: "budget_exceeded",
+      orgId: campaign.org_id,
+    });
+    return { skipped: true, reason: "budget_exceeded" };
+  }
+
+  // Reserve projected spend so concurrent calls don't exceed budget
+  const { error: reserveErr } = await admin.rpc("reserve_spend", {
+    p_org: campaign.org_id,
+    p_amount_usd: projectedCost,
+  });
+  if (reserveErr) {
+    logger.warn({ err: reserveErr.message, orgId: campaign.org_id }, "reserve_spend RPC error - continuing");
+  }
+
   const integrationConfig = await loadIntegrationConfig(admin, campaign.org_id, agent.provider);
   const provider = buildVoiceProvider({ agent, integrationConfig });
 
@@ -67,6 +99,13 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     });
   } catch (err) {
     logger.error({ err: err.message, agentProvider: agent.provider }, "Provider startCall failed");
+
+    // Release the reserved spend since the call never happened
+    await admin.rpc("release_spend", {
+      p_org: campaign.org_id,
+      p_amount_usd: projectedCost,
+    }).catch((e) => logger.warn({ err: e.message }, "release_spend failed"));
+
     await transition(admin, {
       targetId: target.target_id,
       fromState: STATES.DIALING,
@@ -93,6 +132,10 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     .single();
   if (callErr) {
     logger.error({ err: callErr.message }, "Failed to insert call row after dispatch");
+    await admin.rpc("release_spend", {
+      p_org: campaign.org_id,
+      p_amount_usd: projectedCost,
+    }).catch(() => {});
     return { failed: true, reason: "call_insert_failed" };
   }
 
