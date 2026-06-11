@@ -26,8 +26,16 @@ class ElevenLabsProvider extends VoiceProvider {
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`ElevenLabs ${method} ${path} failed: ${res.status} ${text.slice(0, 200)}`);
+      let detail;
+      try {
+        detail = await res.json();
+      } catch {
+        detail = await res.text().catch(() => "");
+      }
+      const err = new Error(`ElevenLabs ${method} ${path} failed: ${res.status}`);
+      err.status = res.status;
+      err.detail = detail;
+      throw err;
     }
 
     if (res.status === 204) return null;

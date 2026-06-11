@@ -6,10 +6,12 @@ const TIMEOUT_MS = 15_000;
 class ApiError extends Error {
   status: number;
   code: string;
-  constructor(status: number, code: string, message: string) {
+  details?: unknown;
+  constructor(status: number, code: string, message: string, details?: unknown) {
     super(message);
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -63,7 +65,7 @@ async function request<T>(
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new ApiError(res.status, err?.error?.code || "error", err?.error?.message || res.statusText);
+      throw new ApiError(res.status, err?.error?.code || "error", err?.error?.message || res.statusText, err?.error?.details);
     }
 
     if (res.status === 204) return undefined as T;

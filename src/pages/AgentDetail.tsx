@@ -9,6 +9,31 @@ import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
 import { Skeleton } from "../components/legacy-ui/States";
 
+const TONE_OPTIONS = [
+  "warm and professional",
+  "calm and reassuring",
+  "energetic and friendly",
+  "formal and precise",
+  "empathetic and supportive",
+  "concise and direct",
+] as const;
+
+const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "fr", label: "French" },
+  { code: "de", label: "German" },
+  { code: "pt", label: "Portuguese" },
+  { code: "it", label: "Italian" },
+  { code: "ja", label: "Japanese" },
+  { code: "zh", label: "Chinese" },
+  { code: "ko", label: "Korean" },
+  { code: "nl", label: "Dutch" },
+  { code: "pl", label: "Polish" },
+  { code: "hi", label: "Hindi" },
+  { code: "ar", label: "Arabic" },
+];
+
 type Agent = {
   id: string;
   name: string;
@@ -37,11 +62,11 @@ export default function AgentDetail() {
 
   const [name, setName] = useState("");
   const [objective, setObjective] = useState("");
-  const [tone, setTone] = useState("");
+  const [tone, setTone] = useState<string>(TONE_OPTIONS[0]);
   const [businessName, setBusinessName] = useState("");
   const [transferNumber, setTransferNumber] = useState("");
   const [timezone, setTimezone] = useState("");
-  const [languagesText, setLanguagesText] = useState("");
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(["en"]);
   const [testNumber, setTestNumber] = useState("");
   const [calling, setCalling] = useState(false);
   const [callMsg, setCallMsg] = useState<string | null>(null);
@@ -52,11 +77,18 @@ export default function AgentDetail() {
       setAgent(a);
       setName(a.name || "");
       setObjective(a.persona?.objective || "");
-      setTone(a.persona?.tone || "");
+      const savedTone = a.persona?.tone || "";
+      const matchedTone = TONE_OPTIONS.find(
+        (t) => t.toLowerCase() === savedTone.toLowerCase().trim()
+      );
+      setTone(matchedTone || (TONE_OPTIONS.includes(savedTone as any) ? savedTone : TONE_OPTIONS[0]));
       setBusinessName(a.persona?.business_name || "");
       setTransferNumber(a.transfer_number || "");
       setTimezone(a.timezone || "America/New_York");
-      setLanguagesText((a.languages || ["en"]).join(", "));
+      const langs = (a.languages || ["en"])
+        .map((l: string) => l.trim().toLowerCase().slice(0, 5))
+        .filter(Boolean);
+      setSelectedLanguages(langs.length ? langs : ["en"]);
 
       const { data: kb } = await supabase
         .from("agent_knowledge")
@@ -85,21 +117,25 @@ export default function AgentDetail() {
         tone,
         business_name: businessName,
       };
-      const languages = languagesText
-        .split(",")
-        .map((l) => l.trim())
-        .filter(Boolean);
       await api.patch(`/v1/agents/${id}`, {
         name,
         persona,
         transfer_number: transferNumber || null,
         timezone: timezone || "America/New_York",
-        languages,
+        languages: selectedLanguages,
       });
       setSavedMsg("Saved and synced.");
       load();
     } catch (e: any) {
-      setSavedMsg(e.message || "Couldn't save.");
+      const detail = e.details || e.detail;
+      if (detail && typeof detail === "object") {
+        const fields = Array.isArray(detail)
+          ? detail.map((d: any) => d.msg || d.message || JSON.stringify(d)).join("; ")
+          : detail.detail || detail.message || JSON.stringify(detail);
+        setSavedMsg(`Provider error: ${fields}`);
+      } else {
+        setSavedMsg(e.message || "Couldn't save.");
+      }
     } finally {
       setSaving(false);
     }
@@ -171,12 +207,15 @@ export default function AgentDetail() {
               />
             </Field>
             <Field label="Tone">
-              <input
+              <select
                 value={tone}
                 onChange={(e) => setTone(e.target.value)}
-                placeholder="warm and professional"
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface"
-              />
+                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
+              >
+                {TONE_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                ))}
+              </select>
             </Field>
             <Field label="Timezone">
               <input
@@ -185,13 +224,22 @@ export default function AgentDetail() {
                 className="w-full h-10 px-3 rounded-md border border-border bg-surface"
               />
             </Field>
-            <Field label="Languages (comma-separated)">
-              <input
-                value={languagesText}
-                onChange={(e) => setLanguagesText(e.target.value)}
-                placeholder="en, es"
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface"
-              />
+            <Field label="Languages">
+              <select
+                multiple
+                value={selectedLanguages}
+                onChange={(e) => {
+                  const chosen = Array.from(e.target.selectedOptions).map((o) => o.value);
+                  setSelectedLanguages(chosen.length ? chosen : ["en"]);
+                }}
+                className="w-full px-3 py-2 rounded-md border border-border bg-surface text-sm"
+                size={4}
+              >
+                {LANGUAGE_OPTIONS.map((l) => (
+                  <option key={l.code} value={l.code}>{l.label} ({l.code})</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-text-muted">Hold Ctrl/Cmd to select multiple.</p>
             </Field>
             <Field label="Human transfer number">
               <input
@@ -202,13 +250,15 @@ export default function AgentDetail() {
               />
             </Field>
           </div>
-          <div className="mt-6 flex items-center gap-3">
+          <div className="mt-6 flex items-center gap-3 flex-wrap">
             <Button onClick={save} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Saving…" : "Save changes"}
             </Button>
             {savedMsg && (
-              <span className="text-sm text-text-muted">{savedMsg}</span>
+              <span className={`text-sm ${savedMsg.startsWith("Provider error") || savedMsg === "Couldn't save." ? "text-danger" : "text-success"}`}>
+                {savedMsg}
+              </span>
             )}
           </div>
         </CardBody>

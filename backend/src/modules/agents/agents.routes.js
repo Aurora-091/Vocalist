@@ -3,7 +3,7 @@ const { z } = require("zod");
 const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
-const { NotFound, BadRequest } = require("../../utils/errors");
+const { NotFound, BadRequest, UnprocessableEntity } = require("../../utils/errors");
 const agentService = require("./agent.service");
 
 const router = express.Router();
@@ -60,15 +60,24 @@ router.post(
   asyncHandler(async (req, res) => {
     try {
       const agent = await agentService.createAgent(req.supabase, req.auth.orgId, req.body);
-      
+
       await req.supabase
         .from("onboarding_state")
         .update({ steps: { create_agent: true }, updated_at: new Date().toISOString() })
         .eq("org_id", req.auth.orgId);
-        
+
       res.status(201).json({ agent });
     } catch (err) {
-      throw new Error("Failed to create agent: " + err.message);
+      if (err.status === 422) {
+        throw UnprocessableEntity(
+          "ElevenLabs rejected the agent configuration",
+          err.detail
+        );
+      }
+      if (err.status >= 400 && err.status < 500) {
+        throw BadRequest(`Provider error: ${err.message}`, err.detail);
+      }
+      throw err;
     }
   })
 );
@@ -78,9 +87,13 @@ router.post(
   requireRole("owner", "admin"),
   validate({
     params: z.object({ id: z.string().uuid() }),
-    body: z.object({ to: z.string().min(4) }),
+    body: z.object({
+      to_number: z.string().min(4).optional(),
+      to: z.string().min(4).optional(),
+    }).refine((b) => b.to_number || b.to, { message: "to_number is required" }),
   }),
   asyncHandler(async (req, res) => {
+    const toNumber = req.body.to_number || req.body.to;
     const { data: agent, error: agentErr } = await req.supabase
       .from("agents")
       .select("id, name, provider")
@@ -98,7 +111,7 @@ router.post(
         direction: "outbound",
         provider: agent.provider,
         status: "queued",
-        outcome: { test: true, requested_by: req.auth.userId, to: req.body.to },
+        outcome: { test: true, requested_by: req.auth.userId, to: toNumber },
       })
       .select("id, status")
       .maybeSingle();
@@ -126,7 +139,16 @@ router.patch(
       res.json({ agent });
     } catch (err) {
       if (err.message.includes("not found")) throw NotFound(err.message);
-      throw new Error("Failed to update agent: " + err.message);
+      if (err.status === 422) {
+        throw UnprocessableEntity(
+          "ElevenLabs rejected the agent configuration",
+          err.detail
+        );
+      }
+      if (err.status >= 400 && err.status < 500) {
+        throw BadRequest(`Provider error: ${err.message}`, err.detail);
+      }
+      throw err;
     }
   })
 );
