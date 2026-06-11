@@ -30,6 +30,7 @@ const Funding = lazy(() => import("./pages/Funding"));
 const Demo = lazy(() => import("./pages/Demo"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Terms = lazy(() => import("./pages/Terms"));
+const Waitlist = lazy(() => import("./pages/Waitlist"));
 
 function PageLoader() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/demo" element={<Demo />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/waitlist" element={<Waitlist />} />
         <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
         <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
         <Route path="/auth/callback/:provider" element={<OAuthCallback />} />

@@ -84,6 +84,18 @@ function generateSystemPrompt(persona) {
   }
 
   sections.push(
+    "# Compliance & Consent Disclosure\n" +
+    "- At the start of every outbound call, after introducing yourself, state: " +
+    '"This call may be recorded for quality and training purposes."\n' +
+    "- If the recipient asks to be removed from the call list, immediately comply, " +
+    "confirm their removal, end the call politely, and flag the contact for DNC.\n" +
+    "- Never proceed with a sales pitch or appointment booking until the recipient " +
+    "has acknowledged the recording disclosure.\n" +
+    "- If calling on behalf of a business, always identify the business name within " +
+    "the first 10 seconds of the call."
+  );
+
+  sections.push(
     "# General Behavior\n- Keep responses concise and conversational.\n- Confirm understanding before taking actions.\n- If a request violates a guardrail, politely decline and offer to escalate."
   );
 

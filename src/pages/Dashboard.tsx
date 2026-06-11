@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Check, Sparkles, Phone, TrendingUp, Users, TriangleAlert as AlertTriangle } from "lucide-react";
+import { Plus, Check, Sparkles, Phone } from "lucide-react";
 import { getOverview, getUsageSummary, getOnboardingSteps } from "../lib/db";
+import { supabase } from "../lib/supabase";
 import { StatCard } from "../components/legacy-ui/StatCard";
 import { Card, CardHeader, CardBody } from "../components/legacy-ui/Card";
 import { Button } from "../components/legacy-ui/Button";
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const [usage, setUsage] = useState<any>(null);
   const [steps, setSteps] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [liveCalls, setLiveCalls] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +50,35 @@ export default function Dashboard() {
         setLoading(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("live-calls")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calls", filter: "status=eq.in_progress" },
+        (payload) => {
+          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+            const call = payload.new;
+            if (call.status === "in_progress") {
+              setLiveCalls((prev) => {
+                const exists = prev.find((c) => c.id === call.id);
+                if (exists) return prev.map((c) => (c.id === call.id ? call : c));
+                return [call, ...prev].slice(0, 10);
+              });
+            } else {
+              setLiveCalls((prev) => prev.filter((c) => c.id !== call.id));
+            }
+          }
+          if (payload.eventType === "DELETE") {
+            setLiveCalls((prev) => prev.filter((c) => c.id !== payload.old?.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const checklistDone = steps && Object.values(steps).every(Boolean);
@@ -153,13 +184,39 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <div className="font-medium">Live now</div>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                {liveCalls.length > 0 && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${liveCalls.length > 0 ? "bg-success" : "bg-text-muted/30"}`} />
+              </span>
+              <span className="font-medium">Live now</span>
+              {liveCalls.length > 0 && (
+                <span className="text-xs text-text-muted ml-1">({liveCalls.length})</span>
+              )}
+            </div>
           </CardHeader>
           <CardBody>
-            <div className="text-sm text-text-muted">
-              No live calls right now. Place a test call from any agent to see
-              one here.
-            </div>
+            {liveCalls.length === 0 ? (
+              <div className="text-sm text-text-muted">
+                No live calls right now. Place a test call from any agent to see it here.
+              </div>
+            ) : (
+              <ul className="space-y-2.5">
+                {liveCalls.map((call) => (
+                  <li key={call.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2.5">
+                      <Phone className="w-3.5 h-3.5 text-success" />
+                      <span className="font-mono text-xs">{call.to_number || "Unknown"}</span>
+                    </div>
+                    <span className="text-xs text-text-muted">
+                      {call.direction === "inbound" ? "Inbound" : "Outbound"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardBody>
         </Card>
         <Card>

@@ -126,9 +126,24 @@ Deno.serve(async (req: Request) => {
         shopifyPath = `/admin/api/2024-01/${resourceType}.json?${searchParams}`;
     }
 
-    // Note: In production, api_key_ref would be used to fetch from vault
-    // For now, use SHOPIFY_API_KEY env var as fallback
-    const apiKey = Deno.env.get("SHOPIFY_API_KEY") || connection.api_key_ref;
+    let apiKey: string | null = null;
+    if (connection.api_key_ref) {
+      const { data: secret } = await adminClient
+        .from("vault.decrypted_secrets")
+        .select("decrypted_secret")
+        .eq("name", connection.api_key_ref)
+        .maybeSingle();
+      apiKey = secret?.decrypted_secret || null;
+    }
+    if (!apiKey) {
+      apiKey = Deno.env.get("SHOPIFY_API_KEY") || null;
+    }
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: "Shopify API key not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const shopifyRes = await fetch(
       `https://${connection.shop_domain}${shopifyPath}`,
