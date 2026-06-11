@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { api, ApiError } from "../lib/api";
 import { Button } from "../components/legacy-ui/Button";
 
 const DEMO_EMAIL = "demo@aurora.dev";
@@ -19,13 +20,23 @@ export default function Login() {
     e.preventDefault();
     setErr(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
+    try {
+      const result = await api.post<{
+        session: { access_token: string; refresh_token: string };
+        user: { id: string };
+      }>("/v1/auth/login", { email, password });
+      if (result.session) {
+        await supabase.auth.setSession({
+          access_token: result.session.access_token,
+          refresh_token: result.session.refresh_token,
+        });
+      }
+      navigate("/");
+    } catch (error: any) {
       setErr("That email and password didn't match. Try again.");
-      return;
+    } finally {
+      setLoading(false);
     }
-    navigate("/");
   }
 
   async function signInWithGoogle() {
@@ -45,13 +56,20 @@ export default function Login() {
     setPassword(DEMO_PASSWORD);
     setErr(null);
     setLoading(true);
-    supabase.auth.signInWithPassword({ email: DEMO_EMAIL, password: DEMO_PASSWORD }).then(({ error }) => {
-      setLoading(false);
-      if (error) {
-        setErr("Demo account not available. Please sign up.");
-        return;
+    api.post<{
+      session: { access_token: string; refresh_token: string };
+    }>("/v1/auth/login", { email: DEMO_EMAIL, password: DEMO_PASSWORD }).then(async (result) => {
+      if (result.session) {
+        await supabase.auth.setSession({
+          access_token: result.session.access_token,
+          refresh_token: result.session.refresh_token,
+        });
       }
+      setLoading(false);
       navigate("/");
+    }).catch(() => {
+      setLoading(false);
+      setErr("Demo account not available. Please sign up.");
     });
   }
 

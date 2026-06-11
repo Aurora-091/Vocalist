@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { api, ApiError } from "../lib/api";
 import { Button } from "../components/legacy-ui/Button";
 
 export default function Signup() {
@@ -16,24 +17,27 @@ export default function Signup() {
     setErr(null);
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { org_name: orgName },
-        },
-      });
-      if (error) {
-        setErr(error.message);
-        return;
-      }
-      if (data.session) {
+      const result = await api.post<{
+        session: { access_token: string; refresh_token: string };
+        user: { id: string };
+        org: { id: string };
+      }>("/v1/auth/signup", { email, password, org_name: orgName });
+
+      if (result.session) {
+        await supabase.auth.setSession({
+          access_token: result.session.access_token,
+          refresh_token: result.session.refresh_token,
+        });
         navigate("/onboarding");
       } else {
         navigate("/login");
       }
     } catch (error: any) {
-      setErr(error.message || "Couldn't create your account.");
+      if (error instanceof ApiError) {
+        setErr(error.message);
+      } else {
+        setErr(error.message || "Couldn't create your account.");
+      }
     } finally {
       setLoading(false);
     }

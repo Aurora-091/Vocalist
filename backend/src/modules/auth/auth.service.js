@@ -26,8 +26,14 @@ async function signup({ email, password, org_name }) {
   const userId = created.user.id;
   const { error: linkErr } = await admin
     .from("users")
-    .insert({ id: userId, org_id: orgRow.id, email, role: "owner" });
+    .insert({ id: userId, org_id: orgRow.id, email, role: "owner", display_name: org_name || email.split("@")[0] });
   if (linkErr) throw new Error(`Failed to link user: ${linkErr.message}`);
+
+  // Initialize onboarding state
+  await admin.from("onboarding_state").insert({
+    org_id: orgRow.id,
+    steps: { pick_vertical: false, connect_tools: false, add_knowledge: false, create_agent: false, get_number: false, test_and_golive: false },
+  }).catch(() => {});
 
   const { data: session, error: sessErr } = await anonClient.auth.signInWithPassword({
     email,
