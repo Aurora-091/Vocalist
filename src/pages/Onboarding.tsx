@@ -82,7 +82,7 @@ export default function Onboarding() {
                 Step {stepIndex + 1} of {STEP_KEYS.length}
               </div>
               <button
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/dashboard")}
                 className="text-xs text-text-muted hover:text-text"
               >
                 Skip onboarding
@@ -148,7 +148,7 @@ export default function Onboarding() {
               <TestAndGoLive
                 onDone={() => {
                   markDone("test_and_golive");
-                  navigate("/");
+                  navigate("/dashboard");
                 }}
               />
             )}

@@ -62,7 +62,7 @@ export function PublicOnly({ children }: { children: ReactNode }) {
     );
   }
   if (status === "in") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
 }

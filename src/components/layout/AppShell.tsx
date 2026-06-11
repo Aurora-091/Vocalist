@@ -25,7 +25,7 @@ import { getUsageSummary, getOrg } from "../../lib/db";
 import { NotificationsBell } from "./NotificationsBell";
 
 const items = [
-  { to: "/", label: "Home", icon: LayoutDashboard, end: true },
+  { to: "/dashboard", label: "Home", icon: LayoutDashboard, end: true },
   { to: "/agents", label: "Agents", icon: Bot },
   { to: "/campaigns", label: "Campaigns", icon: Megaphone },
   { to: "/calls", label: "Calls", icon: Phone },

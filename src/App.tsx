@@ -44,7 +44,8 @@ export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/welcome" element={<Landing />} />
+        {/* Public / marketing pages */}
+        <Route path="/" element={<Landing />} />
         <Route path="/about" element={<About />} />
         <Route path="/story" element={<Story />} />
         <Route path="/funding" element={<Funding />} />
@@ -64,6 +65,7 @@ export default function App() {
           }
         />
 
+        {/* Authenticated app */}
         <Route
           element={
             <RequireAuth>
@@ -71,7 +73,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/agents" element={<AgentsList />} />
           <Route path="/agents/:id" element={<AgentDetail />} />
           <Route path="/campaigns" element={<Campaigns />} />

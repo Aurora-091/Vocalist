@@ -27,7 +27,7 @@ export function MarketingNav() {
       }`}
     >
       <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/welcome" className="font-semibold tracking-tight text-lg text-[#111]">
+        <Link to="/" className="font-semibold tracking-tight text-lg text-[#111]">
           {SITE.name}
         </Link>
 

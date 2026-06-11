@@ -60,7 +60,7 @@ export default function Signup() {
       {/* Left panel - value prop */}
       <div className="hidden lg:flex lg:w-[45%] bg-[#111] text-white p-12 flex-col justify-between">
         <div>
-          <Link to="/welcome" className="font-semibold text-lg tracking-tight">
+          <Link to="/" className="font-semibold text-lg tracking-tight">
             Aurora
           </Link>
         </div>
@@ -84,7 +84,7 @@ export default function Signup() {
       {/* Right panel - form */}
       <div className="flex-1 flex items-center justify-center px-6 py-12 lg:py-0">
         <div className="w-full max-w-md">
-          <Link to="/welcome" className="font-semibold text-lg tracking-tight text-[#111] lg:hidden mb-8 block">
+          <Link to="/" className="font-semibold text-lg tracking-tight text-[#111] lg:hidden mb-8 block">
             Aurora
           </Link>
 
