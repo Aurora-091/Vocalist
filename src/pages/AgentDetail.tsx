@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Play, Save, Loader as Loader2, ChevronDown, Check } from "lucide-react";
+import { ArrowLeft, Play, Save, Loader as Loader2, ChevronDown, Check, Phone, X } from "lucide-react";
 import { getAgent } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
@@ -32,6 +32,25 @@ const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
   { code: "pl", label: "Polish" },
   { code: "hi", label: "Hindi" },
   { code: "ar", label: "Arabic" },
+  { code: "bn", label: "Bengali" },
+  { code: "bg", label: "Bulgarian" },
+  { code: "hr", label: "Croatian" },
+  { code: "cs", label: "Czech" },
+  { code: "da", label: "Danish" },
+  { code: "fi", label: "Finnish" },
+  { code: "el", label: "Greek" },
+  { code: "id", label: "Indonesian" },
+  { code: "ms", label: "Malay" },
+  { code: "no", label: "Norwegian" },
+  { code: "ro", label: "Romanian" },
+  { code: "ru", label: "Russian" },
+  { code: "sk", label: "Slovak" },
+  { code: "sv", label: "Swedish" },
+  { code: "ta", label: "Tamil" },
+  { code: "th", label: "Thai" },
+  { code: "tr", label: "Turkish" },
+  { code: "uk", label: "Ukrainian" },
+  { code: "vi", label: "Vietnamese" },
 ];
 
 type Agent = {
@@ -70,6 +89,7 @@ export default function AgentDetail() {
   const [testNumber, setTestNumber] = useState("");
   const [calling, setCalling] = useState(false);
   const [callMsg, setCallMsg] = useState<string | null>(null);
+  const [activeCallId, setActiveCallId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -329,9 +349,11 @@ export default function AgentDetail() {
               onClick={async () => {
                 setCalling(true);
                 setCallMsg(null);
+                setActiveCallId(null);
                 try {
-                  await api.post(`/v1/agents/${id}/test-call`, { to_number: testNumber.trim() });
+                  const res = await api.post(`/v1/agents/${id}/test-call`, { to_number: testNumber.trim() });
                   setCallMsg("Call initiated. Your phone should ring shortly.");
+                  if (res?.call_id) setActiveCallId(res.call_id);
                 } catch (e: any) {
                   setCallMsg(e.message || "Failed to place call.");
                 } finally {
@@ -339,7 +361,7 @@ export default function AgentDetail() {
                 }
               }}
             >
-              {calling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+              {calling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Phone className="w-4 h-4 mr-2" />}
               {calling ? "Calling..." : "Test call"}
             </Button>
           </div>
@@ -353,6 +375,10 @@ export default function AgentDetail() {
           )}
         </CardBody>
       </Card>
+
+      {activeCallId && (
+        <TestCallDrawer callId={activeCallId} onClose={() => setActiveCallId(null)} />
+      )}
     </div>
   );
 }
@@ -446,5 +472,115 @@ function Field({
       </label>
       {children}
     </div>
+  );
+}
+
+function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => void }) {
+  const [callStatus, setCallStatus] = useState<string>("connecting");
+  const [transcript, setTranscript] = useState<{ role: string; text: string }[]>([]);
+  const [elapsed, setElapsed] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const startTime = useRef(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime.current) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`call_events_${callId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "call_events",
+          filter: `call_id=eq.${callId}`,
+        },
+        (payload: any) => {
+          const event = payload.new;
+          if (event.kind === "transcript") {
+            setTranscript((prev) => [
+              ...prev,
+              { role: event.metadata?.role || "agent", text: event.metadata?.text || "" },
+            ]);
+          } else if (event.kind === "status_change") {
+            setCallStatus(event.metadata?.status || event.metadata?.new_status || "in_progress");
+          }
+        }
+      )
+      .subscribe();
+
+    supabase
+      .from("calls")
+      .select("status")
+      .eq("id", callId)
+      .single()
+      .then(({ data }) => {
+        if (data?.status) setCallStatus(data.status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [callId]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [transcript]);
+
+  const costPerSec = 0.14 / 60;
+  const estimatedCost = (elapsed * costPerSec).toFixed(3);
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  const isEnded = ["completed", "failed", "no_answer", "busy"].includes(callStatus);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 font-medium">
+            <Phone className="w-4 h-4" />
+            Test call
+            <Badge tone={isEnded ? "neutral" : "success"} dot={!isEnded}>
+              {callStatus.replace(/_/g, " ")}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="font-mono text-xs text-text-muted">
+              {minutes}:{seconds.toString().padStart(2, "0")} · ~${estimatedCost}
+            </span>
+            <button onClick={onClose} className="p-1 rounded hover:bg-surface-2">
+              <X className="w-4 h-4 text-text-muted" />
+            </button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardBody>
+        <div
+          ref={scrollRef}
+          className="h-48 overflow-y-auto space-y-2 bg-surface-2 rounded-md p-3 border border-border"
+        >
+          {transcript.length === 0 ? (
+            <div className="text-xs text-text-muted flex items-center gap-2">
+              {!isEnded && <Loader2 className="w-3 h-3 animate-spin" />}
+              {isEnded ? "No transcript received." : "Waiting for conversation to start..."}
+            </div>
+          ) : (
+            transcript.map((t, i) => (
+              <div key={i} className={`text-xs ${t.role === "agent" ? "text-text" : "text-text-muted"}`}>
+                <span className="font-medium capitalize">{t.role}:</span>{" "}
+                {t.text}
+              </div>
+            ))
+          )}
+        </div>
+      </CardBody>
+    </Card>
   );
 }

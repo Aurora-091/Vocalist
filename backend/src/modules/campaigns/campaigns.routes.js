@@ -173,4 +173,91 @@ router.get(
   })
 );
 
+router.get(
+  "/:id/review",
+  validate({ params: z.object({ id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    const { requireAdmin } = require("../../config/supabase");
+    const admin = requireAdmin();
+
+    const { data: campaign, error: cErr } = await req.supabase
+      .from("campaigns")
+      .select("id, org_id, agent_id, concurrency")
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (cErr) throw cErr;
+    if (!campaign) throw NotFound("Campaign not found");
+
+    const { data: targets } = await req.supabase
+      .from("campaign_targets")
+      .select("contact_id")
+      .eq("campaign_id", req.params.id)
+      .eq("state", STATES.QUEUED);
+
+    const totalTargets = targets?.length || 0;
+    if (totalTargets === 0) {
+      return res.json({
+        campaign_id: req.params.id,
+        total_targets: 0,
+        consented: 0,
+        excluded_dnc: 0,
+        excluded_no_consent: 0,
+        estimated_cost_usd: 0,
+        spend_check_passed: true,
+        ready_to_launch: false,
+        block_reason: "no_targets",
+      });
+    }
+
+    const contactIds = targets.map((t) => t.contact_id);
+    const { data: contacts } = await req.supabase
+      .from("contacts")
+      .select("id, consent_status")
+      .in("id", contactIds.slice(0, 5000))
+      .is("deleted_at", null);
+
+    let consented = 0;
+    let excludedDnc = 0;
+    let excludedNoConsent = 0;
+    for (const c of contacts || []) {
+      if (c.consent_status === "granted") consented++;
+      else if (c.consent_status === "revoked" || c.consent_status === "dnc") excludedDnc++;
+      else excludedNoConsent++;
+    }
+
+    const avgCallMinutes = 2.5;
+    const estimatedCost = consented * avgCallMinutes * 0.14;
+
+    let spendCheckPassed = true;
+    try {
+      const { data: canSpend } = await admin.rpc("can_spend", {
+        p_org_id: campaign.org_id,
+        p_scope: "campaign",
+        p_scope_id: campaign.id,
+        p_projected_usd: estimatedCost,
+        p_now: new Date().toISOString(),
+      });
+      spendCheckPassed = canSpend !== false;
+    } catch {
+      spendCheckPassed = true;
+    }
+
+    let blockReason = null;
+    if (consented === 0) blockReason = "no_consented_targets";
+    else if (!spendCheckPassed) blockReason = "spend_limit_exceeded";
+
+    res.json({
+      campaign_id: req.params.id,
+      total_targets: totalTargets,
+      consented,
+      excluded_dnc: excludedDnc,
+      excluded_no_consent: excludedNoConsent,
+      estimated_cost_usd: Math.round(estimatedCost * 100) / 100,
+      spend_check_passed: spendCheckPassed,
+      ready_to_launch: !blockReason,
+      block_reason: blockReason,
+    });
+  })
+);
+
 module.exports = router;

@@ -4,6 +4,50 @@ const Stripe = require("stripe");
 const env = require("../config/env");
 const { ALERT_THRESHOLDS } = require("../modules/billing/billing.constants");
 
+const DRIFT_THRESHOLD_USD = 0.01;
+
+async function reconcileSpendCounters(admin, periodStart) {
+  const { data: counters, error: cErr } = await admin
+    .from("spend_counters")
+    .select("org_id, scope, scope_id, spent_usd")
+    .gte("period", periodStart);
+  if (cErr || !counters?.length) return 0;
+
+  let corrections = 0;
+  const orgIds = [...new Set(counters.map((c) => c.org_id))];
+
+  for (const orgId of orgIds) {
+    const { data: ledgerRows } = await admin
+      .from("usage_ledger")
+      .select("cost_usd")
+      .eq("org_id", orgId)
+      .gte("period", periodStart);
+
+    const ledgerTotal = (ledgerRows || []).reduce((s, r) => s + (Number(r.cost_usd) || 0), 0);
+    const orgCounters = counters.filter((c) => c.org_id === orgId && c.scope === "org");
+    const counterTotal = orgCounters.reduce((s, c) => s + (Number(c.spent_usd) || 0), 0);
+    const drift = Math.abs(ledgerTotal - counterTotal);
+
+    if (drift > DRIFT_THRESHOLD_USD) {
+      logger.warn(
+        { orgId, ledgerTotal, counterTotal, drift },
+        "Spend counter drift detected — correcting"
+      );
+      for (const counter of orgCounters) {
+        await admin
+          .from("spend_counters")
+          .update({ spent_usd: ledgerTotal, updated_at: new Date().toISOString() })
+          .eq("org_id", counter.org_id)
+          .eq("scope", counter.scope)
+          .eq("scope_id", counter.scope_id)
+          .eq("period", periodStart);
+      }
+      corrections++;
+    }
+  }
+  return corrections;
+}
+
 async function runOnce() {
   const admin = requireAdmin();
   const now = new Date();
@@ -97,7 +141,14 @@ async function runOnce() {
     }
   }
 
-  return { orgs_seen: orgIds.length, period: today, alerts_fired: alertsFired };
+  let driftCorrections = 0;
+  try {
+    driftCorrections = await reconcileSpendCounters(admin, periodStart);
+  } catch (e) {
+    logger.warn({ err: e.message }, "Spend counter reconciliation failed");
+  }
+
+  return { orgs_seen: orgIds.length, period: today, alerts_fired: alertsFired, drift_corrections: driftCorrections };
 }
 
 function start({ intervalMs = 600_000 } = {}) {

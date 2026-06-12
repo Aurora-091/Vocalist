@@ -150,4 +150,58 @@ router.delete(
   })
 );
 
+const dncSchema = z.object({
+  phones: z.array(z.string().min(5)).min(1).max(10000),
+  default_country: z.string().min(2).max(4).default("US"),
+});
+
+router.post(
+  "/dnc-upload",
+  validate({ body: dncSchema }),
+  asyncHandler(async (req, res) => {
+    const country = req.body.default_country || "US";
+    let updated = 0;
+    let created = 0;
+    let invalid = 0;
+
+    for (const phone of req.body.phones) {
+      const e164 = tryE164(phone, country);
+      if (!e164) {
+        invalid++;
+        continue;
+      }
+
+      const { data: existing } = await req.supabase
+        .from("contacts")
+        .select("id")
+        .eq("e164", e164)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (existing) {
+        await req.supabase
+          .from("contacts")
+          .update({ consent_status: "dnc", updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        updated++;
+      } else {
+        const { error } = await req.supabase
+          .from("contacts")
+          .insert({
+            org_id: req.auth.orgId,
+            e164,
+            consent_status: "dnc",
+            source: "dnc_upload",
+            tags: ["dnc"],
+            fields: {},
+          });
+        if (!error) created++;
+        else invalid++;
+      }
+    }
+
+    res.json({ updated, created, invalid, total_blocked: updated + created });
+  })
+);
+
 module.exports = router;

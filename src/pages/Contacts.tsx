@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
-import { Plus, Upload, Search, Trash2 } from "lucide-react";
+import { Plus, Upload, Search, Trash2, ShieldOff } from "lucide-react";
 import { listContacts, createContact } from "../lib/db";
 import { supabase } from "../lib/supabase";
+import { api } from "../lib/api";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody } from "../components/legacy-ui/Card";
 import { ConsentBadge } from "../components/legacy-ui/Badge";
@@ -22,6 +23,7 @@ export default function Contacts() {
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [dncUploading, setDncUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -66,6 +68,11 @@ export default function Contacts() {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
+          <Button variant="ghost" onClick={() => setDncUploading(true)}>
+            <ShieldOff className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">DNC Upload</span>
+            <span className="sm:hidden">DNC</span>
+          </Button>
           <Button variant="secondary" onClick={() => setImporting(true)}>
             <Upload className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Import CSV</span>
@@ -91,6 +98,7 @@ export default function Contacts() {
 
       {creating && <CreateForm onClose={() => setCreating(false)} onSaved={() => load(q)} />}
       {importing && <ImportForm onClose={() => setImporting(false)} onDone={() => load(q)} />}
+      {dncUploading && <DncUploadForm onClose={() => setDncUploading(false)} onDone={() => load(q)} />}
 
       {contacts === null ? (
         <Skeleton className="h-64" />
@@ -290,6 +298,66 @@ function ImportForm({ onClose, onDone }: { onClose: () => void; onDone: () => vo
           <div className="flex justify-end gap-2">
             <Button variant="ghost" type="button" onClick={onClose}>Close</Button>
             <Button type="submit" disabled={busy || !text.trim()}>{busy ? "Importing…" : "Import"}</Button>
+          </div>
+        </form>
+      </CardBody>
+    </Card>
+  );
+}
+
+function DncUploadForm({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setResult(null);
+    const phones = text
+      .split(/[\r\n,]+/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (phones.length === 0) {
+      setResult("No valid phone numbers found.");
+      setBusy(false);
+      return;
+    }
+
+    try {
+      const res = await api.post("/v1/contacts/dnc-upload", { phones });
+      setResult(
+        `Blocked ${res.total_blocked} number${res.total_blocked !== 1 ? "s" : ""}. ` +
+        `(${res.updated} updated, ${res.created} created, ${res.invalid} invalid)`
+      );
+      onDone();
+    } catch (err: any) {
+      setResult(err.message || "Upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardBody>
+        <p className="text-sm text-text-muted mb-3">
+          Paste phone numbers to add to the Do Not Call list. One per line.
+          These numbers will be blocked from all outbound campaigns.
+        </p>
+        <form onSubmit={submit} className="space-y-3">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={6}
+            className="w-full p-3 rounded-md border border-border bg-surface font-mono text-xs"
+            placeholder={"+14155550123\n+14155550456\n+14155550789"}
+          />
+          {result && <div className="text-sm text-text-muted">{result}</div>}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" type="button" onClick={onClose}>Close</Button>
+            <Button type="submit" disabled={busy || !text.trim()}>{busy ? "Blocking…" : "Block numbers"}</Button>
           </div>
         </form>
       </CardBody>
