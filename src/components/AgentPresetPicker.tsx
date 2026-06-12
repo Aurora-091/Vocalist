@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Bot, Phone, PhoneOutgoing, ArrowRight } from "lucide-react";
+import { Bot, Phone, PhoneOutgoing, ArrowRight, ArrowLeft } from "lucide-react";
 import { listAgentPresets } from "../lib/db";
 import { Badge } from "./legacy-ui/Badge";
 import { Button } from "./legacy-ui/Button";
 import { Skeleton } from "./legacy-ui/States";
+import VoiceLibrary from "../pages/VoiceLibrary";
 
 type Preset = {
   id: string;
@@ -26,11 +27,14 @@ export function AgentPresetPicker({
   onSkip,
 }: {
   verticalKey?: string;
-  onSelect: (preset: Preset) => void;
+  onSelect: (preset: Preset & { overrideVoiceId?: string }) => void;
   onSkip: () => void;
 }) {
   const [presets, setPresets] = useState<Preset[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [voiceStep, setVoiceStep] = useState(false);
+  const [overrideVoiceId, setOverrideVoiceId] = useState<string>("");
+  const [overrideVoiceName, setOverrideVoiceName] = useState<string>("");
 
   useEffect(() => {
     (async () => {
@@ -43,9 +47,61 @@ export function AgentPresetPicker({
     })();
   }, [verticalKey]);
 
-  function confirm() {
-    const preset = presets?.find((p) => p.id === selected);
-    if (preset) onSelect(preset);
+  const selectedPreset = presets?.find((p) => p.id === selected);
+
+  function handleConfirm() {
+    if (!selectedPreset) return;
+    setVoiceStep(true);
+  }
+
+  function handleFinish(skipVoice: boolean) {
+    if (!selectedPreset) return;
+    const finalVoiceId = skipVoice ? selectedPreset.voice_id || undefined : overrideVoiceId || selectedPreset.voice_id || undefined;
+    onSelect({ ...selectedPreset, overrideVoiceId: finalVoiceId });
+  }
+
+  if (voiceStep && selectedPreset) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setVoiceStep(false)}
+            className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <div className="font-medium text-sm">Override voice for "{selectedPreset.name}"</div>
+            <p className="text-xs text-text-muted mt-0.5">
+              The preset includes{" "}
+              <span className="font-medium text-text">{selectedPreset.voice_name || "a default voice"}</span>.
+              Choose a different one or skip to keep it.
+            </p>
+          </div>
+          {overrideVoiceName && (
+            <span className="ml-auto text-xs text-success font-medium shrink-0">{overrideVoiceName} selected</span>
+          )}
+        </div>
+
+        <div className="max-h-[420px] overflow-y-auto">
+          <VoiceLibrary
+            onSelect={(vid, vname) => { setOverrideVoiceId(vid); setOverrideVoiceName(vname); }}
+            selectedVoiceId={overrideVoiceId || selectedPreset.voice_id || undefined}
+            filterLanguages={selectedPreset.languages}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={() => handleFinish(true)}>
+            Keep preset voice
+          </Button>
+          <Button onClick={() => handleFinish(false)} disabled={!overrideVoiceId}>
+            Use selected voice
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -134,7 +190,7 @@ export function AgentPresetPicker({
             <Button variant="ghost" onClick={onSkip}>
               Skip
             </Button>
-            <Button onClick={confirm} disabled={!selected}>
+            <Button onClick={handleConfirm} disabled={!selected}>
               Use template
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>

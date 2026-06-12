@@ -169,6 +169,50 @@ router.delete(
 );
 
 router.post(
+  "/:id/sync",
+  requireRole("owner", "admin"),
+  validate({ params: z.object({ id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    try {
+      const agent = await agentService.syncAgent(req.supabase, req.auth.orgId, req.params.id);
+      res.json({ agent });
+    } catch (err) {
+      if (err.message.includes("not found")) throw NotFound(err.message);
+      throw err;
+    }
+  })
+);
+
+router.get(
+  "/:id/system-prompt",
+  validate({ params: z.object({ id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    try {
+      const systemPrompt = await agentService.getSystemPrompt(req.supabase, req.auth.orgId, req.params.id);
+      res.json({ system_prompt: systemPrompt });
+    } catch (err) {
+      if (err.message.includes("not found")) throw NotFound(err.message);
+      throw err;
+    }
+  })
+);
+
+router.post(
+  "/:id/clone",
+  requireRole("owner", "admin"),
+  validate({ params: z.object({ id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    try {
+      const agent = await agentService.cloneAgent(req.supabase, req.auth.orgId, req.params.id);
+      res.status(201).json({ agent });
+    } catch (err) {
+      if (err.message.includes("not found")) throw NotFound(err.message);
+      throw err;
+    }
+  })
+);
+
+router.post(
   "/:id/assign-number",
   requireRole("owner", "admin"),
   validate({

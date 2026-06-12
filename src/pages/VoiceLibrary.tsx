@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, Play, Pause, Volume2, Check } from "lucide-react";
+import { Search, Play, Pause, Check, TriangleAlert as AlertTriangle } from "lucide-react";
 import { listVoices } from "../lib/db";
 import { Badge } from "../components/legacy-ui/Badge";
 import { Skeleton } from "../components/legacy-ui/States";
@@ -39,14 +39,21 @@ const LANGUAGES: Record<string, string> = {
   fi: "Finnish",
 };
 
-export default function VoiceLibrary({ onSelect, selectedVoiceId }: {
+export default function VoiceLibrary({
+  onSelect,
+  selectedVoiceId,
+  filterLanguages,
+}: {
   onSelect?: (voiceId: string, voiceName: string) => void;
   selectedVoiceId?: string;
+  filterLanguages?: string[];
 }) {
   const [voices, setVoices] = useState<Voice[] | null>(null);
   const [search, setSearch] = useState("");
   const [gender, setGender] = useState<string>("");
   const [language, setLanguage] = useState<string>("");
+  const [accent, setAccent] = useState<string>("");
+  const [activeTag, setActiveTag] = useState<string>("");
   const [playing, setPlaying] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -91,7 +98,26 @@ export default function VoiceLibrary({ onSelect, selectedVoiceId }: {
     }
   }
 
+  const accents = voices
+    ? Array.from(new Set(voices.map((v) => v.accent).filter(Boolean) as string[])).sort()
+    : [];
+
+  const allTags = voices
+    ? Array.from(new Set(voices.flatMap((v) => v.tags))).sort()
+    : [];
+
+  const filtered = (voices || []).filter((v) => {
+    if (accent && v.accent !== accent) return false;
+    if (activeTag && !v.tags.includes(activeTag)) return false;
+    return true;
+  });
+
   const isSelector = !!onSelect;
+
+  function isCompatible(voice: Voice) {
+    if (!filterLanguages || filterLanguages.length === 0) return true;
+    return filterLanguages.some((lang) => voice.language_codes.includes(lang));
+  }
 
   return (
     <div className="space-y-6">
@@ -136,35 +162,79 @@ export default function VoiceLibrary({ onSelect, selectedVoiceId }: {
             <option key={code} value={code}>{label}</option>
           ))}
         </select>
+
+        {accents.length > 0 && (
+          <select
+            value={accent}
+            onChange={(e) => setAccent(e.target.value)}
+            className="h-10 px-3 rounded-md border border-border bg-surface text-sm"
+          >
+            <option value="">All accents</option>
+            {accents.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        )}
       </div>
+
+      {allTags.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-text-muted">Tags:</span>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setActiveTag(activeTag === tag ? "" : tag)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                activeTag === tag
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border text-text-muted hover:border-text/30 hover:text-text"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
 
       {voices === null ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-36" />)}
         </div>
-      ) : voices.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-sm text-text-muted">
           No voices found matching your filters.
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {voices.map((v) => {
+          {filtered.map((v) => {
             const isSelected = selectedVoiceId === v.voice_id;
             const isPlaying = playing === v.voice_id;
+            const compatible = isCompatible(v);
             return (
               <div
                 key={v.id}
                 className={`bg-surface border rounded-md p-5 transition-all ${
                   isSelected
                     ? "border-primary ring-1 ring-primary/20"
+                    : !compatible
+                    ? "border-warning/40 opacity-75"
                     : "border-border hover:border-text/20"
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium flex items-center gap-2 flex-wrap">
                       {v.name}
-                      {isSelected && <Check className="w-4 h-4 text-success" />}
+                      {isSelected && <Check className="w-4 h-4 text-success shrink-0" />}
+                      {!compatible && filterLanguages && filterLanguages.length > 0 && (
+                        <span
+                          title={`Voice may not support ${filterLanguages.map((l) => LANGUAGES[l] || l).join(", ")}`}
+                          className="inline-flex items-center gap-1 text-[10px] text-warning shrink-0"
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          Partial support
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-text-muted mt-0.5">
                       {v.gender && <span className="capitalize">{v.gender}</span>}
@@ -174,7 +244,7 @@ export default function VoiceLibrary({ onSelect, selectedVoiceId }: {
                   {v.preview_url && (
                     <button
                       onClick={() => playPreview(v)}
-                      className={`w-9 h-9 rounded-md flex items-center justify-center transition-colors ${
+                      className={`w-9 h-9 rounded-md flex items-center justify-center transition-colors shrink-0 ml-2 ${
                         isPlaying
                           ? "bg-surface-2 text-text border border-border"
                           : "bg-surface-2 text-text-muted hover:text-text"
@@ -194,12 +264,25 @@ export default function VoiceLibrary({ onSelect, selectedVoiceId }: {
 
                 <div className="mt-3 flex items-center gap-1.5 flex-wrap">
                   {v.language_codes.map((code) => (
-                    <Badge key={code} tone="info">
+                    <Badge
+                      key={code}
+                      tone={filterLanguages && filterLanguages.includes(code) ? "success" : "info"}
+                    >
                       {LANGUAGES[code] || code}
                     </Badge>
                   ))}
-                  {v.tags.slice(0, 2).map((tag) => (
-                    <Badge key={tag} tone="neutral">{tag}</Badge>
+                  {v.tags.slice(0, 3).map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => setActiveTag(activeTag === tag ? "" : tag)}
+                      className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+                        activeTag === tag
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "border-border bg-surface-2 text-text-muted hover:border-text/20"
+                      }`}
+                    >
+                      {tag}
+                    </button>
                   ))}
                 </div>
 

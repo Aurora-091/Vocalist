@@ -109,7 +109,8 @@ class AgentService {
     const providerInstance = buildVoiceProvider({ agent: mergedAgent, integrationConfig });
     let newProviderMeta = existing.provider_meta;
     let syncStatus = "synced";
-    
+    let syncError = null;
+
     if (mergedAgent.provider_ref) {
       try {
         const updateResult = await providerInstance.updateAgent(mergedAgent.provider_ref, mergedAgent, systemPrompt);
@@ -119,6 +120,7 @@ class AgentService {
       } catch (err) {
         console.error("Provider update failed, setting sync_status=failed:", err.message);
         syncStatus = "failed";
+        syncError = err.message || "Unknown provider error";
       }
     }
 
@@ -133,6 +135,7 @@ class AgentService {
         voice_id,
         conversation_config_id,
         sync_status: syncStatus,
+        sync_error: syncStatus === "failed" ? syncError : null,
         last_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -197,6 +200,76 @@ class AgentService {
 
     if (updateErr) throw updateErr;
     return true;
+  }
+
+  async syncAgent(supabase, orgId, agentId) {
+    const { data: existing, error: fetchErr } = await supabase
+      .from("agents")
+      .select("*")
+      .eq("id", agentId)
+      .eq("org_id", orgId)
+      .is("deleted_at", null)
+      .single();
+    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+
+    const systemPrompt = personaService.generateSystemPrompt(existing.persona || {});
+    const integrationConfig = await this.getIntegrationConfig(supabase, orgId);
+    const providerInstance = buildVoiceProvider({ agent: existing, integrationConfig });
+
+    if (!existing.provider_ref) throw new Error("Agent has no provider reference to sync");
+
+    await providerInstance.updateAgent(existing.provider_ref, existing, systemPrompt);
+
+    const { data: updated, error: updateErr } = await supabase
+      .from("agents")
+      .update({
+        sync_status: "synced",
+        sync_error: null,
+        last_synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", agentId)
+      .select("*")
+      .single();
+    if (updateErr) throw updateErr;
+    return updated;
+  }
+
+  async cloneAgent(supabase, orgId, agentId) {
+    const { data: existing, error: fetchErr } = await supabase
+      .from("agents")
+      .select("*")
+      .eq("id", agentId)
+      .eq("org_id", orgId)
+      .is("deleted_at", null)
+      .single();
+    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+
+    const cloneData = {
+      name: `${existing.name} (Copy)`,
+      vertical: existing.vertical,
+      persona: existing.persona,
+      voice_id: existing.voice_id,
+      languages: existing.languages,
+      provider: existing.provider,
+      timezone: existing.timezone,
+      transfer_number: existing.transfer_number,
+      consent_required: existing.consent_required,
+    };
+
+    return this.createAgent(supabase, orgId, cloneData);
+  }
+
+  async getSystemPrompt(supabase, orgId, agentId) {
+    const { data: existing, error: fetchErr } = await supabase
+      .from("agents")
+      .select("persona")
+      .eq("id", agentId)
+      .eq("org_id", orgId)
+      .is("deleted_at", null)
+      .single();
+    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    return personaService.generateSystemPrompt(existing.persona || {});
   }
 
   async assignNumber(supabase, orgId, agentId, phoneNumberId) {

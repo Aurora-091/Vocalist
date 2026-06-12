@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Bot, Trash2 } from "lucide-react";
+import { Plus, Bot, Trash2, Copy } from "lucide-react";
 import { listAgents } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
+import { toast } from "sonner";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 import { Badge } from "../components/legacy-ui/Badge";
 import { AgentPresetPicker } from "../components/AgentPresetPicker";
+import VoiceLibrary from "./VoiceLibrary";
 
 type Agent = {
   id: string;
@@ -27,8 +29,12 @@ export default function AgentsList() {
   const [mode, setMode] = useState<CreateMode>("idle");
   const [name, setName] = useState("");
   const [direction, setDirection] = useState<"inbound" | "outbound" | "both">("inbound");
+  const [voiceStep, setVoiceStep] = useState(false);
+  const [pendingVoiceId, setPendingVoiceId] = useState<string>("");
+  const [pendingVoiceName, setPendingVoiceName] = useState<string>("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [cloningId, setCloningId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -41,16 +47,29 @@ export default function AgentsList() {
     load();
   }, []);
 
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
+  function cancelCreate() {
+    setMode("idle");
+    setName("");
+    setDirection("inbound");
+    setVoiceStep(false);
+    setPendingVoiceId("");
+    setPendingVoiceName("");
+  }
+
+  async function submitCreate(voiceId?: string) {
     await api.post("/v1/agents", {
       name,
       persona: { direction, objective: "" },
+      voice_id: voiceId || undefined,
       consent_required: direction !== "inbound",
     });
-    setName("");
-    setMode("idle");
+    cancelCreate();
     load();
+  }
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    setVoiceStep(true);
   }
 
   async function createFromPreset(preset: any) {
@@ -65,6 +84,7 @@ export default function AgentsList() {
         guardrails: preset.persona?.guardrails || [],
         tools: preset.tools || [],
       },
+      voice_id: preset.overrideVoiceId || preset.voice_id || undefined,
       consent_required: preset.consent_required,
       provider: "elevenlabs",
     });
@@ -83,6 +103,19 @@ export default function AgentsList() {
     } finally {
       setDeletingId(null);
       setConfirmId(null);
+    }
+  }
+
+  async function cloneAgent(id: string, agentName: string) {
+    setCloningId(id);
+    try {
+      await api.post(`/v1/agents/${id}/clone`, {});
+      toast.success(`"${agentName}" duplicated.`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to duplicate agent.");
+    } finally {
+      setCloningId(null);
     }
   }
 
@@ -113,46 +146,75 @@ export default function AgentsList() {
       {mode === "manual" && (
         <div className="bg-surface border border-border rounded-md shadow-card">
           <div className="px-6 py-4">
-            <form onSubmit={create} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-text-muted mb-1">
-                  Name
-                </label>
-                <input
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface"
-                  placeholder="Front Desk"
-                />
+            {!voiceStep ? (
+              <form onSubmit={create} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-text-muted mb-1">Name</label>
+                  <input
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full h-10 px-3 rounded-md border border-border bg-surface"
+                    placeholder="Front Desk"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-muted mb-1">Direction</label>
+                  <select
+                    value={direction}
+                    onChange={(e) => setDirection(e.target.value as any)}
+                    className="w-full h-10 px-3 rounded-md border border-border bg-surface"
+                  >
+                    <option value="inbound">Inbound only</option>
+                    <option value="outbound">Outbound only</option>
+                    <option value="both">Both</option>
+                  </select>
+                  {direction !== "inbound" && (
+                    <p className="mt-2 text-xs text-text-muted">
+                      Outbound agents require consent on file. This is locked on and cannot be turned off.
+                    </p>
+                  )}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" type="button" onClick={cancelCreate}>Cancel</Button>
+                  <Button type="submit">Next: Choose voice</Button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-sm">Choose a voice <span className="text-text-muted font-normal">(optional)</span></div>
+                    <p className="text-xs text-text-muted mt-0.5">Skip to use the default voice — you can change it later.</p>
+                  </div>
+                  {pendingVoiceName && (
+                    <span className="text-xs text-success font-medium">{pendingVoiceName} selected</span>
+                  )}
+                </div>
+                <div className="max-h-[420px] overflow-y-auto">
+                  <VoiceLibrary
+                    onSelect={(voiceId, voiceName) => {
+                      setPendingVoiceId(voiceId);
+                      setPendingVoiceName(voiceName);
+                    }}
+                    selectedVoiceId={pendingVoiceId}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" type="button" onClick={() => setVoiceStep(false)}>Back</Button>
+                  <Button variant="ghost" type="button" onClick={() => submitCreate()}>
+                    Skip
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => submitCreate(pendingVoiceId)}
+                    disabled={!pendingVoiceId}
+                  >
+                    Create agent
+                  </Button>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-muted mb-1">
-                  Direction
-                </label>
-                <select
-                  value={direction}
-                  onChange={(e) => setDirection(e.target.value as any)}
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface"
-                >
-                  <option value="inbound">Inbound only</option>
-                  <option value="outbound">Outbound only</option>
-                  <option value="both">Both</option>
-                </select>
-                {direction !== "inbound" && (
-                  <p className="mt-2 text-xs text-text-muted">
-                    Outbound agents require consent on file. This is locked on
-                    and cannot be turned off.
-                  </p>
-                )}
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" type="button" onClick={() => setMode("idle")}>
-                  Cancel
-                </Button>
-                <Button type="submit">Create</Button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       )}
@@ -196,9 +258,30 @@ export default function AgentsList() {
                 </div>
               </Link>
 
-              {/* Delete controls */}
-              {confirmId === a.id ? (
-                <div className="absolute inset-0 bg-surface/95 rounded-md border border-danger/30 flex flex-col items-center justify-center gap-3 p-4">
+              {/* Card action buttons (visible on hover) */}
+              <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => { e.preventDefault(); cloneAgent(a.id, a.name); }}
+                  disabled={cloningId === a.id}
+                  className="p-1.5 rounded text-text-muted hover:text-text hover:bg-surface-2 transition-all disabled:opacity-50"
+                  aria-label="Duplicate agent"
+                  title="Duplicate"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => { e.preventDefault(); setConfirmId(a.id); }}
+                  className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all"
+                  aria-label="Delete agent"
+                  title="Delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Delete confirmation overlay */}
+              {confirmId === a.id && (
+                <div className="absolute inset-0 bg-surface/95 rounded-md border border-danger/30 flex flex-col items-center justify-center gap-3 p-4 z-10">
                   <p className="text-sm font-medium text-center">Delete "{a.name}"?</p>
                   <p className="text-xs text-text-muted text-center">This cannot be undone.</p>
                   <div className="flex gap-2">
@@ -213,14 +296,6 @@ export default function AgentsList() {
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <button
-                  onClick={(e) => { e.preventDefault(); setConfirmId(a.id); }}
-                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all"
-                  aria-label="Delete agent"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
               )}
             </div>
           ))}

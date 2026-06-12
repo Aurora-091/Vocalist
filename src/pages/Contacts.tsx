@@ -25,6 +25,7 @@ export default function Contacts() {
   const [importing, setImporting] = useState(false);
   const [dncUploading, setDncUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function load(query?: string) {
@@ -55,6 +56,7 @@ export default function Contacts() {
       setContacts((prev) => prev?.filter((c) => c.id !== id) ?? null);
     } finally {
       setDeletingId(null);
+      setConfirmDeleteId(null);
     }
   }
 
@@ -137,14 +139,32 @@ export default function Contacts() {
                     <Td className="text-text-muted">{c.source || "—"}</Td>
                     <Td><ConsentBadge status={c.consent_status} /></Td>
                     <Td>
-                      <button
-                        onClick={() => deleteContact(c.id)}
-                        disabled={deletingId === c.id}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
-                        aria-label="Delete contact"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {confirmDeleteId === c.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-text-muted">Sure?</span>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs px-2 py-0.5 rounded border border-border text-text-muted hover:text-text transition-colors"
+                          >
+                            No
+                          </button>
+                          <button
+                            onClick={() => deleteContact(c.id)}
+                            disabled={deletingId === c.id}
+                            className="text-xs px-2 py-0.5 rounded border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20 transition-colors disabled:opacity-50"
+                          >
+                            {deletingId === c.id ? "…" : "Yes"}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(c.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all"
+                          aria-label="Delete contact"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </Td>
                   </tr>
                 ))}
@@ -164,13 +184,30 @@ export default function Contacts() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <ConsentBadge status={c.consent_status} />
-                    <button
-                      onClick={() => deleteContact(c.id)}
-                      disabled={deletingId === c.id}
-                      className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {confirmDeleteId === c.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-xs px-2 py-0.5 rounded border border-border text-text-muted"
+                        >
+                          No
+                        </button>
+                        <button
+                          onClick={() => deleteContact(c.id)}
+                          disabled={deletingId === c.id}
+                          className="text-xs px-2 py-0.5 rounded border border-danger/40 bg-danger/10 text-danger disabled:opacity-50"
+                        >
+                          {deletingId === c.id ? "…" : "Yes"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(c.id)}
+                        className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

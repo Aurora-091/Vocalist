@@ -80,8 +80,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               }`
             }
           >
-            <it.icon className="w-4 h-4" />
-            {it.label}
+            {({ isActive }) => (
+              <>
+                <it.icon className="w-4 h-4" aria-hidden="true" />
+                <span aria-current={isActive ? "page" : undefined}>{it.label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

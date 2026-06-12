@@ -1,21 +1,24 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Play, Save, Loader as Loader2, ChevronDown, Check, Phone, X } from "lucide-react";
-import { getAgent } from "../lib/db";
+import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy } from "lucide-react";
+import { toast } from "sonner";
+import { getAgent, listVoices } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
 import { Skeleton } from "../components/legacy-ui/States";
+import VoiceLibrary from "./VoiceLibrary";
 
-const TONE_OPTIONS = [
+const TONE_PRESETS = [
   "warm and professional",
   "calm and reassuring",
   "energetic and friendly",
   "formal and precise",
   "empathetic and supportive",
   "concise and direct",
+  "custom",
 ] as const;
 
 const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
@@ -69,6 +72,7 @@ type Agent = {
   voice_id?: string | null;
   conversation_config_id?: string | null;
   sync_status?: string | null;
+  sync_error?: string | null;
 };
 
 export default function AgentDetail() {
@@ -76,19 +80,31 @@ export default function AgentDetail() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const [knowledge, setKnowledge] = useState<any[]>([]);
+  const [voiceName, setVoiceName] = useState<string>("");
+  const [voiceDrawerOpen, setVoiceDrawerOpen] = useState(false);
+  const [promptPreview, setPromptPreview] = useState<string | null>(null);
+  const [promptLoading, setPromptLoading] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [langVoiceWarning, setLangVoiceWarning] = useState<string[]>([]);
 
+  // Form state
   const [name, setName] = useState("");
   const [objective, setObjective] = useState("");
-  const [tone, setTone] = useState<string>(TONE_OPTIONS[0]);
+  const [toneMode, setToneMode] = useState<string>(TONE_PRESETS[0]);
+  const [customTone, setCustomTone] = useState("");
   const [businessName, setBusinessName] = useState("");
+  const [firstMessage, setFirstMessage] = useState("");
+  const [guardrails, setGuardrails] = useState("");
+  const [identity, setIdentity] = useState("");
   const [transferNumber, setTransferNumber] = useState("");
   const [timezone, setTimezone] = useState("");
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(["en"]);
+
+  // Test call
   const [testNumber, setTestNumber] = useState("");
   const [calling, setCalling] = useState(false);
-  const [callMsg, setCallMsg] = useState<string | null>(null);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
 
   async function load() {
@@ -97,18 +113,46 @@ export default function AgentDetail() {
       setAgent(a);
       setName(a.name || "");
       setObjective(a.persona?.objective || "");
+
       const savedTone = a.persona?.tone || "";
-      const matchedTone = TONE_OPTIONS.find(
-        (t) => t.toLowerCase() === savedTone.toLowerCase().trim()
-      );
-      setTone(matchedTone || (TONE_OPTIONS.includes(savedTone as any) ? savedTone : TONE_OPTIONS[0]));
+      const isPreset = (TONE_PRESETS as readonly string[]).includes(savedTone);
+      if (!savedTone || isPreset) {
+        setToneMode(savedTone || TONE_PRESETS[0]);
+        setCustomTone("");
+      } else {
+        setToneMode("custom");
+        setCustomTone(savedTone);
+      }
+
       setBusinessName(a.persona?.business_name || "");
+      setFirstMessage(a.persona?.first_message || a.persona?.opening_message || "");
+      setGuardrails(
+        Array.isArray(a.persona?.guardrails)
+          ? (a.persona.guardrails as string[]).join("\n")
+          : a.persona?.guardrails || ""
+      );
+      setIdentity(a.persona?.identity || "");
       setTransferNumber(a.transfer_number || "");
       setTimezone(a.timezone || "America/New_York");
       const langs = (a.languages || ["en"])
         .map((l: string) => l.trim().toLowerCase().slice(0, 5))
         .filter(Boolean);
       setSelectedLanguages(langs.length ? langs : ["en"]);
+
+      // Resolve voice name
+      if (a.voice_id) {
+        const voices = await listVoices();
+        const match = voices.find((v: any) => v.voice_id === a.voice_id);
+        setVoiceName(match?.name || a.voice_id);
+
+        // Language-voice compatibility check
+        const voiceLangs: string[] = match?.language_codes || ["en"];
+        const unsupported = langs.filter((l: string) => !voiceLangs.includes(l));
+        setLangVoiceWarning(unsupported);
+      } else {
+        setVoiceName("Default (Rachel)");
+        setLangVoiceWarning([]);
+      }
 
       const { data: kb } = await supabase
         .from("agent_knowledge")
@@ -126,16 +170,35 @@ export default function AgentDetail() {
     load();
   }, [id]);
 
+  // Re-check language-voice compatibility when languages change
+  useEffect(() => {
+    if (!agent?.voice_id) return;
+    (async () => {
+      const voices = await listVoices();
+      const match = voices.find((v: any) => v.voice_id === agent.voice_id);
+      const voiceLangs: string[] = match?.language_codes || ["en"];
+      const unsupported = selectedLanguages.filter((l) => !voiceLangs.includes(l));
+      setLangVoiceWarning(unsupported);
+    })();
+  }, [selectedLanguages]);
+
   async function save() {
     if (!agent) return;
     setSaving(true);
-    setSavedMsg(null);
     try {
+      const effectiveTone = toneMode === "custom" ? customTone : toneMode;
+      const guardrailsValue = guardrails.trim()
+        ? guardrails.split("\n").map((s) => s.trim()).filter(Boolean)
+        : [];
       const persona = {
         ...(agent.persona || {}),
         objective,
-        tone,
+        tone: effectiveTone,
         business_name: businessName,
+        first_message: firstMessage || undefined,
+        opening_message: firstMessage || undefined,
+        guardrails: guardrailsValue.length ? guardrailsValue : undefined,
+        identity: identity.trim() || undefined,
       };
       await api.patch(`/v1/agents/${id}`, {
         name,
@@ -144,20 +207,57 @@ export default function AgentDetail() {
         timezone: timezone || "America/New_York",
         languages: selectedLanguages,
       });
-      setSavedMsg("Saved and synced.");
+      toast.success("Agent saved and synced.");
       load();
     } catch (e: any) {
       const detail = e.details || e.detail;
       if (detail && typeof detail === "object") {
-        const fields = Array.isArray(detail)
+        const msg = Array.isArray(detail)
           ? detail.map((d: any) => d.msg || d.message || JSON.stringify(d)).join("; ")
           : detail.detail || detail.message || JSON.stringify(detail);
-        setSavedMsg(`Provider error: ${fields}`);
+        toast.error(`Provider error: ${msg}`);
       } else {
-        setSavedMsg(e.message || "Couldn't save.");
+        toast.error(e.message || "Couldn't save.");
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleVoiceSelect(voiceId: string, name: string) {
+    setVoiceDrawerOpen(false);
+    try {
+      await api.patch(`/v1/agents/${id}`, { voice_id: voiceId });
+      toast.success(`Voice changed to ${name}.`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to change voice.");
+    }
+  }
+
+  async function retrySync() {
+    if (!agent) return;
+    setSyncing(true);
+    try {
+      await api.post(`/v1/agents/${id}/sync`, {});
+      toast.success("Agent re-synced with ElevenLabs.");
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Sync failed.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function loadPromptPreview() {
+    setPromptLoading(true);
+    try {
+      const res = await api.get<{ system_prompt: string }>(`/v1/agents/${id}/system-prompt`);
+      setPromptPreview(res.system_prompt);
+    } catch {
+      setPromptPreview("Could not load preview.");
+    } finally {
+      setPromptLoading(false);
     }
   }
 
@@ -169,33 +269,42 @@ export default function AgentDetail() {
   return (
     <div className="space-y-6">
       <div>
-        <Link
-          to="/agents"
-          className="inline-flex items-center text-sm text-text-muted hover:text-text"
-        >
+        <Link to="/agents" className="inline-flex items-center text-sm text-text-muted hover:text-text">
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to agents
         </Link>
         <div className="mt-3 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{agent.name}</h1>
-            <p className="text-sm text-text-muted mt-1">
-              {direction} · {agent.provider}
-            </p>
+            <p className="text-sm text-text-muted mt-1">{direction} · {agent.provider}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {agent.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
             {agent.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
-            {agent.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
-            {agent.consent_required && (
-              <Badge tone="success" dot>
-                consent locked on
-              </Badge>
-            )}
+            {agent.sync_status === "failed" && <Badge tone="danger">Sync failed</Badge>}
+            {agent.consent_required && <Badge tone="success" dot>consent locked on</Badge>}
           </div>
         </div>
       </div>
 
+      {/* Sync failure banner */}
+      {agent.sync_status === "failed" && (
+        <div className="flex items-start gap-3 p-4 rounded-md bg-danger/10 border border-danger/20">
+          <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-danger">Provider sync failed</div>
+            {agent.sync_error && (
+              <div className="text-xs text-text-muted mt-1 break-words">{agent.sync_error}</div>
+            )}
+          </div>
+          <Button variant="secondary" onClick={retrySync} disabled={syncing}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Retrying…" : "Retry sync"}
+          </Button>
+        </div>
+      )}
+
+      {/* Persona card */}
       <Card>
         <CardHeader>
           <div className="font-medium">Persona</div>
@@ -217,7 +326,7 @@ export default function AgentDetail() {
                 className="w-full h-10 px-3 rounded-md border border-border bg-surface"
               />
             </Field>
-            <Field label="Context (Objective)" full>
+            <Field label="Objective" full>
               <textarea
                 value={objective}
                 onChange={(e) => setObjective(e.target.value)}
@@ -226,16 +335,53 @@ export default function AgentDetail() {
                 className="w-full p-3 rounded-md border border-border bg-surface text-sm"
               />
             </Field>
+            <Field label="Opening message (first_message)">
+              <input
+                value={firstMessage}
+                onChange={(e) => setFirstMessage(e.target.value)}
+                placeholder="Hello, thanks for calling. How can I help?"
+                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
+              />
+            </Field>
             <Field label="Tone">
               <select
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
+                value={toneMode}
+                onChange={(e) => setToneMode(e.target.value)}
                 className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
               >
-                {TONE_OPTIONS.map((t) => (
-                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                {TONE_PRESETS.map((t) => (
+                  <option key={t} value={t}>
+                    {t === "custom" ? "Custom…" : t.charAt(0).toUpperCase() + t.slice(1)}
+                  </option>
                 ))}
               </select>
+            </Field>
+            {toneMode === "custom" && (
+              <Field label="Custom tone">
+                <input
+                  value={customTone}
+                  onChange={(e) => setCustomTone(e.target.value)}
+                  placeholder="Playful yet authoritative, like a knowledgeable friend"
+                  className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
+                />
+              </Field>
+            )}
+            <Field label="Guardrails (one per line)" full>
+              <textarea
+                value={guardrails}
+                onChange={(e) => setGuardrails(e.target.value)}
+                rows={3}
+                placeholder={"Do not discuss pricing unless asked.\nAlways offer to transfer to a human for complex issues."}
+                className="w-full p-3 rounded-md border border-border bg-surface text-sm font-mono"
+              />
+            </Field>
+            <Field label="Identity (optional)">
+              <input
+                value={identity}
+                onChange={(e) => setIdentity(e.target.value)}
+                placeholder="You are Maya, a billing assistant at Acme Corp."
+                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
+              />
             </Field>
             <Field label="Timezone">
               <input
@@ -245,10 +391,7 @@ export default function AgentDetail() {
               />
             </Field>
             <Field label="Languages">
-              <LanguagePicker
-                selected={selectedLanguages}
-                onChange={setSelectedLanguages}
-              />
+              <LanguagePicker selected={selectedLanguages} onChange={setSelectedLanguages} />
             </Field>
             <Field label="Human transfer number">
               <input
@@ -259,20 +402,50 @@ export default function AgentDetail() {
               />
             </Field>
           </div>
+
+          {langVoiceWarning.length > 0 && (
+            <div className="mt-4 flex items-center gap-2 text-xs text-warning">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              Voice may not support:{" "}
+              {langVoiceWarning
+                .map((c) => LANGUAGE_OPTIONS.find((l) => l.code === c)?.label ?? c)
+                .join(", ")}
+            </div>
+          )}
+
           <div className="mt-6 flex items-center gap-3 flex-wrap">
             <Button onClick={save} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Saving…" : "Save changes"}
             </Button>
-            {savedMsg && (
-              <span className={`text-sm ${savedMsg.startsWith("Provider error") || savedMsg === "Couldn't save." ? "text-danger" : "text-success"}`}>
-                {savedMsg}
-              </span>
-            )}
+            <button
+              type="button"
+              className="text-sm text-text-muted hover:text-text flex items-center gap-1"
+              onClick={async () => {
+                if (!promptOpen && !promptPreview) await loadPromptPreview();
+                setPromptOpen((v) => !v);
+              }}
+            >
+              <ChevronRight className={`w-3.5 h-3.5 transition-transform ${promptOpen ? "rotate-90" : ""}`} />
+              Preview compiled prompt
+            </button>
           </div>
+
+          {promptOpen && (
+            <div className="mt-4 p-3 rounded-md bg-surface-2 border border-border">
+              {promptLoading ? (
+                <Skeleton className="h-32" />
+              ) : (
+                <pre className="text-xs text-text-muted whitespace-pre-wrap font-mono leading-relaxed">
+                  {promptPreview}
+                </pre>
+              )}
+            </div>
+          )}
         </CardBody>
       </Card>
 
+      {/* Deployment card */}
       <Card>
         <CardHeader>
           <div className="font-medium">Deployment (ElevenLabs CAI)</div>
@@ -284,9 +457,15 @@ export default function AgentDetail() {
                 {agent.provider_ref || agent.provider_agent_id || "Not provisioned"}
               </div>
             </Field>
-            <Field label="Voice ID">
-              <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs">
-                {agent.voice_id || "Default (Rachel)"}
+            <Field label="Voice">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs truncate">
+                  {voiceName}
+                </div>
+                <Button variant="secondary" onClick={() => setVoiceDrawerOpen(true)}>
+                  <Mic className="w-4 h-4 mr-1.5" />
+                  Change
+                </Button>
               </div>
             </Field>
             <Field label="Conversation Config ID">
@@ -327,6 +506,7 @@ export default function AgentDetail() {
         </CardBody>
       </Card>
 
+      {/* Test call card */}
       <Card>
         <CardHeader>
           <div className="font-medium">Place a test call</div>
@@ -348,14 +528,13 @@ export default function AgentDetail() {
               disabled={!agent.provider_ref || !testNumber.trim() || calling}
               onClick={async () => {
                 setCalling(true);
-                setCallMsg(null);
                 setActiveCallId(null);
                 try {
-                  const res = await api.post(`/v1/agents/${id}/test-call`, { to_number: testNumber.trim() });
-                  setCallMsg("Call initiated. Your phone should ring shortly.");
-                  if (res?.call_id) setActiveCallId(res.call_id);
+                  const res = await api.post<any>(`/v1/agents/${id}/test-call`, { to_number: testNumber.trim() });
+                  toast.success("Call initiated. Your phone should ring shortly.");
+                  if (res?.call?.id) setActiveCallId(res.call.id);
                 } catch (e: any) {
-                  setCallMsg(e.message || "Failed to place call.");
+                  toast.error(e.message || "Failed to place call.");
                 } finally {
                   setCalling(false);
                 }
@@ -365,9 +544,6 @@ export default function AgentDetail() {
               {calling ? "Calling..." : "Test call"}
             </Button>
           </div>
-          {callMsg && (
-            <p className="mt-2 text-xs text-text-muted">{callMsg}</p>
-          )}
           {!agent.provider_ref && (
             <p className="mt-2 text-xs text-text-muted">
               Agent not yet provisioned with ElevenLabs. Save the agent first to trigger provisioning.
@@ -378,6 +554,34 @@ export default function AgentDetail() {
 
       {activeCallId && (
         <TestCallDrawer callId={activeCallId} onClose={() => setActiveCallId(null)} />
+      )}
+
+      {/* Voice selection overlay */}
+      {voiceDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setVoiceDrawerOpen(false)}
+          />
+          <div className="relative bg-bg border border-border rounded-xl shadow-elevated w-full max-w-4xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+              <div className="font-semibold">Choose a voice</div>
+              <button
+                onClick={() => setVoiceDrawerOpen(false)}
+                className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <VoiceLibrary
+                onSelect={handleVoiceSelect}
+                selectedVoiceId={agent.voice_id || undefined}
+                filterLanguages={selectedLanguages}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -467,9 +671,7 @@ function Field({
 }) {
   return (
     <div className={full ? "sm:col-span-2" : ""}>
-      <label className="block text-xs font-medium text-text-muted mb-1">
-        {label}
-      </label>
+      <label className="block text-xs font-medium text-text-muted mb-1">{label}</label>
       {children}
     </div>
   );
@@ -523,9 +725,7 @@ function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => vo
         if (data?.status) setCallStatus(data.status);
       });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [callId]);
 
   useEffect(() => {
