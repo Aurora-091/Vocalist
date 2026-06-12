@@ -2,11 +2,13 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({ className, "aria-label": ariaLabel, ...props }: React.ComponentProps<"table"> & { "aria-label"?: string }) {
   return (
     <div
       data-slot="table-container"
       className="relative w-full overflow-x-auto"
+      role="region"
+      aria-label={ariaLabel}
     >
       <table
         data-slot="table"
@@ -63,10 +65,17 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   )
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+function TableHead({
+  className,
+  scope = "col",
+  "aria-sort": ariaSort,
+  ...props
+}: React.ComponentProps<"th"> & { "aria-sort"?: "ascending" | "descending" | "none" }) {
   return (
     <th
       data-slot="table-head"
+      scope={scope}
+      aria-sort={ariaSort}
       className={cn(
         "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
         className
@@ -91,12 +100,17 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
 
 function TableCaption({
   className,
+  srOnly = false,
   ...props
-}: React.ComponentProps<"caption">) {
+}: React.ComponentProps<"caption"> & { srOnly?: boolean }) {
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-4 text-sm text-muted-foreground", className)}
+      className={cn(
+        "mt-4 text-sm text-muted-foreground",
+        srOnly && "sr-only",
+        className
+      )}
       {...props}
     />
   )

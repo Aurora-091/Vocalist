@@ -103,7 +103,7 @@ export default function Contacts() {
       {dncUploading && <DncUploadForm onClose={() => setDncUploading(false)} onDone={() => load(q)} />}
 
       {contacts === null ? (
-        <Skeleton className="h-64" />
+        <Skeleton className="h-64" aria-label="Loading contacts" />
       ) : contacts.length === 0 ? (
         <EmptyState
           title="No contacts yet"
@@ -119,32 +119,36 @@ export default function Contacts() {
         <>
           {/* Desktop table */}
           <div className="hidden md:block bg-surface border border-border rounded-md shadow-card overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Contacts list">
+              <caption className="sr-only">
+                {contacts.length} contact{contacts.length !== 1 ? "s" : ""}{q ? ` matching "${q}"` : ""}
+              </caption>
               <thead className="bg-surface-2 text-text-muted">
                 <tr>
-                  <Th>Name</Th>
-                  <Th>Phone</Th>
-                  <Th>Email</Th>
-                  <Th>Source</Th>
-                  <Th>Consent</Th>
-                  <Th><span className="sr-only">Actions</span></Th>
+                  <Th scope="col">Name</Th>
+                  <Th scope="col">Phone</Th>
+                  <Th scope="col">Email</Th>
+                  <Th scope="col">Source</Th>
+                  <Th scope="col">Consent</Th>
+                  <Th scope="col"><span className="sr-only">Actions</span></Th>
                 </tr>
               </thead>
               <tbody>
                 {contacts.map((c) => (
                   <tr key={c.id} className="border-t border-border hover:bg-surface-2 group">
-                    <Td>{c.name || <span className="text-text-muted">—</span>}</Td>
+                    <Td>{c.name || <span className="text-text-muted" aria-label="No name">—</span>}</Td>
                     <Td className="font-mono">{c.e164}</Td>
-                    <Td>{c.email || <span className="text-text-muted">—</span>}</Td>
+                    <Td>{c.email || <span className="text-text-muted" aria-label="No email">—</span>}</Td>
                     <Td className="text-text-muted">{c.source || "—"}</Td>
                     <Td><ConsentBadge status={c.consent_status} /></Td>
                     <Td>
                       {confirmDeleteId === c.id ? (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5" role="group" aria-label={`Confirm delete ${c.name || c.e164}`}>
                           <span className="text-xs text-text-muted">Sure?</span>
                           <button
                             onClick={() => setConfirmDeleteId(null)}
                             className="text-xs px-2 py-0.5 rounded border border-border text-text-muted hover:text-text transition-colors"
+                            aria-label="Cancel delete"
                           >
                             No
                           </button>
@@ -152,6 +156,7 @@ export default function Contacts() {
                             onClick={() => deleteContact(c.id)}
                             disabled={deletingId === c.id}
                             className="text-xs px-2 py-0.5 rounded border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20 transition-colors disabled:opacity-50"
+                            aria-label={`Confirm delete ${c.name || c.e164}`}
                           >
                             {deletingId === c.id ? "…" : "Yes"}
                           </button>
@@ -159,10 +164,10 @@ export default function Contacts() {
                       ) : (
                         <button
                           onClick={() => setConfirmDeleteId(c.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all"
-                          aria-label="Delete contact"
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all"
+                          aria-label={`Delete ${c.name || c.e164}`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
                       )}
                     </Td>
@@ -223,9 +228,9 @@ export default function Contacts() {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children, scope = "col" }: { children: React.ReactNode; scope?: "col" | "row" | "colgroup" | "rowgroup" }) {
   return (
-    <th className="text-left px-4 py-3 text-xs uppercase tracking-widest font-medium">
+    <th scope={scope} className="text-left px-4 py-3 text-xs uppercase tracking-widest font-medium">
       {children}
     </th>
   );

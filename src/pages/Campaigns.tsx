@@ -69,12 +69,13 @@ export default function Campaigns() {
 
       {/* Status filter chips */}
       {campaigns && campaigns.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
+        <div role="group" aria-label="Filter campaigns by status" className="flex items-center gap-2 flex-wrap">
           {FILTERS.map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 h-8 rounded-full text-xs font-medium transition-colors capitalize ${
+              aria-pressed={filter === f}
+              className={`px-3 h-8 rounded-full text-xs font-medium transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border ${
                 filter === f
                   ? "bg-primary text-primary-foreground"
                   : "bg-surface border border-border text-text-muted hover:text-text"
@@ -82,7 +83,7 @@ export default function Campaigns() {
             >
               {f}
               {f !== "all" && campaigns && (
-                <span className="ml-1.5 opacity-60">
+                <span className="ml-1.5 opacity-60" aria-label={`(${campaigns.filter((c) => c.status === f).length})`}>
                   {campaigns.filter((c) => c.status === f).length}
                 </span>
               )}
@@ -114,35 +115,49 @@ export default function Campaigns() {
         <>
           {/* Desktop table */}
           <div className="hidden md:block bg-surface border border-border rounded-md shadow-card overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Campaigns list">
+              <caption className="sr-only">
+                {visible.length} campaign{visible.length !== 1 ? "s" : ""}
+                {filter !== "all" ? ` with status ${filter}` : ""}
+              </caption>
               <thead className="bg-surface-2 text-text-muted">
                 <tr>
-                  <Th>Name</Th>
-                  <Th>Status</Th>
-                  <Th>Concurrency</Th>
-                  <Th>Retries</Th>
-                  <Th>Created</Th>
+                  <Th scope="col">Name</Th>
+                  <Th scope="col">Status</Th>
+                  <Th scope="col">Concurrency</Th>
+                  <Th scope="col">Retries</Th>
+                  <Th scope="col">Created</Th>
                 </tr>
               </thead>
               <tbody>
                 {visible.map((c) => (
                   <tr
                     key={c.id}
-                    className="border-t border-border hover:bg-surface-2 cursor-pointer"
+                    className="border-t border-border hover:bg-surface-2 cursor-pointer focus-within:bg-surface-2"
                   >
                     <Td>
-                      <Link to={`/campaigns/${c.id}`} className="flex items-center gap-2">
-                        <Megaphone className="w-4 h-4 text-text-muted shrink-0" />
+                      <Link
+                        to={`/campaigns/${c.id}`}
+                        className="flex items-center gap-2 focus-visible:outline-none focus-visible:underline"
+                        aria-label={`Open campaign: ${c.name}`}
+                      >
+                        <Megaphone className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
                         <span className="font-medium">{c.name}</span>
                       </Link>
                     </Td>
                     <Td>
                       <StatusBadge status={c.status} />
                     </Td>
-                    <Td className="font-mono">{c.concurrency}</Td>
-                    <Td className="font-mono">{c.max_retries}</Td>
+                    <Td className="font-mono">
+                      <span aria-label={`Concurrency: ${c.concurrency}`}>{c.concurrency}</span>
+                    </Td>
+                    <Td className="font-mono">
+                      <span aria-label={`Max retries: ${c.max_retries}`}>{c.max_retries}</span>
+                    </Td>
                     <Td className="text-text-muted">
-                      {new Date(c.created_at).toLocaleDateString()}
+                      <time dateTime={c.created_at}>
+                        {new Date(c.created_at).toLocaleDateString()}
+                      </time>
                     </Td>
                   </tr>
                 ))}
@@ -151,27 +166,29 @@ export default function Campaigns() {
           </div>
 
           {/* Mobile cards */}
-          <div className="md:hidden space-y-3">
+          <ul className="md:hidden space-y-3" aria-label="Campaigns list">
             {visible.map((c) => (
-              <Link
-                key={c.id}
-                to={`/campaigns/${c.id}`}
-                className="flex items-center justify-between bg-surface border border-border rounded-md shadow-card p-4 active:bg-surface-2"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Megaphone className="w-4 h-4 text-text-muted shrink-0" />
-                    <span className="font-medium truncate">{c.name}</span>
+              <li key={c.id}>
+                <Link
+                  to={`/campaigns/${c.id}`}
+                  className="flex items-center justify-between bg-surface border border-border rounded-md shadow-card p-4 active:bg-surface-2 hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
+                  aria-label={`Campaign: ${c.name}, status: ${c.status}`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Megaphone className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
+                      <span className="font-medium truncate">{c.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-text-muted">
+                      <StatusBadge status={c.status} />
+                      <time dateTime={c.created_at}>{new Date(c.created_at).toLocaleDateString()}</time>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-text-muted">
-                    <StatusBadge status={c.status} />
-                    <span>{new Date(c.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-text-muted shrink-0 ml-3" />
-              </Link>
+                  <ChevronRight className="w-4 h-4 text-text-muted shrink-0 ml-3" aria-hidden="true" />
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </>
       )}
     </div>
@@ -194,9 +211,9 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children, scope = "col" }: { children: React.ReactNode; scope?: "col" | "row" }) {
   return (
-    <th className="text-left px-4 py-3 text-xs uppercase tracking-widest font-medium">
+    <th scope={scope} className="text-left px-4 py-3 text-xs uppercase tracking-widest font-medium">
       {children}
     </th>
   );
