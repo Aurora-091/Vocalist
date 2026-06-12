@@ -15,6 +15,20 @@ export default function Signup() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+
+    if (password.length < 8) {
+      setErr("Password must be at least 8 characters.");
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setErr("Password needs at least one uppercase letter.");
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setErr("Password needs at least one number.");
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await api.post<{

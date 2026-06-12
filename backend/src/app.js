@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const crypto = require("crypto");
 
 const env = require("./config/env");
 const logger = require("./config/logger");
@@ -63,6 +64,12 @@ function createApp() {
   const app = express();
 
   app.set("trust proxy", 1);
+
+  app.use((req, res, next) => {
+    req.id = req.headers["x-request-id"] || crypto.randomUUID();
+    res.setHeader("X-Request-ID", req.id);
+    next();
+  });
 
   app.use(helmet());
   app.use(cors(buildCorsOptions()));
