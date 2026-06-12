@@ -1,23 +1,5 @@
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Bot,
-  Megaphone,
-  Phone,
-  Users,
-  Plug,
-  TrendingUp,
-  CreditCard,
-  Settings,
-  LogOut,
-  ShieldCheck,
-  Volume2,
-  Sun,
-  Moon,
-  Monitor,
-  Menu,
-  X,
-} from "lucide-react";
+import { LayoutDashboard, Bot, Megaphone, Phone, Users, Plug, TrendingUp, ChartBar as BarChart2, BookOpen, CreditCard, Settings, LogOut, ShieldCheck, Volume2, Sun, Moon, Monitor, Menu, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { supabase } from "../../lib/supabase";
 import { useEffect, useState } from "react";
@@ -31,7 +13,9 @@ const items = [
   { to: "/calls", label: "Calls", icon: Phone },
   { to: "/contacts", label: "Contacts", icon: Users },
   { to: "/voices", label: "Voices", icon: Volume2 },
+  { to: "/knowledge", label: "Knowledge", icon: BookOpen },
   { to: "/integrations", label: "Integrations", icon: Plug },
+  { to: "/analytics", label: "Analytics", icon: BarChart2 },
   { to: "/outcomes", label: "Outcomes", icon: TrendingUp },
   { to: "/billing", label: "Billing", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: Settings },

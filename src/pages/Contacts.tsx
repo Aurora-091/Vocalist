@@ -293,50 +293,136 @@ function CreateForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
 
 function ImportForm({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [text, setText] = useState("");
+  const [consentAttested, setConsentAttested] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<{ inserted: number; skipped: Array<{ phone: string; reason: string }> } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setText(ev.target?.result as string || "");
+    };
+    reader.readAsText(file);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith(".csv") || file.type === "text/csv" || file.type === "text/plain")) {
+      handleFile(file);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consentAttested) return;
     setBusy(true);
+    setErr(null);
     setResult(null);
+
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    let inserted = 0;
-    let skipped = 0;
-    for (const line of lines) {
-      const [phone, name, email] = line.split(",").map((s) => (s || "").trim());
-      try {
-        await createContact({ phone, name, email, source: "csv" });
-        inserted++;
-      } catch {
-        skipped++;
-      }
+    const header = lines[0]?.toLowerCase();
+    const isHeader = header?.includes("phone") || header?.includes("name") || header?.includes("email");
+    const dataLines = isHeader ? lines.slice(1) : lines;
+
+    const contacts = dataLines.map((line) => {
+      const parts = line.split(",").map((s) => s.trim().replace(/^["']|["']$/g, ""));
+      return { phone: parts[0] || "", name: parts[1] || undefined, email: parts[2] || undefined };
+    }).filter((c) => c.phone);
+
+    if (contacts.length === 0) {
+      setErr("No valid rows found. Format: phone,name,email — one per line.");
+      setBusy(false);
+      return;
     }
-    setResult(`Inserted ${inserted}. Skipped ${skipped}.`);
-    onDone();
-    setBusy(false);
+
+    try {
+      const res = await api.post<{ inserted: number; skipped: Array<{ phone: string; reason: string }> }>(
+        "/v1/contacts/bulk",
+        { contacts, source: "csv", default_country: "US" }
+      );
+      setResult(res);
+      onDone();
+    } catch (e: any) {
+      setErr(e.message || "Import failed.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <Card>
       <CardBody>
-        <p className="text-sm text-text-muted mb-3">
-          Paste lines like <code className="font-mono">phone,name,email</code>. One per line.
-        </p>
-        <form onSubmit={submit} className="space-y-3">
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium mb-1">Import contacts from CSV</p>
+            <p className="text-xs text-text-muted">
+              Columns: <code className="font-mono">phone, name (optional), email (optional)</code>. First row can be a header.
+            </p>
+          </div>
+
+          <div
+            onDrop={onDrop}
+            onDragOver={(e) => e.preventDefault()}
+            onClick={() => fileRef.current?.click()}
+            className="border-2 border-dashed border-border rounded-md p-4 text-center text-sm text-text-muted cursor-pointer hover:border-text-muted hover:bg-surface-2 transition-colors"
+          >
+            <Upload className="w-5 h-5 mx-auto mb-1.5 opacity-50" />
+            {text ? (
+              <span className="text-success text-xs">File loaded — {text.split(/\r?\n/).filter(Boolean).length} lines</span>
+            ) : (
+              <span>Drag a .csv file here or click to browse</span>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              className="sr-only"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+            />
+          </div>
+
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            rows={6}
+            rows={5}
             className="w-full p-3 rounded-md border border-border bg-surface font-mono text-xs"
-            placeholder="+14155550123,Jordan Lee,jordan@example.com"
+            placeholder="+14155550123,Jordan Lee,jordan@example.com&#10;+14155550456,Alex Kim"
           />
-          {result && <div className="text-sm text-text-muted">{result}</div>}
+
+          <label className="flex items-start gap-2.5 p-3 rounded-md border border-border bg-surface-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={consentAttested}
+              onChange={(e) => setConsentAttested(e.target.checked)}
+              className="mt-0.5 rounded border-border"
+            />
+            <span className="text-xs text-text-muted leading-relaxed">
+              I confirm I have written or verbal consent to contact these individuals by phone. Contacts without consent will be
+              imported with <code className="font-mono">consent_status = none</code> and will be excluded from outbound campaigns.
+            </span>
+          </label>
+
+          {err && <div className="text-sm text-danger">{err}</div>}
+          {result && (
+            <div className="text-sm text-text-muted">
+              Imported {result.inserted} contact{result.inserted !== 1 ? "s" : ""}.
+              {result.skipped.length > 0 && ` Skipped ${result.skipped.length} invalid.`}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
             <Button variant="ghost" type="button" onClick={onClose}>Close</Button>
-            <Button type="submit" disabled={busy || !text.trim()}>{busy ? "Importing…" : "Import"}</Button>
+            <Button
+              onClick={(e) => submit(e as any)}
+              disabled={busy || !text.trim() || !consentAttested}
+            >
+              {busy ? "Importing…" : "Import contacts"}
+            </Button>
           </div>
-        </form>
+        </div>
       </CardBody>
     </Card>
   );

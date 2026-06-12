@@ -24,6 +24,8 @@ const VoiceLibrary = lazy(() => import("./pages/VoiceLibrary"));
 const ShopifyConnect = lazy(() => import("./pages/ShopifyConnect"));
 const IntegrationConnect = lazy(() => import("./pages/IntegrationConnect"));
 const OAuthCallback = lazy(() => import("./pages/auth/OAuthCallback"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Knowledge = lazy(() => import("./pages/Knowledge"));
 const About = lazy(() => import("./pages/About"));
 const Story = lazy(() => import("./pages/Story"));
 const Funding = lazy(() => import("./pages/Funding"));
@@ -87,6 +89,8 @@ export default function App() {
           <Route path="/integrations/connect/:provider" element={<IntegrationConnect />} />
           <Route path="/voices" element={<VoiceLibrary />} />
           <Route path="/outcomes" element={<Outcomes />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
