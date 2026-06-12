@@ -59,7 +59,7 @@ export default function Story() {
           <div className="max-w-3xl">
             <div className="border-l-2 border-[#111] pl-8">
               <p className="text-xl md:text-2xl text-[#0F172A] leading-relaxed font-medium">
-                "We didn't start Aurora because we thought voice AI was cool. We started it
+                "We didn't start Weeber because we thought voice AI was cool. We started it
                 because the existing tools were getting small businesses sued."
               </p>
               <p className="mt-4 text-sm text-[#64748B]">Marcus Chen, CEO</p>
@@ -93,7 +93,7 @@ export default function Story() {
             The next chapter starts with you
           </h2>
           <p className="mt-4 text-white/50 max-w-md mx-auto">
-            Join 340+ businesses using Aurora to handle real calls, compliantly.
+            Join 340+ businesses using Weeber to handle real calls, compliantly.
           </p>
           <Link
             to="/signup"

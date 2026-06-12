@@ -87,13 +87,13 @@ export default function PrivacyPolicy() {
               <section id="introduction" className="mb-12">
                 <h2>Introduction</h2>
                 <p>
-                  Aurora Voice AI ("Aurora," "we," "us," or "our") is committed to protecting
+                  Weeber Voice AI ("Weeber," "we," "us," or "our") is committed to protecting
                   your privacy. This Privacy Policy explains how we collect, use, disclose,
                   and safeguard your information when you use our voice AI platform and services.
                 </p>
                 <p>
                   This policy applies to all users of our platform, including business customers
-                  who deploy Aurora agents and the end consumers who interact with those agents
+                  who deploy Weeber agents and the end consumers who interact with those agents
                   via phone calls.
                 </p>
               </section>
@@ -136,7 +136,7 @@ export default function PrivacyPolicy() {
               <section id="call-recording-and-transcription" className="mb-12">
                 <h2>Call Recording & Transcription</h2>
                 <p>
-                  All calls made through Aurora are recorded and transcribed. Our AI agents
+                  All calls made through Weeber are recorded and transcribed. Our AI agents
                   disclose recording at the beginning of every call as required by applicable
                   two-party consent laws. Recordings are used for:
                 </p>
@@ -155,7 +155,7 @@ export default function PrivacyPolicy() {
               <section id="consent-and-compliance" className="mb-12">
                 <h2>Consent & Compliance</h2>
                 <p>
-                  Aurora's consent management system is a core part of our infrastructure.
+                  Weeber's consent management system is a core part of our infrastructure.
                   We maintain an append-only consent ledger that records:
                 </p>
                 <ul>
@@ -175,10 +175,10 @@ export default function PrivacyPolicy() {
                 <h2>Data Sharing</h2>
                 <p>We do not sell personal information. We share data only in these circumstances:</p>
                 <ul>
-                  <li>With our customers (the businesses who deploy Aurora agents) — they receive call data, transcripts, and outcomes for calls made on their behalf</li>
+                  <li>With our customers (the businesses who deploy Weeber agents) — they receive call data, transcripts, and outcomes for calls made on their behalf</li>
                   <li>With service providers who help us operate our platform (cloud hosting, payment processing)</li>
                   <li>When required by law, regulation, or legal process</li>
-                  <li>To protect the rights, property, or safety of Aurora, our customers, or others</li>
+                  <li>To protect the rights, property, or safety of Weeber, our customers, or others</li>
                 </ul>
               </section>
 

@@ -88,7 +88,7 @@ export default function Terms() {
               <section id="acceptance" className="mb-12">
                 <h2>Acceptance of Terms</h2>
                 <p>
-                  By accessing or using Aurora Voice AI ("the Service"), you agree to be bound
+                  By accessing or using Weeber Voice AI ("the Service"), you agree to be bound
                   by these Terms of Service ("Terms"). If you are using the Service on behalf
                   of an organization, you represent that you have authority to bind that
                   organization to these Terms.
@@ -103,7 +103,7 @@ export default function Terms() {
               <section id="description" className="mb-12">
                 <h2>Description of Service</h2>
                 <p>
-                  Aurora provides an AI-powered voice calling platform that enables businesses
+                  Weeber provides an AI-powered voice calling platform that enables businesses
                   to automate inbound and outbound phone calls. The Service includes voice
                   agents, campaign management, consent enforcement, call recording and
                   transcription, and related analytics.
@@ -111,7 +111,7 @@ export default function Terms() {
                 <p>
                   The Service is designed to facilitate compliant voice communications. However,
                   ultimate responsibility for regulatory compliance lies with the customer.
-                  Aurora provides tools and infrastructure to support compliance but does not
+                  Weeber provides tools and infrastructure to support compliance but does not
                   provide legal advice.
                 </p>
               </section>
@@ -152,7 +152,7 @@ export default function Terms() {
               <section id="compliance-obligations" className="mb-12">
                 <h2>Compliance Obligations</h2>
                 <p>
-                  Aurora provides consent management infrastructure, but you remain responsible
+                  Weeber provides consent management infrastructure, but you remain responsible
                   for ensuring that:
                 </p>
                 <ul>
@@ -162,7 +162,7 @@ export default function Terms() {
                   <li>Your agents' scripts do not make false or misleading claims</li>
                 </ul>
                 <p>
-                  Aurora will block outbound calls to numbers that lack consent records in our
+                  Weeber will block outbound calls to numbers that lack consent records in our
                   system. You are responsible for ensuring consent records you provide are valid.
                 </p>
               </section>
@@ -200,7 +200,7 @@ export default function Terms() {
                 <h2>Intellectual Property</h2>
                 <p>
                   The Service, including all software, AI models, algorithms, and documentation,
-                  is owned by Aurora and protected by intellectual property laws. Your subscription
+                  is owned by Weeber and protected by intellectual property laws. Your subscription
                   grants you a limited, non-exclusive, non-transferable license to use the Service
                   for its intended purpose.
                 </p>
@@ -214,7 +214,7 @@ export default function Terms() {
               <section id="limitation-of-liability" className="mb-12">
                 <h2>Limitation of Liability</h2>
                 <p>
-                  TO THE MAXIMUM EXTENT PERMITTED BY LAW, AURORA SHALL NOT BE LIABLE FOR ANY
+                  TO THE MAXIMUM EXTENT PERMITTED BY LAW, WEEBER SHALL NOT BE LIABLE FOR ANY
                   INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING
                   BUT NOT LIMITED TO LOSS OF PROFITS, DATA, OR BUSINESS OPPORTUNITIES.
                 </p>
@@ -224,7 +224,7 @@ export default function Terms() {
                   applies regardless of the theory of liability.
                 </p>
                 <p>
-                  Aurora is not liable for TCPA violations, fines, or lawsuits arising from
+                  Weeber is not liable for TCPA violations, fines, or lawsuits arising from
                   your use of the Service if such violations result from inaccurate consent
                   records you provided or from use of the Service in violation of these Terms.
                 </p>

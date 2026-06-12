@@ -513,7 +513,7 @@ export default function AgentDetail() {
         </CardHeader>
         <CardBody>
           <p className="text-sm text-text-muted mb-4">
-            Aurora will call the number below so you can hear your agent live.
+            Weeber will call the number below so you can hear your agent live.
             Requires ElevenLabs provider to be configured.
           </p>
           <div className="flex flex-wrap gap-3">

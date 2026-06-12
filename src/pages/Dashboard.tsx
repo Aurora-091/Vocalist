@@ -109,10 +109,10 @@ export default function Dashboard() {
                 <Sparkles className="w-4 h-4" />
               </span>
               <div className="flex-1">
-                <div className="font-medium">Welcome to Aurora</div>
+                <div className="font-medium">Welcome to Weeber</div>
                 <p className="text-sm text-text-muted mt-1">
                   Start by creating your first agent, then add contacts and launch a campaign.
-                  Aurora handles consent, DNC enforcement, and recording disclosure automatically.
+                  Weeber handles consent, DNC enforcement, and recording disclosure automatically.
                 </p>
                 <div className="mt-4">
                   <Link to="/onboarding">
@@ -128,7 +128,7 @@ export default function Dashboard() {
       {steps && !checklistDone && (
         <Card>
           <CardHeader>
-            <div className="font-medium">Finish setting up Aurora</div>
+            <div className="font-medium">Finish setting up Weeber</div>
             <p className="text-xs text-text-muted mt-1">
               {Object.values(steps).filter(Boolean).length} of{" "}
               {Object.keys(steps).length} done

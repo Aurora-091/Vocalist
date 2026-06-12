@@ -173,7 +173,7 @@ function AppearancePanel() {
       </CardHeader>
       <CardBody>
         <p className="text-sm text-text-muted mb-4">
-          Choose how Aurora looks for you. This syncs across devices.
+          Choose how Weeber looks for you. This syncs across devices.
         </p>
         <div className="grid grid-cols-3 gap-3 max-w-sm">
           {themes.map(({ key, label, icon: Icon }) => (
@@ -430,7 +430,7 @@ function CompliancePanel() {
         </CardHeader>
         <CardBody>
           <p className="text-sm text-text-muted">
-            Aurora enforces consent on every outbound dial. Opt-outs propagate
+            Weeber enforces consent on every outbound dial. Opt-outs propagate
             instantly across active campaigns. Recording disclosure is part of
             every outbound persona by default.
           </p>
@@ -591,7 +591,7 @@ function WebhooksPanel() {
       </CardHeader>
       <CardBody>
         <p className="text-sm text-text-muted mb-4">
-          We sign every event with HMAC-SHA256 in the <code className="font-mono">X-Aurora-Signature</code> header.
+          We sign every event with HMAC-SHA256 in the <code className="font-mono">X-Weeber-Signature</code> header.
         </p>
         <div className="flex gap-2 mb-4">
           <input

@@ -45,7 +45,7 @@ export default function Waitlist() {
             <h1 className="text-4xl md:text-6xl font-bold leading-[0.95] tracking-tight text-[#0F172A]">
               Get early access
               <br />
-              <span className="text-[#64748B]">to Aurora Voice AI.</span>
+              <span className="text-[#64748B]">to Weeber Voice AI.</span>
             </h1>
             <p className="mt-6 text-lg text-[#475569] leading-relaxed max-w-xl">
               We're onboarding businesses in batches. Join the waitlist to get notified
@@ -57,7 +57,7 @@ export default function Waitlist() {
                 <div className="text-lg font-semibold">You're on the list.</div>
                 <p className="mt-2 text-sm text-white/60 leading-relaxed">
                   We'll reach out when your spot opens. In the meantime, check out
-                  our demo to see Aurora in action.
+                  our demo to see Weeber in action.
                 </p>
                 <Link
                   to="/demo"

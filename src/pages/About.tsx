@@ -12,7 +12,7 @@ export default function About() {
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-4">
-            About Aurora
+            About Weeber
           </div>
           <h1 className="text-4xl md:text-6xl font-bold leading-[0.95] tracking-tight text-[#0F172A] max-w-3xl">
             We make voice AI
@@ -20,7 +20,7 @@ export default function About() {
             <span className="text-[#64748B]">accessible and compliant.</span>
           </h1>
           <p className="mt-6 text-lg text-[#475569] max-w-2xl leading-relaxed">
-            Aurora was built for the businesses that enterprise AI vendors ignore — clinics,
+            Weeber was built for the businesses that enterprise AI vendors ignore — clinics,
             local shops, and Shopify merchants who need real calls handled without hiring
             a call center or violating consent regulations.
           </p>
@@ -62,13 +62,13 @@ export default function About() {
                 in from day one.
               </p>
               <p>
-                We started Aurora because we watched a Shopify merchant get a $12,000 TCPA fine
+                We started Weeber because we watched a Shopify merchant get a $12,000 TCPA fine
                 for a cart-recovery campaign that a vendor told them was "compliant." It wasn't.
                 The consent model was wrong, the opt-out mechanism was broken, and the audit trail
                 didn't exist.
               </p>
               <p>
-                Aurora enforces consent at the infrastructure level. You literally cannot dial a
+                Weeber enforces consent at the infrastructure level. You literally cannot dial a
                 number that hasn't passed our consent gate. That's the product.
               </p>
             </div>
@@ -106,7 +106,7 @@ export default function About() {
             Team
           </div>
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#0F172A] mb-12">
-            The people behind Aurora
+            The people behind Weeber
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {TEAM.map((member) => (

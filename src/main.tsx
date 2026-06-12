@@ -10,7 +10,7 @@ import "./index.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ThemeProvider attribute="class" defaultTheme="system" storageKey="aurora-theme">
+      <ThemeProvider attribute="class" defaultTheme="system" storageKey="weeber-theme">
         <TooltipProvider delayDuration={150}>
           <App />
           <Toaster richColors closeButton position="top-right" />

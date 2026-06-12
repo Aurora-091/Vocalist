@@ -267,7 +267,7 @@ function ConnectTools({ onSkip }: { onSkip: () => void }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-text-muted">
-        Connect tools so Aurora can read calendar availability, customer
+        Connect tools so Weeber can read calendar availability, customer
         records, and order history. You can connect more later from
         Integrations.
       </p>
@@ -329,7 +329,7 @@ function AddKnowledge({
   return (
     <div className="space-y-4">
       <p className="text-sm text-text-muted">
-        Point Aurora at a public help page, FAQ, or product catalog. We'll
+        Point Weeber at a public help page, FAQ, or product catalog. We'll
         crawl and embed it so the agent answers from your real content.
       </p>
       <div className="grid sm:grid-cols-2 gap-3">
@@ -471,7 +471,7 @@ function GetNumber({
     <div className="space-y-4">
       <p className="text-sm text-text-muted">
         Phone numbers are provisioned through Twilio once your account is
-        connected. You can bring your own (BYO) number or get a new one from Aurora.
+        connected. You can bring your own (BYO) number or get a new one from Weeber.
       </p>
       <p className="text-sm text-text-muted">
         This step requires your Twilio credentials to be configured in Settings.
@@ -497,7 +497,7 @@ function TestAndGoLive({ onDone }: { onDone: () => void }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-text-muted">
-        You're set. Aurora's compliance gates and recording disclosure are on
+        You're set. Weeber's compliance gates and recording disclosure are on
         by default. Open an agent's detail page to place a test call before
         flipping any live campaigns.
       </p>

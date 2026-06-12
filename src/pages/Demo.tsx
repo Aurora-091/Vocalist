@@ -34,7 +34,7 @@ export default function Demo() {
             Live demo
           </div>
           <h1 className="text-4xl md:text-6xl font-bold leading-[0.95] tracking-tight text-[#111] max-w-3xl">
-            Hear Aurora
+            Hear Weeber
             <br />
             <span className="text-[#888]">handle a real call.</span>
           </h1>
@@ -69,7 +69,7 @@ export default function Demo() {
                       }`}
                     >
                       <div className="font-mono text-[10px] uppercase tracking-widest mb-1 opacity-60">
-                        {line.speaker === "agent" ? "Aurora" : "Customer"}
+                        {line.speaker === "agent" ? "Weeber" : "Customer"}
                       </div>
                       {line.text}
                     </div>
@@ -141,7 +141,7 @@ export default function Demo() {
             Use cases
           </div>
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#111] mb-12">
-            What Aurora can handle
+            What Weeber can handle
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             {SCENARIOS.map((scenario) => (

@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { useEffect, useState } from "react";
 import { getUsageSummary, getOrg } from "../../lib/db";
 import { NotificationsBell } from "./NotificationsBell";
+import { WeeberLogo } from "../WeeberLogo";
 
 const items = [
   { to: "/dashboard", label: "Home", icon: LayoutDashboard, end: true },
@@ -47,7 +48,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="h-14 px-5 flex items-center border-b border-border">
-        <div className="font-semibold tracking-tight">Aurora</div>
+        <div className="font-semibold tracking-tight"><WeeberLogo size="sm" /></div>
       </div>
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
         {items.map((it) => (

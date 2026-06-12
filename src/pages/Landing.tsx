@@ -6,7 +6,7 @@ export default function Landing() {
     <div className="marketing min-h-full bg-bg">
       <header className="border-b border-border bg-surface/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1280px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="font-semibold tracking-tight text-lg">Aurora</div>
+          <div className="font-semibold tracking-tight text-lg">Weeber</div>
           <div className="flex items-center gap-4 text-sm">
             <Link to="/login" className="text-text-muted hover:text-text transition-colors">
               Sign in
@@ -33,7 +33,7 @@ export default function Landing() {
               <span className="text-text-muted">Compliant by default.</span>
             </h1>
             <p className="mt-6 text-lg text-text-muted max-w-xl leading-relaxed">
-              Aurora answers inbound calls, recovers abandoned carts, books appointments,
+              Weeber answers inbound calls, recovers abandoned carts, books appointments,
               and routes to humans — without breaking TCPA consent rules. Built for
               Shopify merchants and clinics.
             </p>
@@ -87,13 +87,13 @@ export default function Landing() {
               number="01"
               icon={<Bot className="w-5 h-5" />}
               title="Create your agent"
-              body="Pick a vertical template. Set the objective and tone. Aurora handles persona construction, recording disclosure, and compliance gating."
+              body="Pick a vertical template. Set the objective and tone. Weeber handles persona construction, recording disclosure, and compliance gating."
             />
             <Step
               number="02"
               icon={<Megaphone className="w-5 h-5" />}
               title="Import contacts, launch"
-              body="Upload a CSV or sync from Shopify. Aurora enforces consent on import. Start a campaign and the dialer handles concurrency, retries, and voicemail."
+              body="Upload a CSV or sync from Shopify. Weeber enforces consent on import. Start a campaign and the dialer handles concurrency, retries, and voicemail."
             />
             <Step
               number="03"
@@ -164,7 +164,7 @@ export default function Landing() {
 
       <footer className="border-t border-border">
         <div className="max-w-[1280px] mx-auto px-6 py-8 flex items-center justify-between text-xs text-text-muted">
-          <div>Aurora Voice AI</div>
+          <div>Weeber Voice AI</div>
           <div className="flex gap-6">
             <span>Privacy</span>
             <span>Terms</span>

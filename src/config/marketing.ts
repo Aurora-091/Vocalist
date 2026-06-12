@@ -1,8 +1,8 @@
 export const SITE = {
-  name: "Aurora",
+  name: "Weeber",
   tagline: "Voice AI for SMBs",
   description:
-    "Aurora answers inbound calls, recovers abandoned carts, books appointments, and routes to humans — without breaking TCPA consent rules.",
+    "Weeber answers inbound calls, recovers abandoned carts, books appointments, and routes to humans — without breaking TCPA consent rules.",
 };
 
 export const NAV_LINKS = [
@@ -79,7 +79,7 @@ export const INVESTORS_STATS = [
 ] as const;
 
 export const CALL_TRANSCRIPT = [
-  { speaker: "agent", text: "Good afternoon, this is Aurora calling on behalf of Bloom Dental. Am I speaking with Sarah?" },
+  { speaker: "agent", text: "Good afternoon, this is Weeber calling on behalf of Bloom Dental. Am I speaking with Sarah?" },
   { speaker: "customer", text: "Yes, this is Sarah." },
   { speaker: "agent", text: "Hi Sarah. I'm reaching out because you have an upcoming cleaning appointment on Thursday at 2pm. I wanted to confirm you're still able to make it." },
   { speaker: "customer", text: "Oh right, Thursday. Actually, can I move it to Friday morning?" },

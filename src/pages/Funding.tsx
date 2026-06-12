@@ -20,7 +20,7 @@ export default function Funding() {
             <span className="text-[#888]">for voice AI.</span>
           </h1>
           <p className="mt-6 text-lg text-[#555] max-w-2xl leading-relaxed">
-            Aurora is building the infrastructure that makes outbound voice AI legally safe.
+            Weeber is building the infrastructure that makes outbound voice AI legally safe.
             We're the consent and compliance engine that every voice agent needs — whether
             it's ours or someone else's.
           </p>
@@ -67,7 +67,7 @@ export default function Funding() {
                 non-compliant dials at the infrastructure level — not the application level.
               </p>
               <p>
-                This positions Aurora as both a standalone product (for SMBs who want a full
+                This positions Weeber as both a standalone product (for SMBs who want a full
                 voice agent) and a compliance platform (for enterprises who want to make their
                 existing voice AI legally safe).
               </p>
@@ -120,7 +120,7 @@ export default function Funding() {
               Get in touch
             </div>
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#111]">
-              Interested in Aurora?
+              Interested in Weeber?
             </h2>
             <p className="mt-4 text-[#555] leading-relaxed">
               We're always open to conversations with investors who understand infrastructure

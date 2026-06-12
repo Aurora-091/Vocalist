@@ -58,7 +58,7 @@ export default function CampaignNew() {
         </Link>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight">New campaign</h1>
         <p className="text-sm text-text-muted mt-1">
-          Aurora dials only contacts with consent on file. Opt-outs are honored
+          Weeber dials only contacts with consent on file. Opt-outs are honored
           immediately.
         </p>
       </div>

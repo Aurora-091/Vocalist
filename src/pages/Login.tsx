@@ -4,8 +4,8 @@ import { Eye, EyeOff, ArrowRight, Phone, ShieldCheck, Zap } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
 
-const DEMO_EMAIL = "demo@aurora.dev";
-const DEMO_PASSWORD = "aurora-demo-2026";
+const DEMO_EMAIL = "demo@weeber.dev";
+const DEMO_PASSWORD = "weeber-demo-2026";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -78,7 +78,7 @@ export default function Login() {
       <div className="hidden lg:flex lg:w-[45%] bg-[#111] text-white p-12 flex-col justify-between">
         <div>
           <Link to="/" className="font-semibold text-lg tracking-tight">
-            Aurora
+            Weeber
           </Link>
         </div>
         <div>
@@ -102,14 +102,14 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center px-6 py-12 lg:py-0 bg-[#F8F9FB]">
         <div className="w-full max-w-md">
           <Link to="/" className="font-semibold text-lg tracking-tight text-[#0F172A] lg:hidden mb-8 block">
-            Aurora
+            Weeber
           </Link>
 
           <h2 className="text-2xl font-semibold tracking-tight text-[#0F172A] mb-1">
             Sign in
           </h2>
           <p className="text-sm text-[#475569] mb-8">
-            Welcome back to Aurora.
+            Welcome back to Weeber.
           </p>
 
           <button
@@ -187,7 +187,7 @@ export default function Login() {
           {/* Demo account card */}
           <div className="mt-6 border border-[#E2E8F0] bg-[#F1F5F9] p-4 rounded-md">
             <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-2">
-              Try Aurora instantly
+              Try Weeber instantly
             </div>
             <p className="text-sm text-[#475569] mb-3">
               Explore the full platform with pre-loaded data.
@@ -202,7 +202,7 @@ export default function Login() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-[#E2E8F0] text-sm text-[#475569]">
-            New to Aurora?{" "}
+            New to Weeber?{" "}
             <Link to="/signup" className="font-medium text-[#0F172A] hover:underline">
               Create an account
             </Link>

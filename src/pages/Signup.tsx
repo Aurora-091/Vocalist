@@ -75,7 +75,7 @@ export default function Signup() {
       <div className="hidden lg:flex lg:w-[45%] bg-[#0F172A] text-white p-12 flex-col justify-between">
         <div>
           <Link to="/" className="font-semibold text-lg tracking-tight">
-            Aurora
+            Weeber
           </Link>
         </div>
         <div>
@@ -99,7 +99,7 @@ export default function Signup() {
       <div className="flex-1 flex items-center justify-center px-6 py-12 lg:py-0">
         <div className="w-full max-w-md">
           <Link to="/" className="font-semibold text-lg tracking-tight text-[#0F172A] lg:hidden mb-8 block">
-            Aurora
+            Weeber
           </Link>
 
           <h2 className="text-2xl font-semibold tracking-tight text-[#0F172A] mb-1">

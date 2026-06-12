@@ -134,7 +134,7 @@ export default function IntegrationConnect() {
           body: {
             provider: "whatsapp",
             action: "send_message",
-            params: { to: values.whatsapp_number, body: "Aurora connection test" },
+            params: { to: values.whatsapp_number, body: "Weeber connection test" },
           },
         });
 

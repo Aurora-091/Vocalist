@@ -60,7 +60,7 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Get a phone number</h2>
         <p className="text-sm text-text-muted mt-1">
-          Numbers are provisioned through Twilio. Use your own account or let Aurora manage one for you.
+          Numbers are provisioned through Twilio. Use your own account or let Weeber manage one for you.
         </p>
       </div>
 
@@ -78,7 +78,7 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
                     <div>
                       <div className="font-mono text-sm">{n.e164}</div>
                       <div className="text-xs text-text-muted">
-                        {n.byo ? "BYO" : "Aurora-managed"} · {n.status || "active"}
+                        {n.byo ? "BYO" : "Weeber-managed"} · {n.status || "active"}
                       </div>
                     </div>
                   </div>
@@ -106,7 +106,7 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
           onAuroraManaged={async () => {
             const result = await api.post<{ subaccount: TwilioAccount }>("/v1/twilio/subaccount");
             setAccount(result.subaccount as TwilioAccount);
-            toast.success("Aurora-managed Twilio sub-account provisioned");
+            toast.success("Weeber-managed Twilio sub-account provisioned");
           }}
           onByoLinked={(acct) => {
             setAccount(acct);
@@ -238,7 +238,7 @@ function TwilioSetupChoice({
         </div>
         <p className="text-sm text-text-muted">
           Link an existing Twilio account. Use your own numbers, keep full control, and
-          avoid Aurora provisioning your sub-account.
+          avoid Weeber provisioning your sub-account.
         </p>
       </button>
 
@@ -252,11 +252,11 @@ function TwilioSetupChoice({
             <Server className="w-5 h-5 text-text-muted group-hover:text-primary" />
           </div>
           <div className="font-medium">
-            {loading ? "Provisioning…" : "Let Aurora manage numbers"}
+            {loading ? "Provisioning…" : "Let Weeber manage numbers"}
           </div>
         </div>
         <p className="text-sm text-text-muted">
-          Aurora provisions a Twilio sub-account for you. Easiest setup — search and
+          Weeber provisions a Twilio sub-account for you. Easiest setup — search and
           purchase numbers directly from this dashboard.
         </p>
       </button>
@@ -295,7 +295,7 @@ function AccountLinked({
             <span className="font-medium">
               {account.account_type === "byo_linked"
                 ? "Your Twilio account linked"
-                : "Aurora-managed sub-account"}
+                : "Weeber-managed sub-account"}
             </span>
           </div>
           <Badge tone={account.status === "active" ? "success" : "warning"}>

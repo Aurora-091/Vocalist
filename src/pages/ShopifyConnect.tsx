@@ -244,7 +244,7 @@ export default function ShopifyConnect() {
             </span>
             <div className="font-medium text-lg">Shopify connected</div>
             <p className="mt-2 text-sm text-text-muted">
-              <span className="font-mono">{domain}</span> is now linked to Aurora.
+              <span className="font-mono">{domain}</span> is now linked to Weeber.
               Your agents can access orders, carts, and customer data.
             </p>
             <div className="mt-4">
