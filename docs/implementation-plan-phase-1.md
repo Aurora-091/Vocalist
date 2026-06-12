@@ -443,7 +443,7 @@ Complexity: medium. Closes: scope #18.
 - Seed `vertical_configs` row for Shopify with `recommended_voices`, `recommended_agent_skeletons`, and `tool_catalogue`
 
 **OAuth + connection:**
-- `GET /api/v1/integrations/shopify/connect` → redirect to Shopify OAuth (`read_orders, write_orders, read_customers, write_customers, read_discounts, write_discounts, read_checkouts`)
+- `GET /api/v1/integrations/shopify/connect` → redirect to Shopify OAuth (`read_orders, read_customers, read_checkouts, read_products, write_checkouts`)
 - Callback persists access token via Vault `secret_ref`, marks `integrations(type='shopify', status='active')`
 - Status banner if disconnected; tool catalogue greyed if integration inactive (Scope #4 AC)
 

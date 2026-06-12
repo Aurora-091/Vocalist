@@ -168,7 +168,7 @@ export default function ShopifyConnect() {
                 </div>
                 <div className="flex gap-2">
                   <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">3</span>
-                  <span>Create a new app (or select existing) and configure <strong>Admin API</strong> scopes: <code className="text-xs bg-surface px-1 py-0.5 rounded">read_orders, read_customers, read_checkouts, read_products</code></span>
+                  <span>Create a new app (or select existing) and configure <strong>Admin API</strong> scopes: <code className="text-xs bg-surface px-1 py-0.5 rounded">read_orders, read_customers, read_checkouts, read_products, write_checkouts</code></span>
                 </div>
                 <div className="flex gap-2">
                   <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">4</span>

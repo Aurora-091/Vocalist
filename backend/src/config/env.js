@@ -4,6 +4,9 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env"), override
 
 const { z } = require("zod");
 
+const isProduction = process.env.NODE_ENV === "production";
+const runWorkers = process.env.RUN_WORKERS === "1";
+
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -11,19 +14,21 @@ const schema = z.object({
 
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(20),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: isProduction ? z.string().min(20) : z.string().min(20).optional(),
+  SUPABASE_JWT_SECRET: isProduction ? z.string().min(20) : z.string().min(20).optional(),
 
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
   VAPI_WEBHOOK_SECRET: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: runWorkers ? z.string().min(1) : z.string().optional(),
+  TWILIO_ACCOUNT_SID: runWorkers ? z.string().min(1) : z.string().optional(),
   TWILIO_REGION: z.string().default("us1"),
   TWILIO_VOICE_BASE_URL: z.string().optional(),
   TWILIO_SANDBOX_MODE: z.coerce.boolean().default(true),
 
-  ELEVENLABS_API_KEY: z.string().optional(),
+  ELEVENLABS_API_KEY: runWorkers ? z.string().min(1) : z.string().optional(),
+  ELEVENLABS_WEBHOOK_SECRET: z.string().optional(),
 
   CALLING_HOUR_START: z.coerce.number().int().min(0).max(23).default(9),
   CALLING_HOUR_END: z.coerce.number().int().min(0).max(23).default(19),
@@ -39,6 +44,7 @@ const raw = {
   SUPABASE_URL: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET,
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   VAPI_WEBHOOK_SECRET: process.env.VAPI_WEBHOOK_SECRET,
@@ -48,6 +54,7 @@ const raw = {
   TWILIO_VOICE_BASE_URL: process.env.TWILIO_VOICE_BASE_URL,
   TWILIO_SANDBOX_MODE: process.env.TWILIO_SANDBOX_MODE,
   ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY,
+  ELEVENLABS_WEBHOOK_SECRET: process.env.ELEVENLABS_WEBHOOK_SECRET,
   CALLING_HOUR_START: process.env.CALLING_HOUR_START,
   CALLING_HOUR_END: process.env.CALLING_HOUR_END,
   RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,
@@ -56,7 +63,15 @@ const raw = {
 
 const parsed = schema.safeParse(raw);
 if (!parsed.success) {
-  console.error("Invalid environment configuration:", parsed.error.flatten().fieldErrors);
+  const fields = parsed.error.flatten().fieldErrors;
+  console.error("FATAL: Invalid environment configuration:");
+  console.error(JSON.stringify(fields, null, 2));
+  if (isProduction) {
+    console.error("Production requires: SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET");
+  }
+  if (runWorkers) {
+    console.error("Worker mode (RUN_WORKERS=1) requires: ELEVENLABS_API_KEY, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN");
+  }
   process.exit(1);
 }
 

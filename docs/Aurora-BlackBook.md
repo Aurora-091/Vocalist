@@ -188,29 +188,97 @@ If any condition fails, the number is **never dialed** — logged as suppressed 
 |--------|------|--------|
 | **Subscription** | Monthly SaaS | v1 (launch) |
 | **Metered usage** | Per-minute overage | v1 (launch) |
-| **Outcome pricing** | Per-booking / per-recovered-cart | Phase 2 |
-| **Enterprise / whitelabel** | Custom pricing | Phase 3 |
+| **Outcome pricing** | Per-booking / per-recovered-cart | Phase 4 upsell |
+| **Agency / whitelabel** | Pooled multi-tenant | Phase 3 |
 
-### Pricing Tiers
+### US / EU — Bundled (Twilio)
 
-| Tier | Monthly | Bundled Minutes | Effective $/min | Overage $/min | Numbers Included | Target |
-|------|---------|-----------------|-----------------|---------------|------------------|--------|
-| **Starter** | $99 | 400 | $0.25 | $0.30 | 1 | Solo merchants |
-| **Growth** | $299 | 1,500 | $0.20 | $0.32 | 3 | Growing stores |
-| **Scale** | $799 | 5,000 | $0.16 | $0.35 | 10 | Multi-location |
+| | Starter | Growth | Scale |
+|---|---|---|---|
+| **Price/mo** | $79 | $249 | $699 |
+| **Bundled Minutes** | 300 | 1,200 | 4,000 |
+| **Overage/min** | $0.20 | $0.18 | $0.16 |
+| **Phone Numbers** | 1 | 3 | 10 |
+| **Extra Numbers** | $2/mo | $2/mo | $1.50/mo |
+| **Agents** | 1 | 5 | Unlimited |
+| **Campaigns** | — | Yes | Yes |
+| **Shopify** | Yes | Yes | Yes |
+| **Clinic Vertical** | — | Yes | Yes |
+| **Whitelabel** | — | — | Yes |
+| **Support** | Email | Priority | Dedicated |
 
-**Notes:**
-- All tiers include unlimited agents, campaigns, and knowledge base
-- Starter is limited to 1 concurrent call; Growth to 5; Scale to 20
-- Numbers beyond included: $5/mo each
-- Annual billing: 2 months free (16.7% discount)
+### US / EU — BYO Twilio
+
+| | Starter | Growth | Scale |
+|---|---|---|---|
+| **Price/mo** | $59 | $199 | $549 |
+| **Bundled Minutes** | 300 | 1,200 | 4,000 |
+| **Overage/min** | $0.18 | $0.16 | $0.14 |
+| **Phone Numbers** | Customer owns | Customer owns | Customer owns |
+| **Agents** | 1 | 5 | Unlimited |
+
+BYO saving: $20/mo Starter, $50/mo Growth, $150/mo Scale. Customer pays Twilio directly.
+
+### India — Bundled (Plivo) — Phase 3
+
+| | Starter | Growth | Scale |
+|---|---|---|---|
+| **Price/mo** | Rs.1,999 | Rs.4,999 | Rs.12,999 |
+| **Bundled Minutes** | 300 | 1,200 | 4,000 |
+| **Overage/min** | Rs.18 | Rs.16 | Rs.14 |
+| **Phone Numbers** | 1 (140-series) | 3 (140-series) | 10 (140-series) |
+| **Compliance** | TRAI + DPDP native | TRAI + DPDP native | TRAI + DPDP native |
+
+### India — BYO (Plivo or Exotel) — Phase 3
+
+| | Starter | Growth | Scale |
+|---|---|---|---|
+| **Price/mo** | Rs.1,299 | Rs.3,999 | Rs.9,999 |
+| **Bundled Minutes** | 300 | 1,200 | 4,000 |
+| **Overage/min** | Rs.15 | Rs.13 | Rs.11 |
+| **Phone Numbers** | Customer owns | Customer owns | Customer owns |
+
+BYO saving: Rs.700/mo Starter, Rs.1,000/mo Growth, Rs.3,000/mo Scale.
+
+### Agency / Whitelabel — Both Markets
+
+| | India | US / EU |
+|---|---|---|
+| **Price/mo** | Rs.24,999 | $299 |
+| **Client Orgs** | Up to 10 | Up to 10 |
+| **Pooled Minutes** | 15,000 | 15,000 |
+| **Overage/min** | Rs.12 | $0.14 |
+| **Whitelabel** | Full | Full |
+| **BYO per client** | Yes | Yes |
+
+### Free Trial — All Markets
+
+| | Detail |
+|---|---|
+| **Duration** | 14 days |
+| **Minutes** | 25 free |
+| **Agents** | 1 |
+| **Numbers** | 1 |
+| **Credit card** | Not required to start; required for outbound campaigns |
+| **Telephony** | Aurora bundled (Twilio US / Plivo India) |
+
+### Outcome Pricing — Phase 4 Upsell
+
+Meters registered in Stripe from Phase 2. Activated when attribution is clean.
+
+| Event | India | US / EU |
+|---|---|---|
+| Per recovered cart | Rs.25 | $0.50 |
+| Per appointment booked | Rs.15 | $0.30 |
+| **Monthly cap** | 2x subscription | 2x subscription |
 
 ### Why This Pricing Works
 
 - **Anchored to the alternative:** a part-time receptionist costs $1,500-3,000/mo
-- **Overage is the margin engine:** heavy users pay more, and that's where margin expands
-- **Low entry, natural expansion:** $99 gets them started; success drives volume → upgrade
-- **No per-seat:** SMB owners hate per-seat pricing; they want one number that works
+- **Overage is the margin engine:** heavy users pay more, margin expands naturally
+- **Low entry, natural expansion:** $79 gets them started; success drives volume and upgrade
+- **No per-seat:** SMB owners hate per-seat; they want one number that works
+- **BYO discount** rewards technical customers willing to manage their own telephony
 
 ---
 
@@ -222,19 +290,33 @@ If any condition fails, the number is **never dialed** — logged as suppressed 
 |-----------|----------|----------|
 | Voice AI runtime (ElevenLabs CAI) | ~$0.10 | ElevenLabs |
 | LLM inference (pass-through) | ~$0.02 | OpenAI via ElevenLabs |
-| Telephony (Twilio) | ~$0.014 | Twilio |
+| Telephony — US (Twilio) | ~$0.014 | Twilio |
+| Telephony — India (Plivo) | ~$0.006 | Plivo |
 | Infrastructure (Supabase, hosting) | ~$0.005 | Supabase + Railway |
-| **Total COGS** | **~$0.14/min** | |
+| **Total COGS (US)** | **~$0.14/min** | |
+| **Total COGS (India)** | **~$0.13/min** | |
 
-### Margin Analysis
+### Gross Margin Summary
 
-| Tier | Revenue/min (bundled) | Revenue/min (overage) | COGS/min | Gross margin |
-|------|----------------------|----------------------|----------|--------------|
-| Starter | $0.25 | $0.30 | $0.14 | 44-53% |
-| Growth | $0.20 | $0.32 | $0.14 | 30-56% |
-| Scale | $0.16 | $0.35 | $0.14 | 12-60% |
+| Market | Mode | Revenue/min | Telephony COGS | ElevenLabs COGS | Total COGS | Margin |
+|---|---|---|---|---|---|---|
+| US/EU | Bundled Starter | $0.26 | $0.014 | ~$0.10 | ~$0.114 | ~56% |
+| US/EU | Bundled Growth | $0.21 | $0.014 | ~$0.10 | ~$0.114 | ~46% |
+| US/EU | BYO Starter | $0.20 | $0 | ~$0.10 | ~$0.10 | ~50% |
+| India | Bundled Starter | ~$0.08 | ~$0.006 | ~$0.10 | ~$0.106 | Negative |
+| India | BYO Starter | ~$0.06 | $0 | ~$0.10 | ~$0.10 | Thin |
 
-**Blended gross margin target: 55-65%** (overage-heavy usage skews positive).
+**US/EU blended gross margin target: 50-60%** (overage-heavy usage skews positive).
+
+### India Margin Problem — Honest Assessment
+
+India margins are negative at current ElevenLabs pricing. Three fixes:
+
+**Fix 1 — ElevenLabs startup grant (applied):** 33M characters free zeros voice COGS for ~6-8 months. This is the India launch window.
+
+**Fix 2 — India = BYO-only until grant:** Never offer bundled telephony in India until grant approved. Drops COGS to ElevenLabs only. Thin but survivable.
+
+**Fix 3 — Phase 4 self-host:** Pipecat self-hosting drops COGS to ~$0.02-0.03/min. India margins flip to 60%+.
 
 ### ElevenLabs Startup Grant
 
@@ -242,11 +324,20 @@ Applied for and pending: **33M characters / ~680 hours / ~$4,000 value / 12 mont
 During grant period, CAI COGS drops to ~$0 → gross margin jumps to **85%+** on all tiers.
 Strategy: **do not discount during grant — bank the margin for runway extension.**
 
+### Recommended Launch Sequence
+
+| Phase | Market | Mode | When |
+|---|---|---|---|
+| Phase 1-2 | US/EU | Bundled Twilio | Now |
+| Phase 3 | India | BYO Plivo or Exotel only | India launch |
+| Phase 3 | India | Bundled Plivo | Only after ElevenLabs grant approved |
+| Phase 4 | India | Bundled + self-hosted voice | When minutes > 10K/mo India |
+
 ### Path to 70%+ Gross Margin (Phase 4)
 
 Swap to self-hosted voice stack (Pipecat + Deepgram + OpenAI + ElevenLabs TTS direct):
 - COGS drops from ~$0.14/min to ~$0.06/min
-- Gross margin at Growth tier: $0.20 revenue vs $0.06 cost = **70%**
+- Gross margin at Growth tier: $0.21 revenue vs $0.06 cost = **71%**
 - Requires 1-2 engineers, ~6 weeks, using the existing `VoiceProvider` abstraction (no app rewrite)
 
 ---
