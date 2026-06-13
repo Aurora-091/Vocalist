@@ -38,6 +38,7 @@ const schema = z.object({
 
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().default("Weeber <hello@weeber.ai>"),
+  RESEND_AUDIENCE_ID: z.string().optional(),
 });
 
 const raw = {
@@ -64,6 +65,7 @@ const raw = {
   RATE_LIMIT_MAX: process.env.RATE_LIMIT_MAX,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+  RESEND_AUDIENCE_ID: process.env.RESEND_AUDIENCE_ID,
 };
 
 const parsed = schema.safeParse(raw);

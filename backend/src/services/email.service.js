@@ -114,8 +114,8 @@ async function sendWaitlistWelcome(email, name) {
   const greeting = name ? `Hi ${name}, you're in.` : "You're in.";
   const subject = name ? `You're in, ${name} — Weeber Early Access` : "You're in — Weeber Early Access";
 
-  try {
-    const { data, error } = await resend.emails.send({
+  const tasks = [
+    resend.emails.send({
       from: env.RESEND_FROM_EMAIL,
       to: [email],
       subject,
@@ -123,15 +123,44 @@ async function sendWaitlistWelcome(email, name) {
       replyTo: "hello@weeber.ai",
       text: `${greeting}\n\nThanks for joining the Weeber early access waitlist. We're building the compliance-first voice agent for small businesses — and you'll be among the first to use it.\n\nWhat to expect:\n- We onboard in small batches to guarantee quality.\n- You'll get an invite email the moment your batch opens.\n- First 100 businesses lock in founder pricing — forever.\n\nHave questions or want to share your use case? Just reply to this email — it goes straight to our team.\n\n— The Weeber Team\nhello@weeber.ai`,
       tags: [{ name: "category", value: "waitlist" }],
-    });
+    }),
+  ];
 
+  if (env.RESEND_AUDIENCE_ID) {
+    const nameParts = name ? name.trim().split(/\s+/) : [];
+    tasks.push(
+      resend.contacts.create({
+        audienceId: env.RESEND_AUDIENCE_ID,
+        email,
+        firstName: nameParts[0] || undefined,
+        lastName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined,
+        unsubscribed: false,
+      })
+    );
+  }
+
+  const [emailResult, audienceResult] = await Promise.allSettled(tasks);
+
+  if (emailResult.status === "fulfilled") {
+    const { data, error } = emailResult.value;
     if (error) {
       logger.error({ err: error, to: email }, "Resend email send failed");
     } else {
       logger.info({ emailId: data?.id, to: email }, "Waitlist welcome email sent");
     }
-  } catch (err) {
-    logger.error({ err, to: email }, "Resend email send threw");
+  } else {
+    logger.error({ err: emailResult.reason, to: email }, "Resend email send threw");
+  }
+
+  if (audienceResult && audienceResult.status === "fulfilled") {
+    const { error } = audienceResult.value;
+    if (error) {
+      logger.error({ err: error, to: email }, "Resend audience add failed");
+    } else {
+      logger.info({ to: email }, "Contact added to Resend audience");
+    }
+  } else if (audienceResult && audienceResult.status === "rejected") {
+    logger.error({ err: audienceResult.reason, to: email }, "Resend audience add threw");
   }
 }
 
