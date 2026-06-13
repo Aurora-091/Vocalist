@@ -194,12 +194,6 @@ export default function Waitlist() {
       {/* Hero with form */}
       <section id="waitlist" className="pt-32 pb-20 md:pb-24 px-6">
         <div className="max-w-[640px] mx-auto text-center">
-          <div className="inline-flex items-center gap-2 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
-            <span className="text-xs font-medium tracking-widest uppercase text-[#64748B]">
-              Now accepting early access
-            </span>
-          </div>
           <h1 className="text-4xl md:text-6xl font-bold leading-[0.95] tracking-tight text-[#0F172A]">
             Your business
             <br />
