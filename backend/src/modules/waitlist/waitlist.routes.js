@@ -2,6 +2,7 @@ const { Router } = require("express");
 const { z } = require("zod");
 const { requireAdmin } = require("../../config/supabase");
 const logger = require("../../config/logger");
+const { sendWaitlistWelcome } = require("../../services/email.service");
 
 const router = Router();
 
@@ -31,6 +32,8 @@ router.post("/join", async (req, res) => {
 
   const { broadcastWaitlistCount } = require("./waitlist.ws");
   broadcastWaitlistCount();
+
+  void sendWaitlistWelcome(email);
 
   return res.status(201).json({ success: true });
 });
