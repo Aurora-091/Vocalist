@@ -3,7 +3,6 @@ import { Routes, Route } from "react-router-dom";
 import { RequireAuth, PublicOnly } from "./components/RequireAuth";
 import { AppShell } from "./components/layout/AppShell";
 
-const Landing = lazy(() => import("./pages/Landing"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
@@ -27,9 +26,6 @@ const OAuthCallback = lazy(() => import("./pages/auth/OAuthCallback"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Knowledge = lazy(() => import("./pages/Knowledge"));
 const About = lazy(() => import("./pages/About"));
-const Story = lazy(() => import("./pages/Story"));
-const Funding = lazy(() => import("./pages/Funding"));
-const Demo = lazy(() => import("./pages/Demo"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Waitlist = lazy(() => import("./pages/Waitlist"));
@@ -47,14 +43,10 @@ export default function App() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Public / marketing pages */}
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Waitlist />} />
         <Route path="/about" element={<About />} />
-        <Route path="/story" element={<Story />} />
-        <Route path="/funding" element={<Funding />} />
-        <Route path="/demo" element={<Demo />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
-        <Route path="/waitlist" element={<Waitlist />} />
         <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
         <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
         <Route path="/auth/callback/:provider" element={<OAuthCallback />} />
