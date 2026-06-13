@@ -14,9 +14,10 @@ const server = app.listen(env.PORT, () => {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, "Aurora API listening");
 });
 
-// Intercept upgrades for Twilio Media Streams
+// Intercept upgrades for Twilio Media Streams + Waitlist counter
 const { WebSocketServer } = require("ws");
 const { handleTwilioStream } = require("./src/services/twilio-stream.service");
+const { waitlistWss } = require("./src/modules/waitlist/waitlist.ws");
 
 const wss = new WebSocketServer({ noServer: true });
 
@@ -29,6 +30,10 @@ server.on("upgrade", (request, socket, head) => {
   if (url.pathname.startsWith("/v1/twilio/stream/")) {
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit("connection", ws, request);
+    });
+  } else if (url.pathname === "/ws/waitlist") {
+    waitlistWss.handleUpgrade(request, socket, head, (ws) => {
+      waitlistWss.emit("connection", ws, request);
     });
   } else {
     socket.destroy();

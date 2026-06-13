@@ -177,6 +177,10 @@
   color: #0F172A;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body,
 #root {

@@ -31,6 +31,7 @@ const settingsRoutes = require("./modules/settings/settings.routes");
 const notificationRoutes = require("./modules/notifications/notifications.routes");
 const webhooksOutRoutes = require("./modules/webhooks-out/webhooks-out.routes");
 const twilioRoutes = require("./modules/twilio/twilio.routes");
+const waitlistRoutes = require("./modules/waitlist/waitlist.routes");
 
 function buildCorsOptions() {
   const allowed = (process.env.CORS_ALLOWED_ORIGINS || "")
@@ -91,6 +92,7 @@ function createApp() {
   );
 
   app.use("/v1/auth", authRoutes);
+  app.use("/v1/waitlist", waitlistRoutes);
 
   app.use("/v1", apiLimiter);
 

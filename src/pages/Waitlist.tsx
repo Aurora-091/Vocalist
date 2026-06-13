@@ -1,43 +1,53 @@
 import { useState } from "react";
-import { ArrowRight, Phone, ShieldCheck, ChartBar as BarChart3 } from "lucide-react";
+import { ArrowRight, Phone, ShieldCheck, ChartBar as BarChart3, CircleCheck as CheckCircle2, Circle as XCircle, Quote } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
-import { supabase } from "../lib/supabase";
+import { joinWaitlist } from "../lib/api";
+import { useWaitlistCount } from "../lib/useWaitlistCount";
+import { trackEarlyAccess, trackTryDemo, trackFormSubmit, trackFormSuccess } from "../lib/analytics";
 import { USE_CASES, HOW_IT_WORKS, WAITLIST_BENEFITS } from "../config/marketing";
 
 const USE_CASE_ICONS = [Phone, ShieldCheck, BarChart3];
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 function WaitlistForm({ variant = "light" }: { variant?: "light" | "dark" }) {
   const [email, setEmail] = useState("");
+  const [touched, setTouched] = useState(false);
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
+  const valid = isValidEmail(email);
+  const showValidation = touched && email.length >= 3;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !valid) return;
     setState("loading");
     setErrorMsg("");
-    const { error } = await supabase.from("waitlist").insert({ email, source: "website" });
-    if (error) {
-      if (error.code === "23505") {
-        setState("success");
-      } else {
-        setState("error");
-        setErrorMsg("Something went wrong. Please try again.");
-      }
-    } else {
+    trackFormSubmit();
+
+    const result = await joinWaitlist(email);
+    if (result.success) {
       setState("success");
+      trackFormSuccess();
+    } else {
+      setState("error");
+      setErrorMsg(result.error || "Something went wrong. Try again or email hello@weeber.ai");
     }
   }
 
   if (state === "success") {
     return (
       <div className={`p-6 border max-w-md ${variant === "dark" ? "border-white/10 bg-white/5" : "border-[#E2E8F0] bg-[#F1F5F9]"}`}>
-        <div className={`font-semibold text-base ${variant === "dark" ? "text-white" : "text-[#0F172A]"}`}>
+        <div className={`font-semibold text-base flex items-center gap-2 ${variant === "dark" ? "text-white" : "text-[#0F172A]"}`}>
+          <CheckCircle2 className="w-5 h-5 text-[#22C55E]" />
           You're on the list.
         </div>
         <p className={`mt-1.5 text-sm leading-relaxed ${variant === "dark" ? "text-white/50" : "text-[#64748B]"}`}>
-          We'll reach out when your spot opens. First 100 businesses get founder pricing.
+          Check your email! We've sent you early access details. First 100 businesses get founder pricing.
         </p>
       </div>
     );
@@ -46,21 +56,32 @@ function WaitlistForm({ variant = "light" }: { variant?: "light" | "dark" }) {
   return (
     <form onSubmit={handleSubmit} className="max-w-md">
       <div className="flex gap-2">
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@company.com"
-          className={`flex-1 h-12 px-4 text-sm focus:outline-none transition-colors ${
-            variant === "dark"
-              ? "bg-white/8 border border-white/15 text-white placeholder:text-white/35 focus:border-white/40"
-              : "bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A]"
-          }`}
-        />
+        <div className="relative flex-1">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setTouched(true); }}
+            placeholder="you@company.com"
+            className={`w-full h-12 px-4 pr-10 text-sm focus:outline-none transition-colors ${
+              variant === "dark"
+                ? "bg-white/8 border border-white/15 text-white placeholder:text-white/35 focus:border-white/40"
+                : "bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A]"
+            }`}
+          />
+          {showValidation && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              {valid ? (
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
+              ) : (
+                <XCircle className="w-4 h-4 text-red-500" />
+              )}
+            </span>
+          )}
+        </div>
         <button
           type="submit"
-          disabled={state === "loading"}
+          disabled={state === "loading" || !valid}
           className={`h-12 px-5 text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap ${
             variant === "dark"
               ? "bg-white text-[#111] hover:bg-[#f0f0f0]"
@@ -81,6 +102,8 @@ function WaitlistForm({ variant = "light" }: { variant?: "light" | "dark" }) {
 }
 
 export default function Waitlist() {
+  const { count } = useWaitlistCount();
+
   return (
     <div className="marketing min-h-full bg-[#F8F9FB]">
       <MarketingNav />
@@ -93,7 +116,7 @@ export default function Waitlist() {
               <div className="inline-flex items-center gap-2 mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
                 <span className="text-xs font-medium tracking-widest uppercase text-[#64748B]">
-                  Now accepting early access
+                  {count !== null ? `${count}+ businesses waiting` : "Now accepting early access"}
                 </span>
               </div>
               <h1 className="text-4xl md:text-6xl font-bold leading-[0.95] tracking-tight text-[#0F172A]">
@@ -104,17 +127,31 @@ export default function Waitlist() {
                 <span className="text-[#64748B]">a call again.</span>
               </h1>
               <p className="mt-6 text-lg text-[#475569] leading-relaxed max-w-lg">
-                Weeber is a voice AI platform built for clinics, local shops, and
-                Shopify merchants — with consent compliance baked in at the infrastructure
-                level, not bolted on later.
+                The only voice agent built with compliance first. TCPA-verified. Works in minutes.
               </p>
-              <div className="mt-8">
-                <WaitlistForm variant="light" />
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <a
+                  href="#demo-section"
+                  onClick={() => trackTryDemo()}
+                  className="inline-flex items-center justify-center h-12 px-6 bg-[#22C55E] text-white text-sm font-medium hover:bg-[#16A34A] transition-colors"
+                >
+                  Try Live Demo
+                </a>
+                <a
+                  href="#waitlist-form"
+                  onClick={() => trackEarlyAccess()}
+                  className="inline-flex items-center justify-center h-12 px-6 border border-[#0F172A] text-[#0F172A] text-sm font-medium hover:bg-[#0F172A] hover:text-white transition-colors"
+                >
+                  Get Early Access
+                </a>
               </div>
+              <p className="mt-4 text-xs text-[#94A3B8] text-center sm:text-left">
+                Design partners: Kyonara (Shopify) | Bloom Dental (Clinics)
+              </p>
             </div>
 
             {/* Live call preview */}
-            <div className="hidden md:block">
+            <div className="hidden md:block" id="demo-section">
               <div className="bg-white border border-[#E2E8F0] p-6">
                 <div className="flex items-center gap-3 mb-5 pb-5 border-b border-[#F1F5F9]">
                   <div className="w-8 h-8 bg-[#F1F5F9] flex items-center justify-center">
@@ -178,6 +215,47 @@ export default function Waitlist() {
         </div>
       </section>
 
+      {/* Design Partners */}
+      <section className="border-t border-[#E2E8F0] bg-white">
+        <div className="max-w-[1200px] mx-auto px-6 py-16 md:py-20">
+          <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-8 text-center">
+            Trusted by
+          </div>
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            <div className="border border-[#E2E8F0] p-6 bg-[#F8F9FB]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#0F172A] flex items-center justify-center text-white text-xs font-bold">K</div>
+                <div>
+                  <div className="font-semibold text-sm text-[#0F172A]">Kyonara</div>
+                  <div className="text-[10px] text-[#64748B] uppercase tracking-wide">Shopify Merchant</div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Quote className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-[#475569] leading-relaxed italic">
+                  "Recovered 18-24% of abandoned carts in first month."
+                </p>
+              </div>
+            </div>
+            <div className="border border-[#E2E8F0] p-6 bg-[#F8F9FB]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#22C55E] flex items-center justify-center text-white text-xs font-bold">B</div>
+                <div>
+                  <div className="font-semibold text-sm text-[#0F172A]">Bloom Dental</div>
+                  <div className="text-[10px] text-[#64748B] uppercase tracking-wide">Clinic</div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Quote className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-[#475569] leading-relaxed italic">
+                  "62% of after-hours calls now answered automatically."
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Use cases */}
       <section className="border-t border-[#E2E8F0] bg-[#F8F9FB]">
         <div className="max-w-[1200px] mx-auto px-6 py-20 md:py-24">
@@ -217,7 +295,7 @@ export default function Waitlist() {
                     </div>
                     <div>
                       <div className="font-mono text-3xl font-bold text-[#0F172A] mb-1">
-                        {["24/7", "18–24%", "3.2 hrs"][i]}
+                        {["24/7", "18\u201324%", "3.2 hrs"][i]}
                       </div>
                       <div className="text-xs text-[#64748B] uppercase tracking-wide">
                         {["calls answered", "cart recovery rate", "saved per day"][i]}
@@ -313,14 +391,14 @@ export default function Waitlist() {
       </section>
 
       {/* Final CTA */}
-      <section className="bg-[#111] text-white">
+      <section id="waitlist-form" className="bg-[#111] text-white">
         <div className="max-w-[1200px] mx-auto px-6 py-20 md:py-24">
           <div className="max-w-xl">
             <div className="text-xs font-medium tracking-widest uppercase text-white/40 mb-4">
               Get early access
             </div>
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-              Join 340+ businesses on the waitlist.
+              Join {count !== null ? `${count}+` : "170+"} businesses on the waitlist.
             </h2>
             <p className="text-white/50 leading-relaxed mb-8">
               We're onboarding in batches. Reserve your spot now and lock in

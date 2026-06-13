@@ -19,8 +19,16 @@ export const FOOTER_COLUMNS = [
   {
     title: "Legal",
     links: [
-      { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "TCPA Compliance", href: "/terms#tcpa" },
+    ],
+  },
+  {
+    title: "Connect",
+    links: [
+      { label: "Twitter / X", href: "https://x.com/weeber_ai" },
+      { label: "LinkedIn", href: "https://linkedin.com/company/weeber-ai" },
     ],
   },
 ] as const;
