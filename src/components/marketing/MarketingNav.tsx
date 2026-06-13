@@ -45,6 +45,12 @@ export function MarketingNav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
+          <a
+            href="mailto:support@weeber.ai"
+            className="text-sm text-[#475569] hover:text-[#0F172A] transition-colors"
+          >
+            Help
+          </a>
         </div>
 
         <button
@@ -71,6 +77,12 @@ export function MarketingNav() {
             ))}
           </nav>
           <div className="flex flex-col gap-3">
+            <a
+              href="mailto:support@weeber.ai"
+              className="text-sm text-[#475569] hover:text-[#0F172A]"
+            >
+              Help
+            </a>
           </div>
         </div>
       )}

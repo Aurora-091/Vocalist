@@ -170,6 +170,12 @@ export function AppShell() {
               </div>
             )}
             <ShieldCheck className="w-4 h-4 text-success hidden sm:block" aria-label="Compliance: healthy" />
+            <a
+              href="mailto:support@weeber.ai"
+              className="text-sm text-text-muted hover:text-text transition-colors hidden sm:block"
+            >
+              Help
+            </a>
             <ThemeToggle />
             <NotificationsBell />
           </div>
