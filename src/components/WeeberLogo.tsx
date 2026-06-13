@@ -6,15 +6,15 @@ type WeeberLogoProps = {
 };
 
 const HEIGHT_MAP = {
-  sm: 22,
-  md: 28,
-  lg: 40,
+  sm: 24,
+  md: 31,
+  lg: 44,
 };
 
 const ICON_HEIGHT_MAP = {
-  sm: 28,
-  md: 36,
-  lg: 52,
+  sm: 31,
+  md: 40,
+  lg: 57,
 };
 
 export function WeeberLogo({
