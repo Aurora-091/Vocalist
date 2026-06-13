@@ -1,26 +1,41 @@
 type WeeberLogoProps = {
   className?: string;
   size?: "sm" | "md" | "lg";
+  variant?: "wordmark" | "icon";
   inverted?: boolean;
 };
 
-const SIZE_MAP = {
-  sm: { height: 18, fontSize: 15, letterSpacing: -0.5 },
-  md: { height: 22, fontSize: 19, letterSpacing: -0.8 },
-  lg: { height: 32, fontSize: 28, letterSpacing: -1.2 },
+const HEIGHT_MAP = {
+  sm: 22,
+  md: 28,
+  lg: 40,
 };
 
-export function WeeberLogo({ className = "", size = "md", inverted = false }: WeeberLogoProps) {
-  const { height, fontSize, letterSpacing } = SIZE_MAP[size];
-  const filterStyle = inverted ? { filter: 'brightness(0) invert(1)' } : {};
+const ICON_HEIGHT_MAP = {
+  sm: 28,
+  md: 36,
+  lg: 52,
+};
 
-  return (
-    <img 
-      src="/logo.png" 
-      alt="Weeber" 
-      height={height}
-      className={className}
-      style={{ display: "inline-block", verticalAlign: "middle", height: height, ...filterStyle }}
-    />
-  );
+export function WeeberLogo({
+  className = "",
+  size = "md",
+  variant = "wordmark",
+  inverted = false,
+}: WeeberLogoProps) {
+  const h = variant === "icon" ? ICON_HEIGHT_MAP[size] : HEIGHT_MAP[size];
+  const src =
+    variant === "icon"
+      ? "/weeber_favicon_transparent.png"
+      : "/weeber_logo_transparent.png";
+
+  const style: React.CSSProperties = {
+    display: "inline-block",
+    verticalAlign: "middle",
+    height: h,
+    width: "auto",
+    ...(inverted ? { filter: "brightness(0) invert(1)" } : {}),
+  };
+
+  return <img src={src} alt="Weeber" style={style} className={className} />;
 }

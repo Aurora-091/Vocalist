@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
-import { NAV_LINKS, SITE } from "../../config/marketing";
+import { NAV_LINKS } from "../../config/marketing";
+import { WeeberLogo } from "../WeeberLogo";
 
 export function MarketingNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -27,8 +28,8 @@ export function MarketingNav() {
       }`}
     >
       <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" className="font-semibold tracking-tight text-lg text-[#0F172A]">
-          {SITE.name}
+        <Link to="/" className="flex items-center">
+          <WeeberLogo size="md" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">

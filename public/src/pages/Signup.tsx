@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ShieldCheck, Phone, Zap } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { api, ApiError } from "../lib/api";
+import { WeeberLogo } from "../components/WeeberLogo";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -74,8 +75,8 @@ export default function Signup() {
       {/* Left panel - value prop */}
       <div className="hidden lg:flex lg:w-[45%] bg-[#0F172A] text-white p-12 flex-col justify-between">
         <div>
-          <Link to="/" className="font-semibold text-lg tracking-tight">
-            Weeber
+          <Link to="/" className="inline-flex items-center">
+            <WeeberLogo size="md" inverted />
           </Link>
         </div>
         <div>
@@ -98,8 +99,8 @@ export default function Signup() {
       {/* Right panel - form */}
       <div className="flex-1 flex items-center justify-center px-6 py-12 lg:py-0">
         <div className="w-full max-w-md">
-          <Link to="/" className="font-semibold text-lg tracking-tight text-[#0F172A] lg:hidden mb-8 block">
-            Weeber
+          <Link to="/" className="inline-flex items-center lg:hidden mb-8">
+            <WeeberLogo size="md" />
           </Link>
 
           <h2 className="text-2xl font-semibold tracking-tight text-[#0F172A] mb-1">

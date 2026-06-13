@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { FOOTER_COLUMNS, SITE } from "../../config/marketing";
+import { WeeberLogo } from "../WeeberLogo";
 
 export function MarketingFooter() {
   return (
@@ -7,7 +8,7 @@ export function MarketingFooter() {
       <div className="max-w-[1200px] mx-auto px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
           <div className="col-span-2 md:col-span-1">
-            <div className="font-semibold tracking-tight text-lg">{SITE.name}</div>
+            <WeeberLogo size="md" inverted />
             <p className="mt-3 text-sm text-slate-400 leading-relaxed max-w-[240px]">
               {SITE.description}
             </p>
