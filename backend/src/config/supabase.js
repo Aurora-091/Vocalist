@@ -1,11 +1,12 @@
 const { createClient } = require("@supabase/supabase-js");
+const WebSocket = require("ws");
 const env = require("./env");
 
 const { fetchWithRetry } = require("../utils/retry");
 
 const baseOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
-  global: { fetch: fetchWithRetry },
+  global: { fetch: fetchWithRetry, WebSocket },
 };
 
 const adminClient = env.SUPABASE_SERVICE_ROLE_KEY
