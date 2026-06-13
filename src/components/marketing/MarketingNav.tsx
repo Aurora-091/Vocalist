@@ -45,12 +45,6 @@ export function MarketingNav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-          <a
-            href="/#waitlist"
-            className="inline-flex items-center h-9 px-5 bg-[#0F172A] text-white text-sm font-medium rounded-md hover:bg-[#1E293B] transition-colors"
-          >
-            Join the waitlist
-          </a>
         </div>
 
         <button
@@ -77,12 +71,6 @@ export function MarketingNav() {
             ))}
           </nav>
           <div className="flex flex-col gap-3">
-            <a
-              href="/#waitlist"
-              className="inline-flex items-center justify-center h-10 px-5 bg-[#0F172A] text-white text-sm font-medium rounded-md"
-            >
-              Join the waitlist
-            </a>
           </div>
         </div>
       )}

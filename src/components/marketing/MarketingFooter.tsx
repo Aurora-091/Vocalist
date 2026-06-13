@@ -5,7 +5,7 @@ import { WeeberLogo } from "../WeeberLogo";
 
 export function MarketingFooter() {
   return (
-    <footer className="bg-[#0F172A] text-white">
+    <footer className="bg-[#000000] text-white">
       <div className="max-w-[1200px] mx-auto px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
           <div className="col-span-2 md:col-span-2">

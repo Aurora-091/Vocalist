@@ -2,25 +2,36 @@ import { useState } from "react";
 import { ArrowRight, Phone, ShieldCheck, ChartBar as BarChart3, CircleCheck as CheckCircle2, Circle as XCircle } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
-import { joinWaitlist } from "../lib/api";
+import { joinWaitlist, submitWaitlistPhone } from "../lib/api";
 import { useWaitlistCount } from "../lib/useWaitlistCount";
-import { trackEarlyAccess, trackFormSubmit, trackFormSuccess } from "../lib/analytics";
+import { trackFormSubmit, trackFormSuccess } from "../lib/analytics";
 import { USE_CASES, HOW_IT_WORKS } from "../config/marketing";
 
-const USE_CASE_ICONS = [Phone, ShieldCheck, BarChart3];
+const USE_CASE_ICONS = [ShieldCheck, BarChart3, Phone];
+const BASE_COUNT = 170;
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function WaitlistForm({ variant = "light" }: { variant?: "light" | "dark" }) {
+function isValidPhone(phone: string) {
+  return /^\+?[\d\s\-()]{7,20}$/.test(phone);
+}
+
+function HeroForm() {
+  const { count } = useWaitlistCount();
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
+  const [phone, setPhone] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [phoneState, setPhoneState] = useState<"idle" | "loading" | "success" | "error">("idle");
+
   const valid = isValidEmail(email);
   const showValidation = touched && email.length >= 3;
+  const displayCount = count !== null ? count + BASE_COUNT : BASE_COUNT;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,82 +50,154 @@ function WaitlistForm({ variant = "light" }: { variant?: "light" | "dark" }) {
     }
   }
 
-  if (state === "success") {
-    return (
-      <div className={`p-6 border max-w-md ${variant === "dark" ? "border-white/10 bg-white/5" : "border-[#E2E8F0] bg-[#F1F5F9]"}`}>
-        <div className={`font-semibold text-base flex items-center gap-2 ${variant === "dark" ? "text-white" : "text-[#0F172A]"}`}>
-          <CheckCircle2 className="w-5 h-5 text-[#22C55E]" />
-          You're on the list.
-        </div>
-        <p className={`mt-1.5 text-sm leading-relaxed ${variant === "dark" ? "text-white/50" : "text-[#64748B]"}`}>
-          Check your email! We've sent you early access details. First 100 businesses get founder pricing.
-        </p>
-      </div>
-    );
+  async function handlePhoneSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!phone || !isValidPhone(phone)) return;
+    setPhoneState("loading");
+
+    const result = await submitWaitlistPhone(email, phone);
+    if (result.success) {
+      setPhoneState("success");
+    } else {
+      setPhoneState("error");
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); setTouched(true); }}
-            placeholder="you@company.com"
-            className={`w-full h-12 px-4 pr-10 text-sm focus:outline-none transition-colors ${
-              variant === "dark"
-                ? "bg-white/8 border border-white/15 text-white placeholder:text-white/35 focus:border-white/40"
-                : "bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A]"
-            }`}
-          />
-          {showValidation && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2">
-              {valid ? (
-                <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
-              ) : (
-                <XCircle className="w-4 h-4 text-red-500" />
-              )}
+    <div className="max-w-md mx-auto">
+      {state !== "success" ? (
+        <>
+          <form onSubmit={handleSubmit}>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setTouched(true); }}
+                  placeholder="you@company.com"
+                  className="w-full h-12 px-4 pr-10 text-sm bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A] focus:outline-none transition-colors"
+                />
+                {showValidation && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {valid ? (
+                      <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-500" />
+                    )}
+                  </span>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={state === "loading" || !valid}
+                className="h-12 px-5 text-sm font-medium bg-[#0F172A] text-white hover:bg-[#1E293B] transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {state === "loading" ? "Joining..." : "Get early access"}
+              </button>
+            </div>
+            {state === "error" && (
+              <p className="mt-2 text-xs text-red-600">{errorMsg}</p>
+            )}
+            <p className="mt-2.5 text-xs text-[#94A3B8]">
+              No credit card. No code. First 100 businesses get founder pricing.
+            </p>
+          </form>
+
+          {/* Live counter */}
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+            <span className="text-sm font-medium text-[#0F172A]">
+              {displayCount}+ businesses on the waitlist
             </span>
+          </div>
+        </>
+      ) : (
+        <div className="space-y-5">
+          <div className="p-6 border border-[#E2E8F0] bg-[#F1F5F9]">
+            <div className="font-semibold text-base flex items-center gap-2 text-[#0F172A]">
+              <CheckCircle2 className="w-5 h-5 text-[#22C55E]" />
+              You're on the list.
+            </div>
+            <p className="mt-1.5 text-sm leading-relaxed text-[#64748B]">
+              Check your email! We've sent you early access details. First 100 businesses get founder pricing.
+            </p>
+          </div>
+
+          {/* Live counter */}
+          <div className="flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+            <span className="text-sm font-medium text-[#0F172A]">
+              {displayCount}+ businesses on the waitlist
+            </span>
+          </div>
+
+          {/* Phone opt-in */}
+          {phoneState !== "success" ? (
+            <form onSubmit={handlePhoneSubmit} className="mt-2">
+              <p className="text-xs text-[#64748B] mb-2">
+                Want a text when your spot opens? Add your number (optional).
+              </p>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => { setPhone(e.target.value); setPhoneTouched(true); }}
+                    placeholder="+1 (555) 123-4567"
+                    className="w-full h-10 px-4 pr-10 text-sm bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A] focus:outline-none transition-colors"
+                  />
+                  {phoneTouched && phone.length >= 7 && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {isValidPhone(phone) ? (
+                        <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-red-500" />
+                      )}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={phoneState === "loading" || !isValidPhone(phone)}
+                  className="h-10 px-4 text-sm font-medium bg-[#0F172A] text-white hover:bg-[#1E293B] transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {phoneState === "loading" ? "Saving..." : "Opt in"}
+                </button>
+              </div>
+              {phoneState === "error" && (
+                <p className="mt-1.5 text-xs text-red-600">Could not save number. Try again.</p>
+              )}
+              <p className="mt-1.5 text-[10px] text-[#94A3B8]">
+                We'll only text you once when your invite is ready. No spam.
+              </p>
+            </form>
+          ) : (
+            <div className="p-4 border border-[#E2E8F0] bg-[#F1F5F9]">
+              <div className="text-sm flex items-center gap-2 text-[#0F172A] font-medium">
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
+                Phone saved. We'll text you when your spot opens.
+              </div>
+            </div>
           )}
         </div>
-        <button
-          type="submit"
-          disabled={state === "loading" || !valid}
-          className={`h-12 px-5 text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap ${
-            variant === "dark"
-              ? "bg-white text-[#111] hover:bg-[#f0f0f0]"
-              : "bg-[#0F172A] text-white hover:bg-[#1E293B]"
-          }`}
-        >
-          {state === "loading" ? "Joining..." : "Get early access"}
-        </button>
-      </div>
-      {state === "error" && (
-        <p className={`mt-2 text-xs ${variant === "dark" ? "text-red-400" : "text-red-600"}`}>{errorMsg}</p>
       )}
-      <p className={`mt-2.5 text-xs ${variant === "dark" ? "text-white/35" : "text-[#94A3B8]"}`}>
-        No credit card. No code. First 100 businesses get founder pricing.
-      </p>
-    </form>
+    </div>
   );
 }
 
 export default function Waitlist() {
-  const { count } = useWaitlistCount();
-
   return (
     <div className="marketing min-h-full bg-[#F8F9FB]">
       <MarketingNav />
 
-      {/* Hero */}
+      {/* Hero with form */}
       <section id="waitlist" className="pt-32 pb-20 md:pb-24 px-6">
         <div className="max-w-[640px] mx-auto text-center">
           <div className="inline-flex items-center gap-2 mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
             <span className="text-xs font-medium tracking-widest uppercase text-[#64748B]">
-              {count !== null ? `${count}+ businesses waiting` : "Now accepting early access"}
+              Now accepting early access
             </span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold leading-[0.95] tracking-tight text-[#0F172A]">
@@ -127,14 +210,8 @@ export default function Waitlist() {
           <p className="mt-6 text-lg text-[#475569] leading-relaxed max-w-lg mx-auto">
             The only voice agent built with compliance first. TCPA-verified. Works in minutes.
           </p>
-          <div className="mt-8 flex justify-center">
-            <a
-              href="#waitlist-form"
-              onClick={() => trackEarlyAccess()}
-              className="inline-flex items-center justify-center h-12 px-6 bg-[#0F172A] text-white text-sm font-medium hover:bg-[#1E293B] transition-colors"
-            >
-              Get Early Access
-            </a>
+          <div className="mt-8">
+            <HeroForm />
           </div>
         </div>
       </section>
@@ -178,10 +255,10 @@ export default function Waitlist() {
                     </div>
                     <div>
                       <div className="font-mono text-3xl font-bold text-[#0F172A] mb-1">
-                        {["24/7", "18\u201324%", "3.2 hrs"][i]}
+                        {["18\u201324%", "3.2 hrs", "24/7"][i]}
                       </div>
                       <div className="text-xs text-[#64748B] uppercase tracking-wide">
-                        {["calls answered", "cart recovery rate", "saved per day"][i]}
+                        {["cart recovery rate", "saved per day", "calls answered"][i]}
                       </div>
                     </div>
                   </div>
@@ -246,25 +323,6 @@ export default function Waitlist() {
                 dial a number that hasn't passed our consent gate. That's the product.
               </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section id="waitlist-form" className="bg-[#111] text-white">
-        <div className="max-w-[1200px] mx-auto px-6 py-20 md:py-24">
-          <div className="max-w-xl">
-            <div className="text-xs font-medium tracking-widest uppercase text-white/40 mb-4">
-              Get early access
-            </div>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-              Join {count !== null ? `${count}+` : "170+"} businesses on the waitlist.
-            </h2>
-            <p className="text-white/50 leading-relaxed mb-8">
-              We're onboarding in batches. Reserve your spot now and lock in
-              founder pricing before we open to the public.
-            </p>
-            <WaitlistForm variant="dark" />
           </div>
         </div>
       </section>

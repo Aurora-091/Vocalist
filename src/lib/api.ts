@@ -101,3 +101,20 @@ export async function joinWaitlist(email: string): Promise<{ success: boolean; d
     return { success: false, error: "Network error. Please try again." };
   }
 }
+
+export async function submitWaitlistPhone(email: string, phone: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/v1/waitlist/phone`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, phone }),
+    });
+    if (res.ok) {
+      return res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, error: err?.error?.message || "Something went wrong" };
+  } catch {
+    return { success: false, error: "Network error. Please try again." };
+  }
+}

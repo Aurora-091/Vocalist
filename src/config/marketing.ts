@@ -85,12 +85,6 @@ export const CALL_TRANSCRIPT = [
 
 export const USE_CASES = [
   {
-    vertical: "Dental & Medical Clinics",
-    headline: "Never miss an appointment booking again.",
-    body: "Weeber answers inbound calls 24/7, books appointments directly into your calendar, and sends confirmations — without a receptionist tied to the phone. After-hours calls handled. No voicemails left unanswered.",
-    stat: "62% of missed calls happen outside business hours.",
-  },
-  {
     vertical: "Shopify Stores",
     headline: "Recover abandoned orders automatically.",
     body: "When a cart goes cold, Weeber calls the customer, answers product questions, and closes the sale. Consent-verified before every dial, with a full transcript of every conversation in your dashboard.",
@@ -101,6 +95,12 @@ export const USE_CASES = [
     headline: "Handle call volume without adding headcount.",
     body: "Plumbers, salons, repair shops — Weeber qualifies inbound leads, schedules jobs, and routes urgent calls to your team. Your staff focuses on the work, not the ringing phone.",
     stat: "Average 3.2 hours saved per day per business.",
+  },
+  {
+    vertical: "Dental & Medical Clinics",
+    headline: "Never miss an appointment booking again.",
+    body: "Weeber answers inbound calls 24/7, books appointments directly into your calendar, and sends confirmations — without a receptionist tied to the phone. After-hours calls handled. No voicemails left unanswered.",
+    stat: "62% of missed calls happen outside business hours.",
   },
 ] as const;
 
