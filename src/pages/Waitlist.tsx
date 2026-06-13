@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { ArrowRight, Phone, ShieldCheck, BarChart3 } from "lucide-react";
+import { ArrowRight, Phone, ShieldCheck, ChartBar as BarChart3 } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { supabase } from "../lib/supabase";
-import { TRACTION_STATS, USE_CASES, HOW_IT_WORKS, WAITLIST_BENEFITS } from "../config/marketing";
+import { USE_CASES, HOW_IT_WORKS, WAITLIST_BENEFITS } from "../config/marketing";
 
 const USE_CASE_ICONS = [Phone, ShieldCheck, BarChart3];
 
@@ -174,24 +174,6 @@ export default function Waitlist() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Traction stats */}
-      <section className="border-t border-[#E2E8F0] bg-[#F1F5F9]">
-        <div className="max-w-[1200px] mx-auto px-6 py-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[#E2E8F0]">
-            {TRACTION_STATS.map((stat) => (
-              <div key={stat.label} className="px-6 first:pl-0 last:pr-0">
-                <div className="font-mono text-2xl md:text-3xl font-bold text-[#0F172A]">
-                  {stat.value}
-                </div>
-                <div className="mt-1 text-xs text-[#64748B] tracking-wide uppercase">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

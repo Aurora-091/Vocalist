@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
-import { TRACTION_STATS, TEAM, VALUES } from "../config/marketing";
+import { TEAM, VALUES } from "../config/marketing";
 
 export default function About() {
   return (
@@ -23,23 +23,6 @@ export default function About() {
             local shops, and Shopify merchants who need real calls handled without hiring
             a call center or violating consent regulations.
           </p>
-        </div>
-      </section>
-
-      <section className="border-t border-[#E2E8F0] bg-[#F1F5F9]">
-        <div className="max-w-[1200px] mx-auto px-6 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[#E2E8F0]">
-            {TRACTION_STATS.map((stat) => (
-              <div key={stat.label} className="px-6 first:pl-0 last:pr-0">
-                <div className="font-mono text-2xl md:text-3xl font-bold text-[#0F172A]">
-                  {stat.value}
-                </div>
-                <div className="mt-1 text-xs text-[#64748B] tracking-wide uppercase">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
