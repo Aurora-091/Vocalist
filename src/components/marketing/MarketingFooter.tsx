@@ -10,13 +10,13 @@ export function MarketingFooter() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
           <div className="col-span-2 md:col-span-2">
             <WeeberLogo size="md" inverted />
-            <p className="mt-3 text-sm text-slate-400 leading-relaxed max-w-[240px]">
+            <p className="mt-3 text-sm text-white leading-relaxed max-w-[240px]">
               {SITE.description}
             </p>
           </div>
           {FOOTER_COLUMNS.map((col) => (
             <div key={col.title}>
-              <div className="text-xs font-medium tracking-widest uppercase text-slate-500 mb-4">
+              <div className="text-xs font-medium tracking-widest uppercase text-white mb-4">
                 {col.title}
               </div>
               <ul className="space-y-3">
@@ -27,14 +27,14 @@ export function MarketingFooter() {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-slate-400 hover:text-white transition-colors"
+                        className="text-sm text-white hover:text-white/70 transition-colors"
                       >
                         {link.label}
                       </a>
                     ) : (
                       <Link
                         to={link.href}
-                        className="text-sm text-slate-400 hover:text-white transition-colors"
+                        className="text-sm text-white hover:text-white/70 transition-colors"
                       >
                         {link.label}
                       </Link>
@@ -45,19 +45,22 @@ export function MarketingFooter() {
             </div>
           ))}
         </div>
-        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="text-xs text-slate-500">
+        <div className="mt-16 pt-8 border-t border-white/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="text-xs text-white">
             {new Date().getFullYear()} {SITE.name}. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-white/10 text-[10px] font-medium text-slate-400 uppercase tracking-wide">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-white/20 text-[10px] font-medium text-white uppercase tracking-wide">
               <ShieldCheck className="w-3 h-3" />
               SOC 2 Type II Pending
             </div>
-            <div className="text-xs text-slate-500">{SITE.tagline}</div>
+            <div className="text-xs text-white">{SITE.tagline}</div>
           </div>
         </div>
       </div>
     </footer>
   );
 }
+
+
+export { MarketingFooter }
