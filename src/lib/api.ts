@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://vocalist-production.up.railway.app";
 const TIMEOUT_MS = 15_000;
 
 class ApiError extends Error {

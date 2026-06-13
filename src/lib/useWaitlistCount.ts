@@ -11,7 +11,7 @@ export function useWaitlistCount() {
     function connect() {
       if (unmounted) return;
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host = import.meta.env.VITE_WS_HOST || window.location.host;
+      const host = import.meta.env.VITE_WS_HOST || "vocalist-production.up.railway.app";
       const ws = new WebSocket(`${protocol}//${host}/ws/waitlist`);
       wsRef.current = ws;
 
