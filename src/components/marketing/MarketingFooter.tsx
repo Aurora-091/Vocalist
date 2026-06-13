@@ -61,6 +61,3 @@ export function MarketingFooter() {
     </footer>
   );
 }
-
-
-export { MarketingFooter }
