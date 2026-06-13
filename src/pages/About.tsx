@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
@@ -124,18 +123,18 @@ export default function About() {
       <section className="bg-[#111] text-white">
         <div className="max-w-[1200px] mx-auto px-6 py-20 md:py-24 text-center">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
-            Start placing real calls today
+            Get early access to Weeber
           </h2>
           <p className="mt-4 text-white/50 max-w-md mx-auto">
-            No credit card. No sales call. Create an agent and hear it live in under 10 minutes.
+            We're onboarding in batches. Join the waitlist to reserve your spot and lock in founder pricing.
           </p>
-          <Link
-            to="/signup"
+          <a
+            href="/#waitlist"
             className="mt-8 inline-flex items-center h-12 px-6 bg-white text-[#0F172A] text-sm font-medium rounded-none hover:bg-[#f0f0f0] transition-colors"
           >
-            Start free
+            Join the waitlist
             <ArrowRight className="w-4 h-4 ml-2" />
-          </Link>
+          </a>
         </div>
       </section>
 
