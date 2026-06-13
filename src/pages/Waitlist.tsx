@@ -158,7 +158,7 @@ function HeroForm() {
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="sm:max-w-[420px] p-6">
+        <DialogContent className="sm:max-w-[420px] p-6 bg-[#FAFAFA] text-[#0F172A] ring-[#E2E8F0] [&_button[data-slot=dialog-close]]:text-[#64748B] [&_button[data-slot=dialog-close]]:hover:text-[#0F172A] [&_button[data-slot=dialog-close]]:hover:bg-[#F1F5F9]">
           <DialogHeader className="items-center text-center">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-[#22C55E] flex items-center justify-center">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
