@@ -131,7 +131,7 @@ export default function Waitlist() {
             <a
               href="#waitlist-form"
               onClick={() => trackEarlyAccess()}
-              className="inline-flex items-center justify-center h-12 px-6 bg-[#22C55E] text-white text-sm font-medium hover:bg-[#16A34A] transition-colors"
+              className="inline-flex items-center justify-center h-12 px-6 bg-[#0F172A] text-white text-sm font-medium hover:bg-[#1E293B] transition-colors"
             >
               Get Early Access
             </a>
