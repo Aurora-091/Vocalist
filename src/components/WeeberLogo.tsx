@@ -12,30 +12,15 @@ const SIZE_MAP = {
 
 export function WeeberLogo({ className = "", size = "md", inverted = false }: WeeberLogoProps) {
   const { height, fontSize, letterSpacing } = SIZE_MAP[size];
-  const fill = inverted ? "#ffffff" : "currentColor";
+  const filterStyle = inverted ? { filter: 'brightness(0) invert(1)' } : {};
 
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox={`0 0 ${fontSize * 4.2} ${height}`}
+    <img 
+      src="/logo.png" 
+      alt="Weeber" 
       height={height}
-      aria-label="Weeber"
-      role="img"
       className={className}
-      style={{ display: "inline-block", verticalAlign: "middle" }}
-    >
-      <text
-        x="0"
-        y={height - 2}
-        fill={fill}
-        fontFamily="'Geist Variable', 'Geist', ui-sans-serif, system-ui, sans-serif"
-        fontSize={fontSize}
-        fontWeight="600"
-        letterSpacing={letterSpacing}
-        dominantBaseline="auto"
-      >
-        Weeber
-      </text>
-    </svg>
+      style={{ display: "inline-block", verticalAlign: "middle", height: height, ...filterStyle }}
+    />
   );
 }
