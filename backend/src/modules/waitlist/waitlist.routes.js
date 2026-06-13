@@ -7,25 +7,25 @@ const { sendWaitlistWelcome } = require("../../services/email.service");
 const router = Router();
 
 const joinSchema = z.object({
+  name: z.string().trim().min(1).max(80),
   email: z.string().email(),
+  phone: z.string().min(7).max(20).optional(),
   source: z.string().max(50).default("website"),
-});
-
-const phoneSchema = z.object({
-  email: z.string().email(),
-  phone: z.string().min(7).max(20),
 });
 
 router.post("/join", async (req, res) => {
   const parsed = joinSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: { code: "validation_error", message: "Invalid email address" } });
+    return res.status(400).json({ error: { code: "validation_error", message: "Please provide a valid name and email" } });
   }
 
-  const { email, source } = parsed.data;
+  const { name, email, phone, source } = parsed.data;
   const admin = requireAdmin();
 
-  const { error } = await admin.from("waitlist").insert({ email, source });
+  const row = { name, email, source };
+  if (phone) row.phone = phone;
+
+  const { error } = await admin.from("waitlist").insert(row);
 
   if (error) {
     if (error.code === "23505") {
@@ -38,31 +38,9 @@ router.post("/join", async (req, res) => {
   const { broadcastWaitlistCount } = require("./waitlist.ws");
   broadcastWaitlistCount();
 
-  void sendWaitlistWelcome(email);
+  void sendWaitlistWelcome(email, name);
 
   return res.status(201).json({ success: true });
-});
-
-router.post("/phone", async (req, res) => {
-  const parsed = phoneSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: { code: "validation_error", message: "Invalid phone or email" } });
-  }
-
-  const { email, phone } = parsed.data;
-  const admin = requireAdmin();
-
-  const { error } = await admin
-    .from("waitlist")
-    .update({ phone })
-    .eq("email", email);
-
-  if (error) {
-    logger.error({ err: error }, "Waitlist phone update failed");
-    return res.status(500).json({ error: { code: "internal", message: "Something went wrong" } });
-  }
-
-  return res.status(200).json({ success: true });
 });
 
 module.exports = router;

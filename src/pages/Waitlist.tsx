@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { ArrowRight, Phone, ShieldCheck, ChartBar as BarChart3, CircleCheck as CheckCircle2, Circle as XCircle } from "lucide-react";
+import { ArrowRight, Phone, ShieldCheck, ChartBar as BarChart3, CircleCheck as CheckCircle2, Circle as XCircle, Mail } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
-import { joinWaitlist, submitWaitlistPhone } from "../lib/api";
+import { joinWaitlist } from "../lib/api";
 import { useWaitlistCount } from "../lib/useWaitlistCount";
 import { trackFormSubmit, trackFormSuccess } from "../lib/analytics";
 import { USE_CASES, HOW_IT_WORKS } from "../config/marketing";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../components/ui/dialog";
 
 const USE_CASE_ICONS = [ShieldCheck, BarChart3, Phone];
 const BASE_COUNT = 170;
@@ -15,34 +22,43 @@ function isValidEmail(email: string) {
 }
 
 function isValidPhone(phone: string) {
+  if (!phone) return true;
   return /^\+?[\d\s\-()]{7,20}$/.test(phone);
 }
 
 function HeroForm() {
   const { count } = useWaitlistCount();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [touched, setTouched] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [touched, setTouched] = useState({ name: false, email: false, phone: false });
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const [phone, setPhone] = useState("");
-  const [phoneTouched, setPhoneTouched] = useState(false);
-  const [phoneState, setPhoneState] = useState<"idle" | "loading" | "success" | "error">("idle");
-
-  const valid = isValidEmail(email);
-  const showValidation = touched && email.length >= 3;
+  const emailValid = isValidEmail(email);
+  const phoneValid = isValidPhone(phone);
+  const nameValid = name.trim().length > 0;
+  const canSubmit = nameValid && emailValid && phoneValid;
   const displayCount = count !== null ? count + BASE_COUNT : BASE_COUNT;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !valid) return;
+    if (!canSubmit) return;
     setState("loading");
     setErrorMsg("");
     trackFormSubmit();
 
-    const result = await joinWaitlist(email);
+    const payload: { name: string; email: string; phone?: string } = {
+      name: name.trim(),
+      email: email.trim(),
+    };
+    if (phone.trim()) payload.phone = phone.trim();
+
+    const result = await joinWaitlist(payload);
     if (result.success) {
       setState("success");
+      setShowSuccess(true);
       trackFormSuccess();
     } else {
       setState("error");
@@ -50,138 +66,123 @@ function HeroForm() {
     }
   }
 
-  async function handlePhoneSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!phone || !isValidPhone(phone)) return;
-    setPhoneState("loading");
-
-    const result = await submitWaitlistPhone(email, phone);
-    if (result.success) {
-      setPhoneState("success");
-    } else {
-      setPhoneState("error");
-    }
-  }
-
   return (
     <div className="max-w-md mx-auto">
-      {state !== "success" ? (
-        <>
-          <form onSubmit={handleSubmit}>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setTouched(true); }}
-                  placeholder="you@company.com"
-                  className="w-full h-12 px-4 pr-10 text-sm bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A] focus:outline-none transition-colors"
-                />
-                {showValidation && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {valid ? (
-                      <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
-                    )}
-                  </span>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={state === "loading" || !valid}
-                className="h-12 px-5 text-sm font-medium bg-[#0F172A] text-white hover:bg-[#1E293B] transition-colors disabled:opacity-50 whitespace-nowrap"
-              >
-                {state === "loading" ? "Joining..." : "Get early access"}
-              </button>
-            </div>
-            {state === "error" && (
-              <p className="mt-2 text-xs text-red-600">{errorMsg}</p>
-            )}
-            <p className="mt-2.5 text-xs text-[#94A3B8]">
-              No credit card. No code. First 100 businesses get founder pricing.
-            </p>
-          </form>
-
-          {/* Live counter */}
-          <div className="mt-5 flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-            <span className="text-sm font-medium text-[#0F172A]">
-              {displayCount}+ businesses on the waitlist
-            </span>
-          </div>
-        </>
-      ) : (
-        <div className="space-y-5">
-          <div className="p-6 border border-[#E2E8F0] bg-[#F1F5F9]">
-            <div className="font-semibold text-base flex items-center gap-2 text-[#0F172A]">
-              <CheckCircle2 className="w-5 h-5 text-[#22C55E]" />
-              You're on the list.
-            </div>
-            <p className="mt-1.5 text-sm leading-relaxed text-[#64748B]">
-              Check your email! We've sent you early access details. First 100 businesses get founder pricing.
-            </p>
-          </div>
-
-          {/* Live counter */}
-          <div className="flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-            <span className="text-sm font-medium text-[#0F172A]">
-              {displayCount}+ businesses on the waitlist
-            </span>
-          </div>
-
-          {/* Phone opt-in */}
-          {phoneState !== "success" ? (
-            <form onSubmit={handlePhoneSubmit} className="mt-2">
-              <p className="text-xs text-[#64748B] mb-2">
-                Want a text when your spot opens? Add your number (optional).
-              </p>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => { setPhone(e.target.value); setPhoneTouched(true); }}
-                    placeholder="+1 (555) 123-4567"
-                    className="w-full h-10 px-4 pr-10 text-sm bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A] focus:outline-none transition-colors"
-                  />
-                  {phoneTouched && phone.length >= 7 && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                      {isValidPhone(phone) ? (
-                        <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-red-500" />
-                      )}
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="submit"
-                  disabled={phoneState === "loading" || !isValidPhone(phone)}
-                  className="h-10 px-4 text-sm font-medium bg-[#0F172A] text-white hover:bg-[#1E293B] transition-colors disabled:opacity-50 whitespace-nowrap"
-                >
-                  {phoneState === "loading" ? "Saving..." : "Opt in"}
-                </button>
-              </div>
-              {phoneState === "error" && (
-                <p className="mt-1.5 text-xs text-red-600">Could not save number. Try again.</p>
-              )}
-              <p className="mt-1.5 text-[10px] text-[#94A3B8]">
-                We'll only text you once when your invite is ready. No spam.
-              </p>
-            </form>
-          ) : (
-            <div className="p-4 border border-[#E2E8F0] bg-[#F1F5F9]">
-              <div className="text-sm flex items-center gap-2 text-[#0F172A] font-medium">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Name */}
+        <div className="relative">
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => { setName(e.target.value); setTouched((t) => ({ ...t, name: true })); }}
+            placeholder="Your name"
+            className="w-full h-12 px-4 pr-10 text-sm bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A] focus:outline-none transition-colors"
+          />
+          {touched.name && name.length >= 1 && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              {nameValid ? (
                 <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
-                Phone saved. We'll text you when your spot opens.
-              </div>
-            </div>
+              ) : (
+                <XCircle className="w-4 h-4 text-red-500" />
+              )}
+            </span>
           )}
         </div>
-      )}
+
+        {/* Email */}
+        <div className="relative">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setTouched((t) => ({ ...t, email: true })); }}
+            placeholder="you@company.com"
+            className="w-full h-12 px-4 pr-10 text-sm bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A] focus:outline-none transition-colors"
+          />
+          {touched.email && email.length >= 3 && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              {emailValid ? (
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
+              ) : (
+                <XCircle className="w-4 h-4 text-red-500" />
+              )}
+            </span>
+          )}
+        </div>
+
+        {/* Phone (optional) */}
+        <div className="relative">
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => { setPhone(e.target.value); setTouched((t) => ({ ...t, phone: true })); }}
+            placeholder="+91 98765 43210 (optional)"
+            className="w-full h-12 px-4 pr-10 text-sm bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0F172A] focus:outline-none transition-colors"
+          />
+          {touched.phone && phone.length >= 7 && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              {phoneValid ? (
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E]" />
+              ) : (
+                <XCircle className="w-4 h-4 text-red-500" />
+              )}
+            </span>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={state === "loading" || !canSubmit}
+          className="w-full h-12 text-sm font-medium bg-[#0F172A] text-white hover:bg-[#1E293B] transition-colors disabled:opacity-50"
+        >
+          {state === "loading" ? "Joining..." : "Get early access"}
+        </button>
+
+        {state === "error" && (
+          <p className="text-xs text-red-600">{errorMsg}</p>
+        )}
+
+        <p className="text-xs text-[#94A3B8] text-center">
+          No credit card. No code. First 100 businesses get founder pricing.
+        </p>
+      </form>
+
+      {/* Live counter */}
+      <div className="mt-5 flex items-center justify-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+        <span className="text-sm font-medium text-[#0F172A]">
+          {displayCount}+ businesses on the waitlist
+        </span>
+      </div>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent className="sm:max-w-[420px] p-6">
+          <DialogHeader className="items-center text-center">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-[#22C55E] flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
+              We've added you to our waitlist!
+            </DialogTitle>
+            <DialogDescription className="text-[#64748B] mt-1">
+              We'll let you know when Weeber is ready for you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-[#F1F5F9] border border-[#E2E8F0] rounded-md">
+            <Mail className="w-4 h-4 text-[#64748B] flex-shrink-0" />
+            <span className="text-sm text-[#0F172A] truncate">{email}</span>
+          </div>
+
+          <p className="mt-4 text-xs text-[#94A3B8] text-center">
+            Weeber is coming soon. Built compliance-first to give you back your time.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -7,7 +7,8 @@ if (env.RESEND_API_KEY) {
   resend = new Resend(env.RESEND_API_KEY);
 }
 
-function buildWaitlistWelcomeHtml() {
+function buildWaitlistWelcomeHtml(name) {
+  const greeting = name ? `Hi ${name}, you're in.` : "You're in.";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,7 +36,7 @@ function buildWaitlistWelcomeHtml() {
             <!-- Content -->
             <tr><td style="padding:40px 36px 36px;">
               <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0F172A;line-height:1.2;letter-spacing:-0.3px;">
-                You're in.
+                ${greeting}
               </h1>
               <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.7;">
                 Thanks for joining the Weeber early access waitlist. We're building the compliance-first voice agent for small businesses — and you'll be among the first to use it.
@@ -104,20 +105,23 @@ function buildWaitlistWelcomeHtml() {
 </html>`;
 }
 
-async function sendWaitlistWelcome(email) {
+async function sendWaitlistWelcome(email, name) {
   if (!resend) {
     logger.warn("RESEND_API_KEY not configured — skipping waitlist welcome email");
     return;
   }
 
+  const greeting = name ? `Hi ${name}, you're in.` : "You're in.";
+  const subject = name ? `You're in, ${name} — Weeber Early Access` : "You're in — Weeber Early Access";
+
   try {
     const { data, error } = await resend.emails.send({
       from: env.RESEND_FROM_EMAIL,
       to: [email],
-      subject: "You're in — Weeber Early Access",
-      html: buildWaitlistWelcomeHtml(),
+      subject,
+      html: buildWaitlistWelcomeHtml(name),
       replyTo: "hello@weeber.ai",
-      text: `You're in.\n\nThanks for joining the Weeber early access waitlist. We're building the compliance-first voice agent for small businesses — and you'll be among the first to use it.\n\nWhat to expect:\n- We onboard in small batches to guarantee quality.\n- You'll get an invite email the moment your batch opens.\n- First 100 businesses lock in founder pricing — forever.\n\nHave questions or want to share your use case? Just reply to this email — it goes straight to our team.\n\n— The Weeber Team\nhello@weeber.ai`,
+      text: `${greeting}\n\nThanks for joining the Weeber early access waitlist. We're building the compliance-first voice agent for small businesses — and you'll be among the first to use it.\n\nWhat to expect:\n- We onboard in small batches to guarantee quality.\n- You'll get an invite email the moment your batch opens.\n- First 100 businesses lock in founder pricing — forever.\n\nHave questions or want to share your use case? Just reply to this email — it goes straight to our team.\n\n— The Weeber Team\nhello@weeber.ai`,
       tags: [{ name: "category", value: "waitlist" }],
     });
 
