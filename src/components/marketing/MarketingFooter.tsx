@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
 import { FOOTER_COLUMNS, SITE } from "../../config/marketing";
 import { WeeberLogo } from "../WeeberLogo";
 
@@ -50,10 +49,6 @@ export function MarketingFooter() {
             {new Date().getFullYear()} {SITE.name}. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-white/20 text-[10px] font-medium text-white uppercase tracking-wide">
-              <ShieldCheck className="w-3 h-3" />
-              SOC 2 Type II Pending
-            </div>
             <div className="text-xs text-white">{SITE.tagline}</div>
           </div>
         </div>

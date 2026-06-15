@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowRight, CircleCheck as CheckCircle2, Circle as XCircle, Mail, Shield, Lock, SlidersHorizontal } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
@@ -8,7 +8,6 @@ import { trackFormSubmit, trackFormSuccess } from "../lib/analytics";
 import {
   STATS,
   VERTICALS,
-  VOICES,
   HOW_IT_WORKS,
   PLATFORM_FEATURES,
   READY_FLOWS,
@@ -24,7 +23,7 @@ import {
   DialogDescription,
 } from "../components/ui/dialog";
 
-const BASE_COUNT = 170;
+const BASE_COUNT = 58;
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -285,7 +284,7 @@ function HeroForm() {
       </form>
 
       <p className="mt-3 text-[13.5px] text-center text-[#0B0B0C] font-semibold">
-        First waitlist customers lock in <span className="border-b-2 border-[#0B0B0C] pb-px">founder pricing — for life.</span>
+        First 100 customers lock in <span className="border-b-2 border-[#0B0B0C] pb-px">founder pricing.</span>
       </p>
 
       <div className="mt-5 flex items-center justify-center gap-2.5">
@@ -364,21 +363,17 @@ export default function Waitlist() {
 
       <div className="marketing-content">
         {/* Hero */}
-        <section id="waitlist" className="relative pt-36 pb-24 md:pb-28 px-6 text-center overflow-hidden">
+        <section id="waitlist" className="relative pt-24 pb-16 md:pb-20 px-6 text-center overflow-hidden" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <HeroWaves />
           <div className="hero-fade" aria-hidden="true" />
           <div className="relative z-10 max-w-[820px] mx-auto">
-            <span className="inline-flex items-center gap-2 font-mono text-[11.5px] tracking-[.2em] uppercase text-[#9A9AA0] mb-5" data-reveal>
-              <span className="w-[6px] h-[6px] rounded-full bg-[#0B0B0C] animate-pulse" />
-              Live · private beta
-            </span>
-            <h1 className="font-display text-[clamp(40px,6.2vw,76px)] font-extrabold leading-[0.95] tracking-[-0.03em] text-[#0B0B0C]" data-reveal>
+            <h1 className="font-display text-[clamp(34px,5.2vw,64px)] font-extrabold leading-[0.97] tracking-[-0.03em] text-[#0B0B0C]" data-reveal>
               Every call you miss is a customer your competitor just won.
             </h1>
-            <p className="mt-6 text-[clamp(17px,1.5vw,20px)] text-[#67676C] max-w-[52ch] mx-auto leading-relaxed" data-reveal>
+            <p className="mt-5 text-[clamp(16px,1.4vw,18px)] text-[#67676C] max-w-[50ch] mx-auto leading-relaxed" data-reveal>
               Weeber is a voice AI that answers and makes your customer calls for you — booking appointments, recovering abandoned carts, and following up on every order. It sounds human, runs 24/7, and never lets a lead go cold. No code.
             </p>
-            <div className="mt-9" data-reveal>
+            <div className="mt-8" data-reveal>
               <HeroForm />
             </div>
           </div>
@@ -440,51 +435,6 @@ export default function Waitlist() {
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Voices */}
-        <section className="border-b border-[#E6E5E2] bg-[#FCFCFB]">
-          <div className="max-w-[1100px] mx-auto px-6 py-24 md:py-28">
-            <div className="text-center mb-12" data-reveal>
-              <span className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[.16em] uppercase text-[#9A9AA0] justify-center">
-                <span className="w-[6px] h-[6px] rounded-full bg-[#0B0B0C] animate-pulse" />
-                Voices
-              </span>
-              <h2 className="mt-4 font-display text-[clamp(28px,3.8vw,46px)] font-extrabold tracking-[-0.03em] leading-[1.04] text-[#0B0B0C]">
-                Pick a voice your customers will trust.
-              </h2>
-              <p className="mt-4 text-[17.5px] text-[#67676C] max-w-[48ch] mx-auto leading-relaxed">
-                Natural, real-time speech — not a phone-tree robot. Most callers don't realize it's AI.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" data-reveal>
-              {VOICES.map((v, vi) => (
-                <div key={v.name} className="border border-[#E6E5E2] rounded-[15px] p-5 bg-[#FCFCFB] card-lift">
-                  <div className="flex items-center gap-3">
-                    <button
-                      aria-label={`Play ${v.name}`}
-                      className="flex-none w-[33px] h-[33px] rounded-full bg-[#0B0B0C] flex items-center justify-center hover:scale-[1.06] transition-transform"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 10 12" fill="white"><path d="M0 0l10 6-10 6z" /></svg>
-                    </button>
-                    <div>
-                      <div className="font-semibold text-[15px] text-[#0B0B0C]">{v.name}</div>
-                      <div className="font-mono text-[11px] text-[#9A9AA0] mt-0.5">{v.tag}</div>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Waveform seed={vi * 3.7} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-7 flex items-center justify-between flex-wrap gap-3" data-reveal>
-              <p className="text-[15.5px] text-[#67676C]">
-                <strong className="text-[#0B0B0C]">More than 50 voices are live</strong> — across multiple languages and accents.
-              </p>
-              <a href="#waitlist" className="link-grow text-[15px] font-semibold text-[#0B0B0C]">Browse all voices →</a>
             </div>
           </div>
         </section>
@@ -789,101 +739,9 @@ export default function Waitlist() {
           </div>
         </section>
 
-        {/* Final CTA — dark */}
-        <section className="bg-[#0B0B0C] text-white py-28 md:py-32 px-6 text-center">
-          <div className="max-w-[640px] mx-auto" data-reveal>
-            <span className="inline-flex items-center gap-2 font-mono text-[11.5px] tracking-[.2em] uppercase text-[#9A9AA0] mb-5 justify-center">
-              <span className="w-[6px] h-[6px] rounded-full bg-white animate-pulse" />
-              Get early access
-            </span>
-            <h2 className="font-display text-[clamp(32px,4.4vw,56px)] font-extrabold tracking-[-0.03em] leading-[0.97] text-white max-w-[16ch] mx-auto">
-              Don't let the next call ring out.
-            </h2>
-            <p className="mt-5 text-[17px] text-[#9A9AA0] max-w-md mx-auto">
-              We're onboarding in batches of 25. Waitlist customers get founder pricing locked for life.
-            </p>
-            <div className="mt-10">
-              <FinalCTA />
-            </div>
-          </div>
-        </section>
       </div>
 
       <MarketingFooter />
-    </div>
-  );
-}
-
-function FinalCTA() {
-  const { count } = useWaitlistCount();
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [state, setState] = useState<"idle" | "loading" | "done">("idle");
-  const displayCount = count !== null ? count + BASE_COUNT : BASE_COUNT;
-
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isValidEmail(email) || !name.trim()) return;
-    setState("loading");
-    trackFormSubmit();
-    const result = await joinWaitlist({ name: name.trim(), email: email.trim() });
-    if (result.success) {
-      setState("done");
-      trackFormSuccess();
-    } else {
-      setState("idle");
-    }
-  }, [email, name]);
-
-  if (state === "done") {
-    return (
-      <div className="bg-white/10 border border-white/15 rounded-[16px] p-6 text-center max-w-sm mx-auto">
-        <div className="w-12 h-12 mx-auto rounded-full bg-white flex items-center justify-center mb-4">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B0B0C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </div>
-        <p className="font-display font-bold text-xl text-white">You're on the list.</p>
-        <p className="mt-2 text-[14px] text-[#9A9AA0]">We'll reach out when your spot is ready.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-[430px] mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-2.5">
-        <input
-          type="text"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your name"
-          className="w-full h-12 px-4 text-[16px] bg-white/8 border border-white/15 text-white placeholder:text-[#9A9AA0] focus:border-white/40 focus:outline-none rounded-[11px] transition-colors"
-        />
-        <div className="flex gap-2">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@yourbrand.com"
-            className="flex-1 h-12 px-4 text-[16px] bg-white/8 border border-white/15 text-white placeholder:text-[#9A9AA0] focus:border-white/40 focus:outline-none rounded-[11px] transition-colors"
-          />
-          <button
-            type="submit"
-            disabled={state === "loading"}
-            className="h-12 px-5 text-[15px] font-semibold bg-white text-[#0B0B0C] rounded-[11px] hover:bg-white/90 transition-opacity disabled:opacity-50 btn-press whitespace-nowrap"
-          >
-            {state === "loading" ? "Joining..." : "Join the waitlist"}
-          </button>
-        </div>
-      </form>
-      <div className="mt-5 flex items-center justify-center gap-2.5">
-        <span className="w-[7px] h-[7px] rounded-full bg-white animate-pulse" />
-        <span className="text-[14px] text-[#9A9AA0]">
-          <span className="font-mono font-medium text-white">{displayCount}</span> businesses already in line
-        </span>
-      </div>
     </div>
   );
 }

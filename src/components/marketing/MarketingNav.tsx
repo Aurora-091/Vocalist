@@ -53,12 +53,6 @@ export function MarketingNav() {
           >
             Help
           </a>
-          <a
-            href="#waitlist"
-            className="text-[15px] font-semibold text-[#0B0B0C] border border-[#E6E5E2] rounded-[11px] px-4 py-2 hover:bg-[#F3F2EF] transition-colors btn-press"
-          >
-            Join waitlist
-          </a>
         </div>
 
         <button
@@ -90,12 +84,6 @@ export function MarketingNav() {
               className="text-sm text-[#67676C] hover:text-[#0B0B0C]"
             >
               Help
-            </a>
-            <a
-              href="#waitlist"
-              className="text-sm font-semibold text-center bg-[#0B0B0C] text-white rounded-[11px] px-4 py-3"
-            >
-              Join waitlist
             </a>
           </div>
         </div>
