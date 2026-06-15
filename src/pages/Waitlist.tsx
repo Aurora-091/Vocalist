@@ -147,31 +147,33 @@ function HeroWaves() {
       <svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
         <defs>
           <style>{`
-            .hw-wave {
-              animation: hw-wavemove 12s ease-in-out infinite;
-              opacity: 0.15;
-              stroke: #0B0B0C;
+            .flow-line {
+              fill: none;
+              stroke-width: 1.5;
+              stroke-linecap: round;
+              animation: flowmotion 15s ease-in-out infinite;
             }
-            .hw-wave:nth-child(2) { animation-delay: -2s; opacity: 0.12; }
-            .hw-wave:nth-child(3) { animation-delay: -4s; opacity: 0.09; }
-            .hw-gridline { stroke: #9A9AA0; opacity: 0.08; stroke-width: 0.5; }
-            @keyframes hw-wavemove {
-              0%, 100% { transform: translateY(0px); }
-              50% { transform: translateY(-20px); }
+            .flow-line:nth-child(1) { stroke: #0B0B0C; opacity: 0.18; }
+            .flow-line:nth-child(2) { stroke: #1A1A1F; opacity: 0.14; animation-delay: -3s; }
+            .flow-line:nth-child(3) { stroke: #64748B; opacity: 0.12; animation-delay: -6s; }
+            .flow-line:nth-child(4) { stroke: #334155; opacity: 0.10; animation-delay: -9s; }
+            .flow-line:nth-child(5) { stroke: #94A3B8; opacity: 0.08; animation-delay: -12s; }
+            .flow-line:nth-child(6) { stroke: #0B0B0C; opacity: 0.06; animation-delay: -2s; }
+            .flow-line:nth-child(7) { stroke: #475569; opacity: 0.09; animation-delay: -7s; }
+            @keyframes flowmotion {
+              0% { transform: translateX(-80px); }
+              50% { transform: translateX(40px); }
+              100% { transform: translateX(-80px); }
             }
           `}</style>
         </defs>
-        <g>
-          <line x1="0" y1="150" x2="1200" y2="150" className="hw-gridline" />
-          <line x1="0" y1="300" x2="1200" y2="300" className="hw-gridline" />
-          <line x1="0" y1="450" x2="1200" y2="450" className="hw-gridline" />
-          <line x1="300" y1="0" x2="300" y2="600" className="hw-gridline" />
-          <line x1="600" y1="0" x2="600" y2="600" className="hw-gridline" />
-          <line x1="900" y1="0" x2="900" y2="600" className="hw-gridline" />
-        </g>
-        <path d="M 0 300 Q 150 250, 300 300 T 600 300 T 900 300 T 1200 300" className="hw-wave" fill="none" strokeWidth="2" />
-        <path d="M 0 320 Q 150 270, 300 320 T 600 320 T 900 320 T 1200 320" className="hw-wave" fill="none" strokeWidth="2" />
-        <path d="M 0 340 Q 150 290, 300 340 T 600 340 T 900 340 T 1200 340" className="hw-wave" fill="none" strokeWidth="2" />
+        <path d="M -100 120 Q 100 70, 300 120 T 600 120 T 900 120 T 1200 120 T 1500 120" className="flow-line" />
+        <path d="M -100 200 Q 150 150, 350 200 T 650 200 T 950 200 T 1300 200" className="flow-line" />
+        <path d="M -100 290 Q 120 220, 280 290 T 620 290 T 920 290 T 1220 290" className="flow-line" />
+        <path d="M -100 370 Q 140 300, 300 370 T 600 370 T 900 370 T 1200 370" className="flow-line" />
+        <path d="M -100 450 Q 110 400, 290 450 T 590 450 T 890 450 T 1190 450" className="flow-line" />
+        <path d="M -100 520 Q 160 470, 320 520 T 640 520 T 940 520 T 1240 520" className="flow-line" />
+        <path d="M -100 580 Q 130 540, 310 580 T 610 580 T 910 580 T 1210 580" className="flow-line" />
       </svg>
     </div>
   );
@@ -363,17 +365,17 @@ export default function Waitlist() {
 
       <div className="marketing-content">
         {/* Hero */}
-        <section id="waitlist" className="relative pt-24 pb-16 md:pb-20 px-6 text-center overflow-hidden" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <section id="waitlist" className="relative pt-28 pb-20 md:pb-24 px-6 text-center overflow-hidden" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <HeroWaves />
           <div className="hero-fade" aria-hidden="true" />
-          <div className="relative z-10 max-w-[820px] mx-auto">
-            <h1 className="font-display text-[clamp(34px,5.2vw,64px)] font-extrabold leading-[0.97] tracking-[-0.03em] text-[#0B0B0C]" data-reveal>
+          <div className="relative z-10 max-w-[900px] mx-auto">
+            <h1 className="font-display text-[clamp(38px,6vw,72px)] font-extrabold leading-[0.93] tracking-[-0.035em] text-[#0B0B0C]" data-reveal>
               Every call you miss is a customer your competitor just won.
             </h1>
-            <p className="mt-5 text-[clamp(16px,1.4vw,18px)] text-[#67676C] max-w-[50ch] mx-auto leading-relaxed" data-reveal>
+            <p className="mt-7 text-[clamp(17px,1.6vw,21px)] text-[#4A4A4F] max-w-[54ch] mx-auto leading-[1.6]" data-reveal>
               Weeber is a voice AI that answers and makes your customer calls for you — booking appointments, recovering abandoned carts, and following up on every order. It sounds human, runs 24/7, and never lets a lead go cold. No code.
             </p>
-            <div className="mt-8" data-reveal>
+            <div className="mt-10" data-reveal>
               <HeroForm />
             </div>
           </div>
