@@ -3,7 +3,7 @@ import { ArrowRight, CircleCheck as CheckCircle2, Circle as XCircle, Mail, Shiel
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { joinWaitlist } from "../lib/api";
-import { useWaitlistCount } from "../lib/useWaitlistCount";
+import { useWaitlistCount, bumpWaitlistCount } from "../lib/useWaitlistCount";
 import { trackFormSubmit, trackFormSuccess } from "../lib/analytics";
 import {
   STATS,
@@ -210,6 +210,7 @@ function HeroForm() {
     if (result.success) {
       setState("success");
       setShowSuccess(true);
+      bumpWaitlistCount();
       trackFormSuccess();
     } else {
       setState("error");

@@ -1,7 +1,26 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
+
+// Shared optimistic offset so every instance (hero badge + form) bumps together.
+let optimisticBump = 0;
+const bumpListeners = new Set<() => void>();
+
+function subscribeBump(listener: () => void) {
+  bumpListeners.add(listener);
+  return () => bumpListeners.delete(listener);
+}
+
+function getBumpSnapshot() {
+  return optimisticBump;
+}
+
+export function bumpWaitlistCount() {
+  optimisticBump += 1;
+  bumpListeners.forEach((l) => l());
+}
 
 export function useWaitlistCount() {
   const [count, setCount] = useState<number | null>(null);
+  const bump = useSyncExternalStore(subscribeBump, getBumpSnapshot, getBumpSnapshot);
   const wsRef = useRef<WebSocket | null>(null);
   const retriesRef = useRef(0);
 
@@ -23,7 +42,14 @@ export function useWaitlistCount() {
         try {
           const data = JSON.parse(event.data);
           if (data.type === "waitlist_count" && typeof data.count === "number") {
-            setCount(data.count);
+            setCount((prev) => {
+              // Server caught up to (or past) our optimistic guess: drop the local bump.
+              if (prev !== null && data.count > prev && optimisticBump > 0) {
+                optimisticBump = Math.max(0, optimisticBump - (data.count - prev));
+                bumpListeners.forEach((l) => l());
+              }
+              return data.count;
+            });
           }
         } catch {}
       };
@@ -48,5 +74,6 @@ export function useWaitlistCount() {
     };
   }, []);
 
-  return { count };
+  const combined = count === null ? (bump > 0 ? bump : null) : count + bump;
+  return { count: combined };
 }
