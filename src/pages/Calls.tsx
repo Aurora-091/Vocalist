@@ -12,6 +12,7 @@ import {
   TableCell,
   TableCaption,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 type Call = {
   id: string;
@@ -266,11 +267,11 @@ function FilterChip({
   );
 }
 
-function Th({ children, scope = "col" }: { children: React.ReactNode; scope?: "col" | "row" }) {
+function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th scope={scope} className="text-left px-4 py-3 text-xs uppercase tracking-widest font-medium">
+    <TableHead scope="col" className="text-xs uppercase tracking-widest font-medium">
       {children}
-    </th>
+    </TableHead>
   );
 }
 
@@ -292,25 +293,25 @@ function SortableTh({
   const isActive = current === field;
   const Icon = isActive ? (dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
   return (
-    <th
+    <TableHead
       scope="col"
       aria-sort={ariaSort}
-      className="text-left px-4 py-3 text-xs uppercase tracking-widest font-medium"
+      className="text-xs uppercase tracking-widest font-medium"
     >
       <button
         onClick={() => onSort(field)}
-        className="inline-flex items-center gap-1 hover:text-text transition-colors focus-visible:outline-none focus-visible:underline"
+        className="inline-flex items-center gap-1 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:underline"
         aria-label={`Sort by ${String(children)} ${isActive && dir === "asc" ? "descending" : "ascending"}`}
       >
         {children}
-        <Icon className={`w-3 h-3 ${isActive ? "text-text" : "opacity-40"}`} aria-hidden="true" />
+        <Icon className={cn("size-3", isActive ? "text-foreground" : "opacity-40")} aria-hidden="true" />
       </button>
-    </th>
+    </TableHead>
   );
 }
 
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 ${className}`}>{children}</td>;
+function Td({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <TableCell className={className}>{children}</TableCell>;
 }
 
 function CallDrawer({ id, onClose }: { id: string; onClose: () => void }) {

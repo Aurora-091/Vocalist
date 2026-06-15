@@ -7,6 +7,24 @@ import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody } from "../components/legacy-ui/Card";
 import { ConsentBadge } from "../components/legacy-ui/Badge";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+} from "@/components/ui/input-group";
+import { Field, FieldGroup, FieldError } from "@/components/ui/field";
 
 type Contact = {
   id: string;
@@ -88,15 +106,17 @@ export default function Contacts() {
         </div>
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="w-4 h-4 absolute top-3 left-3 text-text-muted pointer-events-none" />
-        <input
+      <InputGroup className="max-w-md">
+        <InputGroupAddon>
+          <Search />
+        </InputGroupAddon>
+        <InputGroupInput
           value={q}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search by name, email, or phone"
-          className="w-full h-10 pl-9 pr-3 rounded-md border border-border bg-surface"
+          aria-label="Search contacts"
         />
-      </div>
+      </InputGroup>
 
       {creating && <CreateForm onClose={() => setCreating(false)} onSaved={() => load(q)} />}
       {importing && <ImportForm onClose={() => setImporting(false)} onDone={() => load(q)} />}
@@ -118,63 +138,65 @@ export default function Contacts() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block bg-surface border border-border rounded-md shadow-card overflow-hidden">
-            <table className="w-full text-sm" aria-label="Contacts list">
-              <caption className="sr-only">
+          <div className="hidden md:block bg-card border border-border rounded-md shadow-card overflow-hidden">
+            <Table aria-label="Contacts list">
+              <TableCaption srOnly>
                 {contacts.length} contact{contacts.length !== 1 ? "s" : ""}{q ? ` matching "${q}"` : ""}
-              </caption>
-              <thead className="bg-surface-2 text-text-muted">
-                <tr>
-                  <Th scope="col">Name</Th>
-                  <Th scope="col">Phone</Th>
-                  <Th scope="col">Email</Th>
-                  <Th scope="col">Source</Th>
-                  <Th scope="col">Consent</Th>
-                  <Th scope="col"><span className="sr-only">Actions</span></Th>
-                </tr>
-              </thead>
-              <tbody>
+              </TableCaption>
+              <TableHeader className="bg-muted">
+                <TableRow>
+                  <Th>Name</Th>
+                  <Th>Phone</Th>
+                  <Th>Email</Th>
+                  <Th>Source</Th>
+                  <Th>Consent</Th>
+                  <Th><span className="sr-only">Actions</span></Th>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {contacts.map((c) => (
-                  <tr key={c.id} className="border-t border-border hover:bg-surface-2 group">
-                    <Td>{c.name || <span className="text-text-muted" aria-label="No name">—</span>}</Td>
+                  <TableRow key={c.id} className="group">
+                    <Td>{c.name || <span className="text-muted-foreground" aria-label="No name">—</span>}</Td>
                     <Td className="font-mono">{c.e164}</Td>
-                    <Td>{c.email || <span className="text-text-muted" aria-label="No email">—</span>}</Td>
-                    <Td className="text-text-muted">{c.source || "—"}</Td>
+                    <Td>{c.email || <span className="text-muted-foreground" aria-label="No email">—</span>}</Td>
+                    <Td className="text-muted-foreground">{c.source || "—"}</Td>
                     <Td><ConsentBadge status={c.consent_status} /></Td>
                     <Td>
                       {confirmDeleteId === c.id ? (
                         <div className="flex items-center gap-1.5" role="group" aria-label={`Confirm delete ${c.name || c.e164}`}>
-                          <span className="text-xs text-text-muted">Sure?</span>
-                          <button
+                          <span className="text-xs text-muted-foreground">Sure?</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setConfirmDeleteId(null)}
-                            className="text-xs px-2 py-0.5 rounded border border-border text-text-muted hover:text-text transition-colors"
                             aria-label="Cancel delete"
                           >
                             No
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
                             onClick={() => deleteContact(c.id)}
                             disabled={deletingId === c.id}
-                            className="text-xs px-2 py-0.5 rounded border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20 transition-colors disabled:opacity-50"
                             aria-label={`Confirm delete ${c.name || c.e164}`}
                           >
                             {deletingId === c.id ? "…" : "Yes"}
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <button
                           onClick={() => setConfirmDeleteId(c.id)}
-                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all"
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
                           aria-label={`Delete ${c.name || c.e164}`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <Trash2 className="size-3.5" aria-hidden="true" />
                         </button>
                       )}
                     </Td>
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Mobile cards */}
@@ -228,15 +250,15 @@ export default function Contacts() {
   );
 }
 
-function Th({ children, scope = "col" }: { children: React.ReactNode; scope?: "col" | "row" | "colgroup" | "rowgroup" }) {
+function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th scope={scope} className="text-left px-4 py-3 text-xs uppercase tracking-widest font-medium">
+    <TableHead scope="col" className="text-xs uppercase tracking-widest font-medium">
       {children}
-    </th>
+    </TableHead>
   );
 }
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 ${className}`}>{children}</td>;
+function Td({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <TableCell className={className}>{children}</TableCell>;
 }
 
 function CreateForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
@@ -264,32 +286,44 @@ function CreateForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
   return (
     <Card>
       <CardBody>
-        <form onSubmit={submit} className="grid sm:grid-cols-3 gap-3">
-          <input
-            required
-            placeholder="+1 415 555 0123"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="h-10 px-3 rounded-md border border-border bg-surface"
-          />
-          <input
-            placeholder="Name (optional)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="h-10 px-3 rounded-md border border-border bg-surface"
-          />
-          <input
-            type="email"
-            placeholder="Email (optional)"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="h-10 px-3 rounded-md border border-border bg-surface"
-          />
-          {err && <div className="sm:col-span-3 text-sm text-danger">{err}</div>}
-          <div className="sm:col-span-3 flex justify-end gap-2">
-            <Button variant="ghost" type="button" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
-          </div>
+        <form onSubmit={submit}>
+          <FieldGroup className="grid sm:grid-cols-3 gap-3">
+            <Field>
+              <Input
+                required
+                placeholder="+1 415 555 0123"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                aria-label="Phone number"
+              />
+            </Field>
+            <Field>
+              <Input
+                placeholder="Name (optional)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                aria-label="Name"
+              />
+            </Field>
+            <Field>
+              <Input
+                type="email"
+                placeholder="Email (optional)"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-label="Email"
+              />
+            </Field>
+            {err && (
+              <Field data-invalid className="sm:col-span-3">
+                <FieldError>{err}</FieldError>
+              </Field>
+            )}
+            <div className="sm:col-span-3 flex justify-end gap-2">
+              <Button variant="ghost" type="button" onClick={onClose}>Cancel</Button>
+              <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
+            </div>
+          </FieldGroup>
         </form>
       </CardBody>
     </Card>
@@ -372,9 +406,9 @@ function ImportForm({ onClose, onDone }: { onClose: () => void; onDone: () => vo
             onDrop={onDrop}
             onDragOver={(e) => e.preventDefault()}
             onClick={() => fileRef.current?.click()}
-            className="border-2 border-dashed border-border rounded-md p-4 text-center text-sm text-text-muted cursor-pointer hover:border-text-muted hover:bg-surface-2 transition-colors"
+            className="border-2 border-dashed border-border rounded-md p-4 text-center text-sm text-muted-foreground cursor-pointer hover:border-muted-foreground hover:bg-muted transition-colors"
           >
-            <Upload className="w-5 h-5 mx-auto mb-1.5 opacity-50" />
+            <Upload className="size-5 mx-auto mb-1.5 opacity-50" />
             {text ? (
               <span className="text-success text-xs">File loaded — {text.split(/\r?\n/).filter(Boolean).length} lines</span>
             ) : (
@@ -389,30 +423,30 @@ function ImportForm({ onClose, onDone }: { onClose: () => void; onDone: () => vo
             />
           </div>
 
-          <textarea
+          <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={5}
-            className="w-full p-3 rounded-md border border-border bg-surface font-mono text-xs"
+            className="font-mono text-xs"
+            aria-label="CSV contents"
             placeholder="+14155550123,Jordan Lee,jordan@example.com&#10;+14155550456,Alex Kim"
           />
 
-          <label className="flex items-start gap-2.5 p-3 rounded-md border border-border bg-surface-2 cursor-pointer">
-            <input
-              type="checkbox"
+          <label className="flex items-start gap-2.5 p-3 rounded-md border border-border bg-muted cursor-pointer">
+            <Checkbox
               checked={consentAttested}
-              onChange={(e) => setConsentAttested(e.target.checked)}
-              className="mt-0.5 rounded border-border"
+              onCheckedChange={(v) => setConsentAttested(v === true)}
+              className="mt-0.5"
             />
-            <span className="text-xs text-text-muted leading-relaxed">
+            <span className="text-xs text-muted-foreground leading-relaxed">
               I confirm I have written or verbal consent to contact these individuals by phone. Contacts without consent will be
               imported with <code className="font-mono">consent_status = none</code> and will be excluded from outbound campaigns.
             </span>
           </label>
 
-          {err && <div className="text-sm text-danger">{err}</div>}
+          {err && <div className="text-sm text-destructive">{err}</div>}
           {result && (
-            <div className="text-sm text-text-muted">
+            <div className="text-sm text-muted-foreground">
               Imported {result.inserted} contact{result.inserted !== 1 ? "s" : ""}.
               {result.skipped.length > 0 && ` Skipped ${result.skipped.length} invalid.`}
             </div>
@@ -475,19 +509,20 @@ function DncUploadForm({ onClose, onDone }: { onClose: () => void; onDone: () =>
   return (
     <Card>
       <CardBody>
-        <p className="text-sm text-text-muted mb-3">
+        <p className="text-sm text-muted-foreground mb-3">
           Paste phone numbers to add to the Do Not Call list. One per line.
           These numbers will be blocked from all outbound campaigns.
         </p>
-        <form onSubmit={submit} className="space-y-3">
-          <textarea
+        <form onSubmit={submit} className="flex flex-col gap-3">
+          <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={6}
-            className="w-full p-3 rounded-md border border-border bg-surface font-mono text-xs"
+            className="font-mono text-xs"
+            aria-label="Phone numbers to block"
             placeholder={"+14155550123\n+14155550456\n+14155550789"}
           />
-          {result && <div className="text-sm text-text-muted">{result}</div>}
+          {result && <div className="text-sm text-muted-foreground">{result}</div>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" type="button" onClick={onClose}>Close</Button>
             <Button type="submit" disabled={busy || !text.trim()}>{busy ? "Blocking…" : "Block numbers"}</Button>
