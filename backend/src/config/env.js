@@ -39,6 +39,9 @@ const schema = z.object({
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().default("Weeber <hello@weeber.ai>"),
   RESEND_AUDIENCE_ID: z.string().optional(),
+
+  FRONTEND_URL: z.string().url().default("https://weeber.ai"),
+  BACKEND_URL: z.string().url().default("https://api.weeber.ai"),
 });
 
 const raw = {
@@ -66,6 +69,9 @@ const raw = {
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
   RESEND_AUDIENCE_ID: process.env.RESEND_AUDIENCE_ID,
+
+  FRONTEND_URL: process.env.FRONTEND_URL,
+  BACKEND_URL: process.env.BACKEND_URL,
 };
 
 const parsed = schema.safeParse(raw);

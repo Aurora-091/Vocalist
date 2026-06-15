@@ -7,94 +7,136 @@ if (env.RESEND_API_KEY) {
   resend = new Resend(env.RESEND_API_KEY);
 }
 
-function buildWaitlistWelcomeHtml(name) {
-  const greeting = name ? `Hi ${name}, you're in.` : "You're in.";
+const SITE_URL = env.FRONTEND_URL || "https://weeber.ai";
+const BACKEND_URL = env.BACKEND_URL || "https://api.weeber.ai";
+
+function buildReferralLink(token) {
+  return `${SITE_URL}/?ref=${token}`;
+}
+
+function buildUnsubscribeLink(token) {
+  return `${BACKEND_URL}/api/waitlist/unsubscribe?token=${token}`;
+}
+
+function buildWaitlistWelcomeHtml(name, token, position) {
+  const firstName = name ? name.trim().split(/\s+/)[0] : null;
+  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+  const positionStr = position ? `#${position}` : "on the list";
+  const referralLink = buildReferralLink(token);
+  const unsubscribeLink = buildUnsubscribeLink(token);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Welcome to Weeber</title>
+  <title>You're in — Weeber</title>
 </head>
-<body style="margin:0;padding:0;background:#0F172A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#0F172A;padding:48px 20px;">
+<body style="margin:0;padding:0;background:#F5F4F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#F5F4F0;padding:48px 20px 32px;">
     <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:520px;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:540px;">
 
         <!-- Logo -->
-        <tr><td style="padding:0 0 32px;">
-          <img src="https://weeber.ai/weeber_logo_transparent.png" alt="Weeber" width="120" style="display:block;border:0;" />
+        <tr><td style="padding:0 0 28px;">
+          <img src="https://weeber.ai/weeber_logo_transparent.png" alt="Weeber" width="108" style="display:block;border:0;filter:brightness(0);" />
         </td></tr>
 
         <!-- Main card -->
-        <tr><td style="background:#FFFFFF;border-radius:2px;">
+        <tr><td style="background:#FEFEFE;border:1px solid #E8E6E1;border-radius:3px;overflow:hidden;">
           <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
 
-            <!-- Green confirmation bar -->
-            <tr><td style="background:#22C55E;height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>
+            <!-- Top accent line -->
+            <tr><td style="background:#0B0B0C;height:3px;font-size:0;line-height:0;">&nbsp;</td></tr>
 
             <!-- Content -->
-            <tr><td style="padding:40px 36px 36px;">
-              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0F172A;line-height:1.2;letter-spacing:-0.3px;">
-                ${greeting}
+            <tr><td style="padding:40px 40px 8px;">
+
+              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#9A9AA0;text-transform:uppercase;letter-spacing:0.9px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                Weeber Waitlist
+              </p>
+              <h1 style="margin:0 0 28px;font-size:26px;font-weight:800;color:#0B0B0C;line-height:1.15;letter-spacing:-0.4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                ${greeting} You're in —<br>you're ${positionStr} in line.
               </h1>
-              <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.7;">
-                Thanks for joining the Weeber early access waitlist. We're building the compliance-first voice agent for small businesses — and you'll be among the first to use it.
+
+              <p style="margin:0 0 20px;font-size:15px;color:#4A4A4F;line-height:1.75;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                Quick reminder of what you signed up for: Weeber is a voice AI that answers and makes your customer calls — booking appointments, recovering abandoned carts, and following up on every order. Human-sounding, 24/7, no code.
               </p>
 
-              <!-- What to expect box -->
-              <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#F8F9FB;border:1px solid #E2E8F0;margin:0 0 28px;">
-                <tr><td style="padding:24px 28px;">
-                  <p style="margin:0 0 16px;font-size:13px;font-weight:600;color:#0F172A;text-transform:uppercase;letter-spacing:0.8px;">
-                    What to expect
-                  </p>
-                  <table cellpadding="0" cellspacing="0" role="presentation">
-                    <tr>
-                      <td style="padding:6px 14px 6px 0;font-size:14px;color:#22C55E;vertical-align:top;font-weight:700;">&#10003;</td>
-                      <td style="padding:6px 0;font-size:14px;color:#475569;line-height:1.6;">We onboard in small batches to guarantee quality.</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 14px 6px 0;font-size:14px;color:#22C55E;vertical-align:top;font-weight:700;">&#10003;</td>
-                      <td style="padding:6px 0;font-size:14px;color:#475569;line-height:1.6;">You'll get an invite email the moment your batch opens.</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 14px 6px 0;font-size:14px;color:#22C55E;vertical-align:top;font-weight:700;">&#10003;</td>
-                      <td style="padding:6px 0;font-size:14px;color:#475569;line-height:1.6;">First 100 businesses lock in founder pricing — forever.</td>
-                    </tr>
-                  </table>
-                </td></tr>
-              </table>
-
-              <p style="margin:0 0 6px;font-size:14px;color:#64748B;line-height:1.6;">
-                Have questions or want to share your use case? Just reply to this email — it goes straight to our team.
+              <p style="margin:0 0 8px;font-size:15px;color:#0B0B0C;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                Two things worth knowing:
               </p>
-            </td></tr>
 
-            <!-- Sign-off -->
-            <tr><td style="padding:0 36px 36px;">
-              <table cellpadding="0" cellspacing="0" role="presentation">
+              <!-- Point 1 -->
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 16px;">
                 <tr>
-                  <td style="padding-right:12px;vertical-align:middle;">
-                    <div style="width:36px;height:36px;border-radius:50%;background:#0F172A;text-align:center;line-height:36px;color:#FFFFFF;font-size:14px;font-weight:600;">W</div>
+                  <td style="width:22px;vertical-align:top;padding-top:3px;">
+                    <span style="font-size:15px;color:#0B0B0C;font-weight:600;">→</span>
                   </td>
-                  <td style="vertical-align:middle;">
-                    <p style="margin:0;font-size:14px;font-weight:600;color:#0F172A;">The Weeber Team</p>
-                    <p style="margin:2px 0 0;font-size:12px;color:#94A3B8;">hello@weeber.ai</p>
+                  <td style="font-size:15px;color:#4A4A4F;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                    You're early, so you lock in <strong style="color:#0B0B0C;">founder pricing for life.</strong> The first waitlist customers keep it for as long as they stay.
                   </td>
                 </tr>
               </table>
+
+              <!-- Point 2 -->
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 28px;">
+                <tr>
+                  <td style="width:22px;vertical-align:top;padding-top:3px;">
+                    <span style="font-size:15px;color:#0B0B0C;font-weight:600;">→</span>
+                  </td>
+                  <td style="font-size:15px;color:#4A4A4F;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                    You can <strong style="color:#0B0B0C;">skip ahead.</strong> We open access in small batches, and every business that joins through your link moves you up 2 spots.
+                  </td>
+                </tr>
+              </table>
+
+            </td></tr>
+
+            <!-- Referral box -->
+            <tr><td style="padding:0 40px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#F5F4F0;border:1px solid #E3E1DC;border-radius:2px;">
+                <tr><td style="padding:22px 24px;">
+                  <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#9A9AA0;text-transform:uppercase;letter-spacing:0.9px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                    Your referral link
+                  </p>
+                  <p style="margin:0 0 16px;font-size:13px;color:#67676C;word-break:break-all;font-family:'Courier New',Courier,monospace;background:#ECEAE5;padding:10px 12px;border-radius:2px;line-height:1.5;">
+                    ${referralLink}
+                  </p>
+                  <p style="margin:0;font-size:14px;color:#4A4A4F;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                    Send it to one founder who's losing customers to a phone nobody answers — you probably know a few.
+                  </p>
+                </td></tr>
+              </table>
+            </td></tr>
+
+            <!-- CTA button -->
+            <tr><td style="padding:0 40px 36px;" align="center">
+              <a href="${referralLink}" style="display:inline-block;background:#0B0B0C;color:#FEFEFE;text-decoration:none;font-size:15px;font-weight:700;padding:14px 36px;border-radius:2px;letter-spacing:-0.1px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                Share your link →
+              </a>
+            </td></tr>
+
+            <!-- Reply CTA -->
+            <tr><td style="padding:0 40px 40px;border-top:1px solid #ECEAE5;">
+              <p style="margin:20px 0 0;font-size:14px;color:#67676C;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                We'll email you the moment your spot opens. In the meantime, hit reply and tell us what you run — it helps us get you into the right batch first.
+              </p>
+              <p style="margin:20px 0 0;font-size:14px;color:#0B0B0C;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                — The Weeber team
+              </p>
             </td></tr>
 
           </table>
         </td></tr>
 
         <!-- Footer -->
-        <tr><td style="padding:28px 0 0;text-align:center;">
-          <p style="margin:0 0 4px;font-size:11px;color:#64748B;line-height:1.5;">
-            You received this because you signed up at weeber.ai
+        <tr><td style="padding:24px 0 0;text-align:center;">
+          <p style="margin:0 0 6px;font-size:11px;color:#9A9AA0;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+            You received this because you joined the waitlist at weeber.ai
           </p>
-          <p style="margin:0;font-size:11px;color:#475569;line-height:1.5;">
-            No further emails until your invite is ready. No spam, ever.
+          <p style="margin:0;font-size:11px;color:#9A9AA0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+            <a href="${unsubscribeLink}" style="color:#9A9AA0;text-decoration:underline;">Unsubscribe from future emails</a>
           </p>
         </td></tr>
 
@@ -105,23 +147,55 @@ function buildWaitlistWelcomeHtml(name) {
 </html>`;
 }
 
-async function sendWaitlistWelcome(email, name) {
+function buildWaitlistWelcomeText(name, token, position) {
+  const firstName = name ? name.trim().split(/\s+/)[0] : null;
+  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+  const positionStr = position ? `#${position}` : "on the list";
+  const referralLink = buildReferralLink(token);
+  const unsubscribeLink = buildUnsubscribeLink(token);
+
+  return `Subject: You're in — here's how to move up the line
+
+${greeting}
+
+You're on the Weeber waitlist. Right now you're ${positionStr} in line.
+
+Quick reminder of what you signed up for: Weeber is a voice AI that answers and makes your customer calls — booking appointments, recovering abandoned carts, and following up on every order. Human-sounding, 24/7, no code.
+
+Two things worth knowing:
+
+→ You're early, so you lock in founder pricing for life. The first waitlist customers keep it for as long as they stay.
+
+→ You can skip ahead. We open access in small batches, and every business that joins through your link moves you up 2 spots:
+
+${referralLink}
+
+Send it to one founder who's losing customers to a phone nobody answers — you probably know a few.
+
+We'll email you the moment your spot opens. In the meantime, hit reply and tell us what you run — it helps us get you into the right batch first.
+
+— The Weeber team
+
+---
+To unsubscribe from future emails: ${unsubscribeLink}`;
+}
+
+async function sendWaitlistWelcome(email, name, token, position) {
   if (!resend) {
     logger.warn("RESEND_API_KEY not configured — skipping waitlist welcome email");
     return;
   }
 
-  const greeting = name ? `Hi ${name}, you're in.` : "You're in.";
-  const subject = name ? `You're in, ${name} — Weeber Early Access` : "You're in — Weeber Early Access";
+  const subject = "You're in — here's how to move up the line";
 
   const tasks = [
     resend.emails.send({
       from: env.RESEND_FROM_EMAIL,
       to: [email],
       subject,
-      html: buildWaitlistWelcomeHtml(name),
+      html: buildWaitlistWelcomeHtml(name, token, position),
+      text: buildWaitlistWelcomeText(name, token, position),
       replyTo: "hello@weeber.ai",
-      text: `${greeting}\n\nThanks for joining the Weeber early access waitlist. We're building the compliance-first voice agent for small businesses — and you'll be among the first to use it.\n\nWhat to expect:\n- We onboard in small batches to guarantee quality.\n- You'll get an invite email the moment your batch opens.\n- First 100 businesses lock in founder pricing — forever.\n\nHave questions or want to share your use case? Just reply to this email — it goes straight to our team.\n\n— The Weeber Team\nhello@weeber.ai`,
       tags: [{ name: "category", value: "waitlist" }],
     }),
   ];
@@ -137,6 +211,8 @@ async function sendWaitlistWelcome(email, name) {
         unsubscribed: false,
       })
     );
+  } else {
+    logger.warn("RESEND_AUDIENCE_ID not set — contact not added to Resend audience");
   }
 
   const [emailResult, audienceResult] = await Promise.allSettled(tasks);
