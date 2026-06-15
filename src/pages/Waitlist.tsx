@@ -143,37 +143,49 @@ function GrainOverlay() {
 
 function HeroWaves() {
   return (
-    <div className="hero-bg" aria-hidden="true">
-      <svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
+    <div className="hero-bg" aria-hidden="true" style={{ top: "auto", bottom: 0, height: "55%" }}>
+      <svg viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice" style={{ width: "100%", height: "100%" }}>
         <defs>
           <style>{`
             .flow-line {
               fill: none;
-              stroke-width: 1.5;
+              stroke-width: 1.4;
               stroke-linecap: round;
               animation: flowmotion 15s ease-in-out infinite;
             }
-            .flow-line:nth-child(1) { stroke: #0B0B0C; opacity: 0.18; }
-            .flow-line:nth-child(2) { stroke: #1A1A1F; opacity: 0.14; animation-delay: -3s; }
-            .flow-line:nth-child(3) { stroke: #64748B; opacity: 0.12; animation-delay: -6s; }
-            .flow-line:nth-child(4) { stroke: #334155; opacity: 0.10; animation-delay: -9s; }
-            .flow-line:nth-child(5) { stroke: #94A3B8; opacity: 0.08; animation-delay: -12s; }
-            .flow-line:nth-child(6) { stroke: #0B0B0C; opacity: 0.06; animation-delay: -2s; }
-            .flow-line:nth-child(7) { stroke: #475569; opacity: 0.09; animation-delay: -7s; }
+            .flow-line:nth-child(1)  { stroke: #0B0B0C; opacity: 0.16; }
+            .flow-line:nth-child(2)  { stroke: #1A1A1F; opacity: 0.14; animation-delay: -2s; }
+            .flow-line:nth-child(3)  { stroke: #334155; opacity: 0.12; animation-delay: -4s; }
+            .flow-line:nth-child(4)  { stroke: #64748B; opacity: 0.11; animation-delay: -6s; }
+            .flow-line:nth-child(5)  { stroke: #0B0B0C; opacity: 0.09; animation-delay: -8s; }
+            .flow-line:nth-child(6)  { stroke: #475569; opacity: 0.10; animation-delay: -10s; }
+            .flow-line:nth-child(7)  { stroke: #94A3B8; opacity: 0.08; animation-delay: -1s; }
+            .flow-line:nth-child(8)  { stroke: #1A1A1F; opacity: 0.12; animation-delay: -3s; }
+            .flow-line:nth-child(9)  { stroke: #0B0B0C; opacity: 0.07; animation-delay: -5s; }
+            .flow-line:nth-child(10) { stroke: #334155; opacity: 0.09; animation-delay: -7s; }
+            .flow-line:nth-child(11) { stroke: #64748B; opacity: 0.06; animation-delay: -9s; }
+            .flow-line:nth-child(12) { stroke: #475569; opacity: 0.08; animation-delay: -11s; }
+            .flow-line:nth-child(13) { stroke: #0B0B0C; opacity: 0.05; animation-delay: -13s; }
             @keyframes flowmotion {
-              0% { transform: translateX(-80px); }
-              50% { transform: translateX(40px); }
-              100% { transform: translateX(-80px); }
+              0% { transform: translateX(-60px); }
+              50% { transform: translateX(35px); }
+              100% { transform: translateX(-60px); }
             }
           `}</style>
         </defs>
-        <path d="M -100 120 Q 100 70, 300 120 T 600 120 T 900 120 T 1200 120 T 1500 120" className="flow-line" />
-        <path d="M -100 200 Q 150 150, 350 200 T 650 200 T 950 200 T 1300 200" className="flow-line" />
-        <path d="M -100 290 Q 120 220, 280 290 T 620 290 T 920 290 T 1220 290" className="flow-line" />
-        <path d="M -100 370 Q 140 300, 300 370 T 600 370 T 900 370 T 1200 370" className="flow-line" />
-        <path d="M -100 450 Q 110 400, 290 450 T 590 450 T 890 450 T 1190 450" className="flow-line" />
-        <path d="M -100 520 Q 160 470, 320 520 T 640 520 T 940 520 T 1240 520" className="flow-line" />
-        <path d="M -100 580 Q 130 540, 310 580 T 610 580 T 910 580 T 1210 580" className="flow-line" />
+        <path d="M -100 20  Q 120 -10, 300 20  T 600 20  T 900 20  T 1200 20  T 1500 20"  className="flow-line" />
+        <path d="M -100 58  Q 150 30,  350 58  T 650 58  T 950 58  T 1300 58"  className="flow-line" />
+        <path d="M -100 95  Q 100 65,  280 95  T 580 95  T 880 95  T 1200 95"  className="flow-line" />
+        <path d="M -100 130 Q 140 100, 320 130 T 640 130 T 940 130 T 1240 130" className="flow-line" />
+        <path d="M -100 168 Q 110 140, 290 168 T 590 168 T 890 168 T 1190 168" className="flow-line" />
+        <path d="M -100 205 Q 160 175, 340 205 T 660 205 T 960 205 T 1260 205" className="flow-line" />
+        <path d="M -100 245 Q 130 215, 310 245 T 610 245 T 910 245 T 1210 245" className="flow-line" />
+        <path d="M -100 285 Q 150 255, 330 285 T 630 285 T 930 285 T 1230 285" className="flow-line" />
+        <path d="M -100 325 Q 100 295, 280 325 T 580 325 T 880 325 T 1180 325" className="flow-line" />
+        <path d="M -100 365 Q 140 335, 320 365 T 640 365 T 940 365 T 1240 365" className="flow-line" />
+        <path d="M -100 405 Q 120 375, 300 405 T 600 405 T 900 405 T 1200 405" className="flow-line" />
+        <path d="M -100 440 Q 160 412, 340 440 T 660 440 T 960 440 T 1260 440" className="flow-line" />
+        <path d="M -100 475 Q 130 450, 310 475 T 610 475 T 910 475 T 1210 475" className="flow-line" />
       </svg>
     </div>
   );
