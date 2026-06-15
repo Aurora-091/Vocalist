@@ -167,7 +167,7 @@ function HeroBgWaveform() {
 
 function HeroBadge() {
   const { count } = useWaitlistCount();
-  const displayCount = count !== null ? count : FALLBACK_COUNT;
+  const displayCount = FALLBACK_COUNT + (count ?? 0);
   return (
     <div className="mb-6 inline-flex items-center gap-2 bg-[var(--m-bg-alt)] border border-[var(--m-border)] rounded-full px-3.5 py-1.5 text-[13px] text-[var(--m-text-secondary)]" data-reveal>
       <span className="w-[7px] h-[7px] rounded-full bg-[#22c55e] inline-block hero-pulse-dot" />
@@ -191,7 +191,7 @@ function HeroForm() {
   const phoneValid = isValidPhone(phone);
   const nameValid = name.trim().length > 0;
   const canSubmit = nameValid && emailValid && phoneValid;
-  const displayCount = count !== null ? count : FALLBACK_COUNT;
+  const displayCount = FALLBACK_COUNT + (count ?? 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -217,7 +217,7 @@ function HeroForm() {
     }
   }
 
-  const inputClass = "w-full h-12 px-4 pr-10 text-[16px] bg-[var(--m-bg)] border-[1.5px] border-[var(--m-border)] text-[var(--m-text)] placeholder:text-[var(--m-text-muted)] focus:border-[var(--m-text-muted)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(154,154,160,0.1)] transition-all rounded-lg";
+  const inputClass = "w-full h-12 px-4 pr-10 text-[16px] bg-[var(--m-bg)] border-[1.5px] border-[var(--m-text-muted)] text-[var(--m-text)] placeholder:text-[var(--m-text-muted)] shadow-[0_1px_2px_rgba(0,0,0,0.04)] focus:border-[var(--m-text)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(11,11,12,0.12)] transition-all rounded-lg";
 
   return (
     <div className="max-w-[430px] mx-auto">
@@ -283,7 +283,7 @@ function HeroForm() {
         )}
       </form>
 
-      <p className="mt-4 text-[13px] text-center text-[var(--m-text-muted)]">
+      <p className="mt-4 text-[13.5px] text-center text-[var(--m-text-secondary)]">
         First 100 customers lock in <span className="font-bold text-[var(--m-text)]">founder pricing.</span>
       </p>
 
@@ -364,7 +364,7 @@ export default function Waitlist() {
             <h1 className="font-display text-[clamp(2.8rem,6vw,5.5rem)] font-extrabold leading-[0.93] tracking-[-0.03em] text-[var(--m-text)]" data-reveal>
               Every call you miss<br />is a sale you just lost.
             </h1>
-            <p className="mt-6 text-[1.1rem] text-[var(--m-text-secondary)] max-w-[480px] mx-auto leading-[1.6]" data-reveal>
+            <p className="mt-6 text-[1.2rem] md:text-[1.3rem] font-medium text-[var(--m-text)] max-w-[520px] mx-auto leading-[1.55] text-pretty" data-reveal>
               Voice AI that books, recovers carts, and follows up. 24/7. No code.
             </p>
             <div className="mt-10" data-reveal>
