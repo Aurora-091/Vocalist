@@ -143,49 +143,58 @@ function GrainOverlay() {
 
 function HeroWaves() {
   return (
-    <div className="hero-bg" aria-hidden="true" style={{ top: "auto", bottom: 0, height: "55%" }}>
-      <svg viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice" style={{ width: "100%", height: "100%" }}>
+    <div className="hero-bg" aria-hidden="true" style={{ top: "auto", bottom: 0, height: "60%" }}>
+      <svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" style={{ width: "100%", height: "100%" }}>
         <defs>
+          <linearGradient id="grd-dark" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#0B0B0C" stopOpacity="0.6" />
+            <stop offset="50%" stopColor="#334155" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#0B0B0C" stopOpacity="0.6" />
+          </linearGradient>
+          <linearGradient id="grd-slate" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#475569" stopOpacity="0.4" />
+            <stop offset="50%" stopColor="#94A3B8" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#334155" stopOpacity="0.4" />
+          </linearGradient>
+          <linearGradient id="grd-mid" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#1A1A1F" stopOpacity="0.5" />
+            <stop offset="40%" stopColor="#64748B" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#1A1A1F" stopOpacity="0.5" />
+          </linearGradient>
           <style>{`
-            .flow-line {
+            .fl {
               fill: none;
-              stroke-width: 1.4;
               stroke-linecap: round;
-              animation: flowmotion 15s ease-in-out infinite;
+              animation: flowmotion 14s ease-in-out infinite;
             }
-            .flow-line:nth-child(1)  { stroke: #0B0B0C; opacity: 0.16; }
-            .flow-line:nth-child(2)  { stroke: #1A1A1F; opacity: 0.14; animation-delay: -2s; }
-            .flow-line:nth-child(3)  { stroke: #334155; opacity: 0.12; animation-delay: -4s; }
-            .flow-line:nth-child(4)  { stroke: #64748B; opacity: 0.11; animation-delay: -6s; }
-            .flow-line:nth-child(5)  { stroke: #0B0B0C; opacity: 0.09; animation-delay: -8s; }
-            .flow-line:nth-child(6)  { stroke: #475569; opacity: 0.10; animation-delay: -10s; }
-            .flow-line:nth-child(7)  { stroke: #94A3B8; opacity: 0.08; animation-delay: -1s; }
-            .flow-line:nth-child(8)  { stroke: #1A1A1F; opacity: 0.12; animation-delay: -3s; }
-            .flow-line:nth-child(9)  { stroke: #0B0B0C; opacity: 0.07; animation-delay: -5s; }
-            .flow-line:nth-child(10) { stroke: #334155; opacity: 0.09; animation-delay: -7s; }
-            .flow-line:nth-child(11) { stroke: #64748B; opacity: 0.06; animation-delay: -9s; }
-            .flow-line:nth-child(12) { stroke: #475569; opacity: 0.08; animation-delay: -11s; }
-            .flow-line:nth-child(13) { stroke: #0B0B0C; opacity: 0.05; animation-delay: -13s; }
+            .fl-a { stroke: url(#grd-dark); stroke-width: 1.8; }
+            .fl-b { stroke: url(#grd-slate); stroke-width: 1.5; }
+            .fl-c { stroke: url(#grd-mid); stroke-width: 1.6; }
             @keyframes flowmotion {
-              0% { transform: translateX(-60px); }
-              50% { transform: translateX(35px); }
-              100% { transform: translateX(-60px); }
+              0% { transform: translateX(-50px); }
+              50% { transform: translateX(30px); }
+              100% { transform: translateX(-50px); }
             }
           `}</style>
         </defs>
-        <path d="M -100 20  Q 120 -10, 300 20  T 600 20  T 900 20  T 1200 20  T 1500 20"  className="flow-line" />
-        <path d="M -100 58  Q 150 30,  350 58  T 650 58  T 950 58  T 1300 58"  className="flow-line" />
-        <path d="M -100 95  Q 100 65,  280 95  T 580 95  T 880 95  T 1200 95"  className="flow-line" />
-        <path d="M -100 130 Q 140 100, 320 130 T 640 130 T 940 130 T 1240 130" className="flow-line" />
-        <path d="M -100 168 Q 110 140, 290 168 T 590 168 T 890 168 T 1190 168" className="flow-line" />
-        <path d="M -100 205 Q 160 175, 340 205 T 660 205 T 960 205 T 1260 205" className="flow-line" />
-        <path d="M -100 245 Q 130 215, 310 245 T 610 245 T 910 245 T 1210 245" className="flow-line" />
-        <path d="M -100 285 Q 150 255, 330 285 T 630 285 T 930 285 T 1230 285" className="flow-line" />
-        <path d="M -100 325 Q 100 295, 280 325 T 580 325 T 880 325 T 1180 325" className="flow-line" />
-        <path d="M -100 365 Q 140 335, 320 365 T 640 365 T 940 365 T 1240 365" className="flow-line" />
-        <path d="M -100 405 Q 120 375, 300 405 T 600 405 T 900 405 T 1200 405" className="flow-line" />
-        <path d="M -100 440 Q 160 412, 340 440 T 660 440 T 960 440 T 1260 440" className="flow-line" />
-        <path d="M -100 475 Q 130 450, 310 475 T 610 475 T 910 475 T 1210 475" className="flow-line" />
+        <path d="M -100 15  Q 130 -15, 310 15  T 620 15  T 930 15  T 1240 15  T 1550 15"  className="fl fl-a" style={{ animationDelay: "0s" }} />
+        <path d="M -100 48  Q 160 20,  350 48  T 660 48  T 970 48  T 1300 48"  className="fl fl-b" style={{ animationDelay: "-1.5s" }} />
+        <path d="M -100 80  Q 100 52,  280 80  T 580 80  T 880 80  T 1200 80"  className="fl fl-c" style={{ animationDelay: "-3s" }} />
+        <path d="M -100 112 Q 145 84, 320 112 T 640 112 T 960 112 T 1280 112" className="fl fl-a" style={{ animationDelay: "-4.5s" }} />
+        <path d="M -100 144 Q 110 116, 290 144 T 590 144 T 890 144 T 1190 144" className="fl fl-b" style={{ animationDelay: "-6s" }} />
+        <path d="M -100 176 Q 155 148, 335 176 T 645 176 T 955 176 T 1265 176" className="fl fl-c" style={{ animationDelay: "-7.5s" }} />
+        <path d="M -100 210 Q 125 180, 305 210 T 615 210 T 925 210 T 1235 210" className="fl fl-a" style={{ animationDelay: "-2s" }} />
+        <path d="M -100 244 Q 150 214, 330 244 T 640 244 T 950 244 T 1260 244" className="fl fl-b" style={{ animationDelay: "-3.5s" }} />
+        <path d="M -100 278 Q 100 248, 280 278 T 580 278 T 880 278 T 1180 278" className="fl fl-c" style={{ animationDelay: "-5s" }} />
+        <path d="M -100 312 Q 140 282, 320 312 T 640 312 T 960 312 T 1280 312" className="fl fl-a" style={{ animationDelay: "-8s" }} />
+        <path d="M -100 346 Q 115 316, 295 346 T 605 346 T 915 346 T 1225 346" className="fl fl-b" style={{ animationDelay: "-9.5s" }} />
+        <path d="M -100 380 Q 155 350, 335 380 T 645 380 T 955 380 T 1265 380" className="fl fl-c" style={{ animationDelay: "-11s" }} />
+        <path d="M -100 414 Q 130 384, 310 414 T 610 414 T 910 414 T 1210 414" className="fl fl-a" style={{ animationDelay: "-12.5s" }} />
+        <path d="M -100 448 Q 160 418, 340 448 T 660 448 T 960 448 T 1260 448" className="fl fl-b" style={{ animationDelay: "-1s" }} />
+        <path d="M -100 482 Q 100 452, 280 482 T 580 482 T 880 482 T 1180 482" className="fl fl-c" style={{ animationDelay: "-4s" }} />
+        <path d="M -100 516 Q 145 486, 325 516 T 635 516 T 945 516 T 1255 516" className="fl fl-a" style={{ animationDelay: "-6.5s" }} />
+        <path d="M -100 550 Q 120 520, 300 550 T 600 550 T 900 550 T 1200 550" className="fl fl-b" style={{ animationDelay: "-10s" }} />
+        <path d="M -100 584 Q 155 554, 335 584 T 645 584 T 955 584 T 1265 584" className="fl fl-c" style={{ animationDelay: "-13s" }} />
       </svg>
     </div>
   );
