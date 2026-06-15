@@ -142,20 +142,37 @@ function GrainOverlay() {
   );
 }
 
-function HeroClouds() {
+function HeroWaves() {
   return (
-    <div className="hero-clouds" aria-hidden="true">
-      <svg width="100%" height="120%" preserveAspectRatio="xMidYMid slice">
-        <filter id="cloud-filter">
-          <feTurbulence type="fractalNoise" baseFrequency="0.011" numOctaves="4" seed="11" stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
-          <feComponentTransfer>
-            <feFuncR type="linear" slope="0.55" intercept="0.42" />
-            <feFuncG type="linear" slope="0.55" intercept="0.42" />
-            <feFuncB type="linear" slope="0.55" intercept="0.42" />
-          </feComponentTransfer>
-        </filter>
-        <rect width="100%" height="100%" filter="url(#cloud-filter)" />
+    <div className="hero-bg" aria-hidden="true">
+      <svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <style>{`
+            .hw-wave {
+              animation: hw-wavemove 12s ease-in-out infinite;
+              opacity: 0.15;
+              stroke: #0B0B0C;
+            }
+            .hw-wave:nth-child(2) { animation-delay: -2s; opacity: 0.12; }
+            .hw-wave:nth-child(3) { animation-delay: -4s; opacity: 0.09; }
+            .hw-gridline { stroke: #9A9AA0; opacity: 0.08; stroke-width: 0.5; }
+            @keyframes hw-wavemove {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-20px); }
+            }
+          `}</style>
+        </defs>
+        <g>
+          <line x1="0" y1="150" x2="1200" y2="150" className="hw-gridline" />
+          <line x1="0" y1="300" x2="1200" y2="300" className="hw-gridline" />
+          <line x1="0" y1="450" x2="1200" y2="450" className="hw-gridline" />
+          <line x1="300" y1="0" x2="300" y2="600" className="hw-gridline" />
+          <line x1="600" y1="0" x2="600" y2="600" className="hw-gridline" />
+          <line x1="900" y1="0" x2="900" y2="600" className="hw-gridline" />
+        </g>
+        <path d="M 0 300 Q 150 250, 300 300 T 600 300 T 900 300 T 1200 300" className="hw-wave" fill="none" strokeWidth="2" />
+        <path d="M 0 320 Q 150 270, 300 320 T 600 320 T 900 320 T 1200 320" className="hw-wave" fill="none" strokeWidth="2" />
+        <path d="M 0 340 Q 150 290, 300 340 T 600 340 T 900 340 T 1200 340" className="hw-wave" fill="none" strokeWidth="2" />
       </svg>
     </div>
   );
@@ -348,7 +365,7 @@ export default function Waitlist() {
       <div className="marketing-content">
         {/* Hero */}
         <section id="waitlist" className="relative pt-36 pb-24 md:pb-28 px-6 text-center overflow-hidden">
-          <HeroClouds />
+          <HeroWaves />
           <div className="hero-fade" aria-hidden="true" />
           <div className="relative z-10 max-w-[820px] mx-auto">
             <span className="inline-flex items-center gap-2 font-mono text-[11.5px] tracking-[.2em] uppercase text-[#9A9AA0] mb-5" data-reveal>
