@@ -27,7 +27,12 @@ async function signup({ email, password, org_name }) {
   const { error: linkErr } = await admin
     .from("users")
     .insert({ id: userId, org_id: orgRow.id, email, role: "owner", display_name: org_name || email.split("@")[0] });
-  if (linkErr) throw new Error(`Failed to link user: ${linkErr.message}`);
+  if (linkErr) {
+    await admin.auth.admin.deleteUser(userId).catch(() => {});
+    await admin.from("orgs").delete().eq("id", orgRow.id).catch(() => {});
+    if (linkErr.code === "23505") throw Conflict("User already exists");
+    throw new Error(`Failed to link user: ${linkErr.message}`);
+  }
 
   // Initialize onboarding state
   await admin.from("onboarding_state").insert({
