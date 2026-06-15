@@ -5,18 +5,23 @@ export function StatCard({
   value,
   delta,
   hint,
+  icon,
 }: {
   label: string;
   value: ReactNode;
   delta?: string;
   hint?: string;
+  icon?: ReactNode;
 }) {
   const deltaUp = delta?.startsWith("+") || delta?.startsWith("▲");
   const deltaDown = delta?.startsWith("-") || delta?.startsWith("▼");
   return (
     <div className="bg-surface border border-border rounded-md p-5 shadow-card">
-      <div className="text-xs uppercase tracking-widest text-text-muted font-medium">
-        {label}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs uppercase tracking-widest text-text-muted font-medium">
+          {label}
+        </div>
+        {icon && <span className="text-text-muted">{icon}</span>}
       </div>
       <div className="mt-2 flex items-baseline gap-3">
         <div className="font-mono text-3xl font-bold text-text">{value}</div>

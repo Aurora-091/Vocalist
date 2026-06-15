@@ -454,7 +454,12 @@ function DncUploadForm({ onClose, onDone }: { onClose: () => void; onDone: () =>
     }
 
     try {
-      const res = await api.post("/v1/contacts/dnc-upload", { phones });
+      const res = await api.post<{
+        total_blocked: number;
+        updated: number;
+        created: number;
+        invalid: number;
+      }>("/v1/contacts/dnc-upload", { phones });
       setResult(
         `Blocked ${res.total_blocked} number${res.total_blocked !== 1 ? "s" : ""}. ` +
         `(${res.updated} updated, ${res.created} created, ${res.invalid} invalid)`
