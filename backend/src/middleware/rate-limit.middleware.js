@@ -24,4 +24,15 @@ const webhookLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { apiLimiter, webhookLimiter };
+// Strict limiter for unauthenticated, abuse-prone endpoints
+// (login, signup, password reset, waitlist join). Keyed by IP.
+const authLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req, res) => ipKeyGenerator(req, res),
+  message: { error: { code: "rate_limited", message: "Too many attempts. Please try again shortly." } },
+});
+
+module.exports = { apiLimiter, webhookLimiter, authLimiter };

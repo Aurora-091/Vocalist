@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const { Unauthorized, Forbidden } = require("../utils/errors");
 const { clientForToken } = require("../config/supabase");
+const env = require("../config/env");
+const logger = require("../config/logger");
 const asyncHandler = require("../utils/asyncHandler");
 
 function decodeBearer(req) {
@@ -16,10 +18,25 @@ const requireAuth = asyncHandler(async (req, _res, next) => {
   if (!token) throw Unauthorized("Missing bearer token");
 
   let decoded;
-  try {
-    decoded = jwt.decode(token);
-  } catch {
-    throw Unauthorized("Invalid token");
+  if (env.SUPABASE_JWT_SECRET) {
+    // Cryptographically verify the token signature before trusting any claims.
+    try {
+      decoded = jwt.verify(token, env.SUPABASE_JWT_SECRET, { algorithms: ["HS256"] });
+    } catch {
+      throw Unauthorized("Invalid or expired token");
+    }
+  } else if (env.NODE_ENV !== "production") {
+    // Dev/test convenience only: no secret configured, so fall back to an
+    // unverified decode. This branch is unreachable in production because
+    // SUPABASE_JWT_SECRET is required there (see config/env.js).
+    logger.warn("SUPABASE_JWT_SECRET not set — decoding JWT WITHOUT signature verification (non-production only)");
+    try {
+      decoded = jwt.decode(token);
+    } catch {
+      throw Unauthorized("Invalid token");
+    }
+  } else {
+    throw Unauthorized("Token verification unavailable");
   }
   if (!decoded || typeof decoded !== "object") throw Unauthorized("Invalid token");
 

@@ -49,7 +49,8 @@ function buildCorsOptions() {
       if (allowed.some((o) => origin === o || (o.startsWith("*.") && origin.endsWith(o.slice(1))))) {
         return callback(null, true);
       }
-      if (origin.match(/^https:\/\/.*\.vercel\.app$/)) {
+      // Only allow this project's own Vercel preview deployments, not every *.vercel.app site.
+      if (/^https:\/\/vocalist(-[a-z0-9]+)*(-[a-z0-9-]+)?\.vercel\.app$/.test(origin)) {
         return callback(null, true);
       }
       callback(new Error(`CORS: origin ${origin} not allowed`));

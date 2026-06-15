@@ -5,7 +5,7 @@ export const SITE = {
     "Weeber answers inbound calls, recovers abandoned carts, books appointments, and routes to humans — without breaking consent regulations.",
 };
 
-export const NAV_LINKS = [] as const;
+export const NAV_LINKS: ReadonlyArray<{ href: string; label: string }> = [];
 
 export const FOOTER_COLUMNS = [
   {

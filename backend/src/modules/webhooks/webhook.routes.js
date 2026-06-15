@@ -24,8 +24,12 @@ router.post(
     const raw = req.body;
     const rawString = raw instanceof Buffer ? raw.toString("utf8") : JSON.stringify(raw || {});
     const sigHeader = req.headers["x-vapi-signature"] || req.headers["x-signature"];
+    if (!env.VAPI_WEBHOOK_SECRET) {
+      logger.error("VAPI_WEBHOOK_SECRET not configured — refusing webhook");
+      return res.status(503).json({ error: { code: "webhook_not_configured" } });
+    }
     const signatureOk = verifyVapiSignature(env.VAPI_WEBHOOK_SECRET, rawString, sigHeader);
-    if (!signatureOk && env.NODE_ENV === "production") {
+    if (!signatureOk) {
       logger.warn("Invalid Vapi signature");
       return res.status(401).json({ error: { code: "invalid_signature" } });
     }
@@ -66,10 +70,14 @@ router.post(
     const raw = req.body;
     const rawString = raw instanceof Buffer ? raw.toString("utf8") : JSON.stringify(raw || {});
     const sigHeader = req.headers["elevenlabs-signature"] || req.headers["x-signature"];
-    const webhookSecret = process.env.ELEVENLABS_WEBHOOK_SECRET;
+    const webhookSecret = env.ELEVENLABS_WEBHOOK_SECRET;
 
+    if (!webhookSecret) {
+      logger.error("ELEVENLABS_WEBHOOK_SECRET not configured — refusing webhook");
+      return res.status(503).json({ error: { code: "webhook_not_configured" } });
+    }
     const signatureOk = verifyHmacSha256(webhookSecret, rawString, sigHeader);
-    if (webhookSecret && !signatureOk && env.NODE_ENV === "production") {
+    if (!signatureOk) {
       logger.warn("Invalid ElevenLabs signature");
       return res.status(401).json({ error: { code: "invalid_signature" } });
     }
@@ -87,7 +95,7 @@ router.post(
     const logged = await logWebhookEvent({
       source: "elevenlabs",
       externalId,
-      signatureOk: webhookSecret ? signatureOk : true,
+      signatureOk,
       payload,
     });
     if (logged.duplicate) return res.json({ duplicate: true });
@@ -144,8 +152,12 @@ router.post(
   asyncHandler(async (req, res) => {
     const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
     const sig = req.headers["x-twilio-signature"];
+    if (!env.TWILIO_AUTH_TOKEN) {
+      logger.error("TWILIO_AUTH_TOKEN not configured — refusing webhook");
+      return res.status(503).json({ error: { code: "webhook_not_configured" } });
+    }
     const signatureOk = verifyTwilioSignature(env.TWILIO_AUTH_TOKEN, url, req.body, sig);
-    if (!signatureOk && env.NODE_ENV === "production") {
+    if (!signatureOk) {
       return res.status(401).json({ error: { code: "invalid_signature" } });
     }
 
@@ -176,8 +188,12 @@ router.post(
     const crypto = require("crypto");
     const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
     const sig = req.headers["x-twilio-signature"];
+    if (!env.TWILIO_AUTH_TOKEN) {
+      logger.error("TWILIO_AUTH_TOKEN not configured — refusing voice webhook");
+      return res.status(503).type("text/xml").send("<Response/>");
+    }
     const signatureOk = verifyTwilioSignature(env.TWILIO_AUTH_TOKEN, url, req.body, sig);
-    if (!signatureOk && env.NODE_ENV === "production") {
+    if (!signatureOk) {
       return res.status(401).type("text/xml").send("<Response/>");
     }
 

@@ -2,6 +2,7 @@ const express = require("express");
 const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth } = require("../../middleware/auth.middleware");
+const { authLimiter } = require("../../middleware/rate-limit.middleware");
 const service = require("./auth.service");
 const { signupSchema, loginSchema, refreshSchema, resetSchema } = require("./auth.validator");
 
@@ -9,6 +10,7 @@ const router = express.Router();
 
 router.post(
   "/signup",
+  authLimiter,
   validate({ body: signupSchema }),
   asyncHandler(async (req, res) => {
     const result = await service.signup(req.body);
@@ -18,6 +20,7 @@ router.post(
 
 router.post(
   "/login",
+  authLimiter,
   validate({ body: loginSchema }),
   asyncHandler(async (req, res) => {
     const result = await service.login(req.body);
@@ -27,6 +30,7 @@ router.post(
 
 router.post(
   "/refresh",
+  authLimiter,
   validate({ body: refreshSchema }),
   asyncHandler(async (req, res) => {
     const result = await service.refresh(req.body);
@@ -45,6 +49,7 @@ router.post(
 
 router.post(
   "/password-reset",
+  authLimiter,
   validate({ body: resetSchema }),
   asyncHandler(async (req, res) => {
     const result = await service.requestPasswordReset(req.body);

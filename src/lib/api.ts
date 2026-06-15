@@ -1,6 +1,14 @@
 import { supabase } from "./supabase";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://vocalist-production.up.railway.app";
+// In dev, an empty base URL means requests are relative and handled by the Vite
+// proxy (see vite.config.ts). In production the var must be set explicitly so we
+// never silently fall back to a hardcoded environment.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+
+if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is required in production builds but was not set.");
+}
+
 const TIMEOUT_MS = 15_000;
 
 class ApiError extends Error {
