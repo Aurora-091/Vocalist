@@ -4,7 +4,7 @@ import { Menu, X } from "lucide-react";
 import { NAV_LINKS } from "../../config/marketing";
 import { WeeberLogo } from "../WeeberLogo";
 
-export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
+export function MarketingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
@@ -25,13 +25,13 @@ export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
         scrolled
-          ? "bg-[#FCFCFB]/86 backdrop-blur-[10px] border-b border-[#E6E5E2]"
+          ? "bg-[var(--m-bg)]/86 backdrop-blur-[10px] border-b border-[var(--m-border)]"
           : "bg-transparent border-b border-transparent"
       }`}
     >
       <div className="max-w-[1100px] mx-auto px-6 h-[66px] flex items-center justify-between">
         <Link to="/" className="flex items-center">
-          <WeeberLogo size="md" className={darkLogo ? "[filter:brightness(0)]" : ""} />
+          <WeeberLogo size="md" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -39,7 +39,7 @@ export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
             <Link
               key={link.href}
               to={link.href}
-              className="text-[15px] text-[#67676C] hover:text-[#0B0B0C] transition-colors"
+              className="text-[15px] text-[var(--m-text-secondary)] hover:text-[var(--m-text)] transition-colors"
             >
               {link.label}
             </Link>
@@ -49,7 +49,7 @@ export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
         <div className="hidden md:flex items-center gap-4">
           <a
             href="#faq"
-            className="text-[15px] text-[#67676C] hover:text-[#0B0B0C] transition-colors"
+            className="text-[15px] text-[var(--m-text-secondary)] hover:text-[var(--m-text)] transition-colors"
           >
             Help
           </a>
@@ -58,7 +58,7 @@ export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
         <button
           type="button"
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden p-2 text-[#0B0B0C]"
+          className="md:hidden p-2 text-[var(--m-text)]"
           aria-label="Toggle menu"
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -66,13 +66,13 @@ export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden bg-[#FCFCFB] border-b border-[#E6E5E2] px-6 pb-6">
+        <div className="md:hidden bg-[var(--m-bg)] border-b border-[var(--m-border)] px-6 pb-6">
           <nav className="flex flex-col gap-4 mb-6">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
-                className="text-sm text-[#67676C] hover:text-[#0B0B0C]"
+                className="text-sm text-[var(--m-text-secondary)] hover:text-[var(--m-text)]"
               >
                 {link.label}
               </Link>
@@ -81,7 +81,7 @@ export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
           <div className="flex flex-col gap-3">
             <a
               href="#faq"
-              className="text-sm text-[#67676C] hover:text-[#0B0B0C]"
+              className="text-sm text-[var(--m-text-secondary)] hover:text-[var(--m-text)]"
             >
               Help
             </a>

@@ -160,21 +160,31 @@
   }
 }
 
-/* Marketing pages always render in light mode — never inherit dark theme */
+/* Marketing page tokens — system-dependent light/dark */
 .marketing {
-  color-scheme: light;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --border: oklch(0.922 0 0);
-  --color-bg: #F8F9FB;
-  --color-surface: #FFFFFF;
-  --color-surface-2: #F1F3F7;
-  --color-text: #0F172A;
-  --color-text-secondary: #475569;
-  --color-text-muted: #64748B;
-  --color-text-placeholder: #94A3B8;
-  background-color: #F8F9FB;
-  color: #0F172A;
+  --m-bg: #FCFCFB;
+  --m-bg-alt: #F3F2EF;
+  --m-surface: #FFFFFF;
+  --m-border: #E6E5E2;
+  --m-text: #0B0B0C;
+  --m-text-secondary: #67676C;
+  --m-text-muted: #9A9AA0;
+  --m-accent-bg: #0B0B0C;
+  --m-accent-fg: #FCFCFB;
+  background-color: var(--m-bg);
+  color: var(--m-text);
+}
+
+:is(.dark) .marketing {
+  --m-bg: #000000;
+  --m-bg-alt: #0A0A0A;
+  --m-surface: #141414;
+  --m-border: rgba(255, 255, 255, 0.08);
+  --m-text: #FAFAFA;
+  --m-text-secondary: #A1A1A1;
+  --m-text-muted: #666666;
+  --m-accent-bg: #FAFAFA;
+  --m-accent-fg: #000000;
 }
 
 html {
@@ -398,7 +408,7 @@ textarea:disabled {
   display: inline-block;
   width: 4px;
   border-radius: 4px;
-  background: #9A9AA0;
+  background: var(--m-text-muted, #9A9AA0);
   animation: waveanim 1.2s ease-in-out infinite;
 }
 
@@ -428,6 +438,11 @@ textarea:disabled {
   transform-origin: bottom;
 }
 
+:is(.dark) .hero-wave-bar {
+  background: linear-gradient(180deg, #FAFAFA 0%, #64748B 50%, #334155 100%);
+  opacity: 0.2;
+}
+
 @keyframes heroBgWave {
   0%, 100% { transform: scaleY(0.5); opacity: 0.25; }
   50% { transform: scaleY(1); opacity: 0.4; }
@@ -449,7 +464,7 @@ textarea:disabled {
   bottom: 0;
   height: 55%;
   z-index: 1;
-  background: linear-gradient(180deg, transparent 0%, #FCFCFB 86%);
+  background: linear-gradient(180deg, transparent 0%, var(--m-bg, #FCFCFB) 86%);
 }
 
 .btn-press:active {
