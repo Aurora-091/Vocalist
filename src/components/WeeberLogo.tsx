@@ -37,5 +37,12 @@ export function WeeberLogo({
     ...(inverted ? { filter: "brightness(0) invert(1)" } : {}),
   };
 
-  return <img src={src} alt="Weeber" style={style} className={className} />;
+  return (
+    <img
+      src={src}
+      alt="Weeber"
+      style={style}
+      className={`${inverted ? "" : "dark:invert"} ${className}`}
+    />
+  );
 }
