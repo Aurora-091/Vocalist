@@ -4,7 +4,7 @@ import { Menu, X } from "lucide-react";
 import { NAV_LINKS } from "../../config/marketing";
 import { WeeberLogo } from "../WeeberLogo";
 
-export function MarketingNav() {
+export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
@@ -31,7 +31,7 @@ export function MarketingNav() {
     >
       <div className="max-w-[1100px] mx-auto px-6 h-[66px] flex items-center justify-between">
         <Link to="/" className="flex items-center">
-          <WeeberLogo size="md" />
+          <WeeberLogo size="md" className={darkLogo ? "brightness-0" : ""} />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">

@@ -417,6 +417,21 @@ textarea:disabled {
   50% { box-shadow: 0 0 0 6px rgba(34,197,94,0.05); }
 }
 
+.hero-wave-bar {
+  flex: 1;
+  max-width: 8px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #94A3B8 0%, #CBD5E1 100%);
+  opacity: 0.18;
+  animation: heroBgWave 4s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+@keyframes heroBgWave {
+  0%, 100% { transform: scaleY(0.6); opacity: 0.12; }
+  50% { transform: scaleY(1); opacity: 0.22; }
+}
+
 .hero-bg {
   position: absolute;
   inset: 0;
