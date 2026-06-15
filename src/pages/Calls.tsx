@@ -3,6 +3,15 @@ import { Phone, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { listCalls, getCall } from "../lib/db";
 import { Badge } from "../components/legacy-ui/Badge";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from "@/components/ui/table";
 
 type Call = {
   id: string;
@@ -99,14 +108,14 @@ export default function Calls() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block bg-surface border border-border rounded-md shadow-card overflow-hidden">
-            <table className="w-full text-sm" aria-describedby="calls-desc" aria-label="Call history">
-              <caption className="sr-only">
+          <div className="hidden md:block bg-card border border-border rounded-md shadow-card overflow-hidden">
+            <Table aria-describedby="calls-desc" aria-label="Call history">
+              <TableCaption srOnly>
                 {calls.length} call{calls.length !== 1 ? "s" : ""}
                 {filter ? `, filtered to ${filter}` : ""}. Sorted by {sortField.replace(/_/g, " ")} {sortDir === "asc" ? "ascending" : "descending"}.
-              </caption>
-              <thead className="bg-surface-2 text-text-muted">
-                <tr>
+              </TableCaption>
+              <TableHeader className="bg-muted">
+                <TableRow>
                   <SortableTh
                     field="started_at"
                     current={sortField}
@@ -116,8 +125,8 @@ export default function Calls() {
                   >
                     When
                   </SortableTh>
-                  <Th scope="col">Direction</Th>
-                  <Th scope="col">Status</Th>
+                  <Th>Direction</Th>
+                  <Th>Status</Th>
                   <SortableTh
                     field="duration_sec"
                     current={sortField}
@@ -136,14 +145,14 @@ export default function Calls() {
                   >
                     Cost
                   </SortableTh>
-                  <Th scope="col">Provider</Th>
-                </tr>
-              </thead>
-              <tbody>
+                  <Th>Provider</Th>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {(sorted || []).map((c) => (
-                  <tr
+                  <TableRow
                     key={c.id}
-                    className="border-t border-border hover:bg-surface-2 cursor-pointer focus-within:bg-surface-2"
+                    className="cursor-pointer focus-within:bg-muted/50"
                     onClick={() => setSelected(c.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -162,7 +171,7 @@ export default function Calls() {
                     </Td>
                     <Td>
                       <span className="inline-flex items-center gap-1.5">
-                        <Phone className="w-3 h-3 text-text-muted" aria-hidden="true" />
+                        <Phone className="size-3 text-muted-foreground" aria-hidden="true" />
                         {c.direction}
                       </span>
                     </Td>
@@ -181,11 +190,11 @@ export default function Calls() {
                         ? `$${Number(c.cost_usd).toFixed(2)}`
                         : <span aria-label="Unknown cost">—</span>}
                     </Td>
-                    <Td className="text-text-muted">{c.provider}</Td>
-                  </tr>
+                    <Td className="text-muted-foreground">{c.provider}</Td>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Mobile card list */}

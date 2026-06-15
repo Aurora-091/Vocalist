@@ -1,14 +1,27 @@
 import { ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+import { Badge as UiBadge } from "@/components/ui/badge";
+
 type Tone = "success" | "warning" | "danger" | "info" | "neutral" | "primary";
 
+// Tone classes override the base Badge colors while keeping its shape/size/focus styles.
 const tones: Record<Tone, string> = {
   success: "bg-success/15 text-success",
   warning: "bg-warning/15 text-warning",
-  danger:  "bg-danger/15 text-danger",
-  info:    "bg-info/15 text-info",
-  neutral: "bg-surface-2 text-text border border-border",
+  danger: "bg-danger/15 text-danger",
+  info: "bg-info/15 text-info",
+  neutral: "bg-muted text-foreground border-border",
   primary: "bg-primary/15 text-primary",
+};
+
+const dotColors: Record<Tone, string> = {
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-danger",
+  info: "bg-info",
+  neutral: "bg-muted-foreground",
+  primary: "bg-primary",
 };
 
 export function Badge({
@@ -21,32 +34,18 @@ export function Badge({
   dot?: boolean;
 }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${tones[tone]}`}
-    >
-      {dot && (
-        <span
-          className={`w-1.5 h-1.5 rounded-full ${
-            tone === "success"
-              ? "bg-success"
-              : tone === "warning"
-              ? "bg-warning"
-              : tone === "danger"
-              ? "bg-danger"
-              : tone === "info"
-              ? "bg-info"
-              : tone === "primary"
-              ? "bg-primary"
-              : "bg-text-muted"
-          }`}
-        />
-      )}
+    <UiBadge variant="secondary" className={cn(tones[tone])}>
+      {dot && <span className={cn("size-1.5 rounded-full", dotColors[tone])} />}
       {children}
-    </span>
+    </UiBadge>
   );
 }
 
-export function ConsentBadge({ status }: { status: "granted" | "none" | "revoked" }) {
+export function ConsentBadge({
+  status,
+}: {
+  status: "granted" | "none" | "revoked";
+}) {
   const map = {
     granted: { tone: "success" as const, label: "granted" },
     none: { tone: "neutral" as const, label: "none" },
