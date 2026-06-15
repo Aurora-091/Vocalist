@@ -90,7 +90,7 @@ export default function About() {
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#0F172A] mb-12">
             The people behind Weeber
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl">
             {TEAM.map((member) => (
               <div key={member.name}>
                 <div className="aspect-[4/5] bg-[#E8ECF1] rounded-none mb-4" />

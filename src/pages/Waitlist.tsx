@@ -322,6 +322,31 @@ export default function Waitlist() {
         </div>
       </section>
 
+      {/* Founders */}
+      <section className="border-t border-[#E2E8F0] bg-[#F0EDE4]">
+        <div className="max-w-[1200px] mx-auto px-6 py-20 md:py-24">
+          <div className="max-w-2xl">
+            <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-4">
+              From the founders
+            </div>
+            <blockquote className="text-xl md:text-2xl font-medium leading-snug text-[#0F172A] tracking-tight">
+              "We kept watching good businesses lose customers to a phone nobody could answer — and watched 'AI calling' tools that sounded like robots. So we built one that sounds human, sets up in an afternoon, and works for the business you actually run."
+            </blockquote>
+            <div className="mt-8 flex items-center gap-6">
+              <div>
+                <p className="font-semibold text-sm text-[#0F172A]">Ashutosh Pawar</p>
+                <p className="text-xs text-[#64748B]">Co-founder, Weeber</p>
+              </div>
+              <span className="text-[#D9D5CE]">&</span>
+              <div>
+                <p className="font-semibold text-sm text-[#0F172A]">Rushikesh Pawar</p>
+                <p className="text-xs text-[#64748B]">Co-founder, Weeber</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <MarketingFooter />
     </div>
   );

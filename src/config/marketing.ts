@@ -31,18 +31,9 @@ export const FOOTER_COLUMNS = [
   },
 ] as const;
 
-export const TRACTION_STATS = [
-  { value: "2.4M", label: "Calls handled" },
-  { value: "340+", label: "Active businesses" },
-  { value: "99.7%", label: "Uptime SLA" },
-  { value: "<2s", label: "Avg. pickup time" },
-] as const;
-
 export const TEAM = [
-  { name: "Marcus Chen", role: "CEO & Co-founder", bio: "Ex-Twilio. Built voice infra at scale." },
-  { name: "Sarah Okafor", role: "CTO & Co-founder", bio: "ML engineer. Previously at Deepgram." },
-  { name: "James Whitfield", role: "Head of Compliance", bio: "Former TCPA counsel at FCC." },
-  { name: "Priya Sharma", role: "VP Engineering", bio: "Distributed systems. Ex-Stripe." },
+  { name: "Ashutosh Pawar", role: "Co-founder", bio: "Built and scaled AdloomX. Performance marketing to voice AI." },
+  { name: "Rushikesh Pawar", role: "Co-founder", bio: "AI/ML engineer. Building the voice and compliance infrastructure." },
 ] as const;
 
 export const VALUES = [
@@ -62,13 +53,6 @@ export const VALUES = [
     title: "Humans in the loop",
     body: "AI handles volume. Humans handle nuance. We make the handoff seamless.",
   },
-] as const;
-
-export const INVESTORS_STATS = [
-  { value: "$4.2M", label: "ARR" },
-  { value: "18%", label: "MoM growth" },
-  { value: "92%", label: "Gross margin" },
-  { value: "< 3%", label: "Monthly churn" },
 ] as const;
 
 export const CALL_TRANSCRIPT = [
