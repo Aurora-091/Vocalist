@@ -21,6 +21,24 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 
 ---
 
+## Remediation status (updated 2026-06-16)
+
+All Critical and High findings have been fixed in code:
+
+| ID | Status | Change |
+|----|--------|--------|
+| C1 | ✅ Fixed | `auth.middleware.js` now `jwt.verify()`s tokens with `SUPABASE_JWT_SECRET` (HS256); unverified `jwt.decode()` only remains as an explicit non-production fallback when no secret is set. |
+| C2 | ✅ Fixed | New strict `authLimiter` (10 req/min/IP) applied directly to `/v1/auth/{login,signup,refresh,password-reset}` and `/v1/waitlist/join`. |
+| H1 | ✅ Resolved by C1 | Role/org claims are now only trusted after signature verification. |
+| H2 | ✅ Fixed | CORS no longer allows any `*.vercel.app`; restricted to this project's `vocalist-*.vercel.app` deployments. |
+| H3 | ✅ Fixed | `src/lib/api.ts` no longer falls back to a hardcoded prod URL; relative in dev, throws on missing `VITE_API_BASE_URL` in prod builds. |
+| H4 | ✅ Fixed | `npm audit fix` in `backend/` — 0 vulnerabilities. |
+| H5 | ✅ Fixed | Vapi/ElevenLabs/Twilio webhooks now reject (503) when their secret is unset and enforce signatures in **all** environments. |
+
+Verification: frontend `vite build` passes, backend `lint:syntax` passes, and all 66 backend invariant tests pass. Medium/Low items below remain open and are tracked for follow-up.
+
+---
+
 ## Critical
 
 ### C1 — API trusts unverified JWTs (signature never checked)
