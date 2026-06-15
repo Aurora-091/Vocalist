@@ -200,6 +200,31 @@ function HeroWaves() {
   );
 }
 
+function HeroBadge() {
+  const { count } = useWaitlistCount();
+  const displayCount = count !== null ? count + BASE_COUNT : BASE_COUNT;
+  return (
+    <div className="mb-6 inline-flex items-center gap-2 bg-[#F3F2EF] border border-[#E6E5E2] rounded-full px-3.5 py-1.5 text-[13px] text-[#67676C]" data-reveal>
+      <span className="w-[7px] h-[7px] rounded-full bg-[#22c55e] inline-block hero-pulse-dot" />
+      {displayCount} businesses already on the waitlist
+    </div>
+  );
+}
+
+function HeroWaveform() {
+  return (
+    <div className="flex items-center justify-center gap-[5px] h-12 my-7" aria-hidden="true" data-reveal>
+      {[16, 30, 42, 48, 42, 30, 16].map((h, i) => (
+        <span
+          key={i}
+          className="waveform-bar"
+          style={{ height: `${h}px`, animationDelay: `${i * 0.1}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function HeroForm() {
   const { count } = useWaitlistCount();
   const [name, setName] = useState("");
@@ -240,7 +265,7 @@ function HeroForm() {
     }
   }
 
-  const inputClass = "w-full h-12 px-4 pr-10 text-[16px] bg-white border border-[#E6E5E2] text-[#0B0B0C] placeholder:text-[#9A9AA0] focus:border-[#0B0B0C] focus:outline-none transition-colors rounded-[11px]";
+  const inputClass = "w-full h-12 px-4 pr-10 text-[16px] bg-[#FCFCFB] border-[1.5px] border-[#E6E5E2] text-[#0B0B0C] placeholder:text-[#9A9AA0] focus:border-[#9A9AA0] focus:outline-none focus:shadow-[0_0_0_3px_rgba(154,154,160,0.1)] transition-all rounded-lg";
 
   return (
     <div className="max-w-[430px] mx-auto">
@@ -280,7 +305,7 @@ function HeroForm() {
           <button
             type="submit"
             disabled={state === "loading" || !canSubmit}
-            className="h-12 px-5 text-[15px] font-semibold bg-[#0B0B0C] text-white rounded-[11px] hover:opacity-90 transition-opacity disabled:opacity-50 btn-press whitespace-nowrap"
+            className="h-12 px-7 text-[1rem] font-semibold bg-[#0B0B0C] text-[#FCFCFB] border-none rounded-lg hover:opacity-[0.85] transition-opacity disabled:opacity-50 btn-press whitespace-nowrap cursor-pointer"
           >
             {state === "loading" ? "Joining..." : "Get early access"}
           </button>
@@ -306,16 +331,9 @@ function HeroForm() {
         )}
       </form>
 
-      <p className="mt-3 text-[13.5px] text-center text-[#0B0B0C] font-semibold">
-        First 100 customers lock in <span className="border-b-2 border-[#0B0B0C] pb-px">founder pricing.</span>
+      <p className="mt-4 text-[13px] text-center text-[#9A9AA0]">
+        First 100 customers lock in <span className="font-bold text-[#0B0B0C]">founder pricing.</span>
       </p>
-
-      <div className="mt-5 flex items-center justify-center gap-2.5">
-        <span className="w-[7px] h-[7px] rounded-full bg-[#0B0B0C] animate-pulse" />
-        <span className="text-[14px] text-[#67676C]">
-          <span className="font-mono font-medium text-[#0B0B0C]">{displayCount}</span> businesses already on the waitlist
-        </span>
-      </div>
 
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
         <DialogContent className="sm:max-w-[460px] p-6 bg-white text-[#0B0B0C] border border-[#E6E5E2] shadow-[0_20px_50px_-34px_rgba(0,0,0,0.35)] [&_button[data-slot=dialog-close]]:text-[#67676C] [&_button[data-slot=dialog-close]]:hover:text-[#0B0B0C]">
@@ -390,13 +408,15 @@ export default function Waitlist() {
           <HeroWaves />
           <div className="hero-fade" aria-hidden="true" />
           <div className="relative z-10 max-w-[900px] mx-auto">
-            <h1 className="font-display text-[clamp(38px,6vw,72px)] font-extrabold leading-[0.93] tracking-[-0.035em] text-[#0B0B0C]" data-reveal>
-              Every call you miss is a customer your competitor just won.
+            <HeroBadge />
+            <h1 className="font-display text-[clamp(2.8rem,6vw,5.5rem)] font-extrabold leading-[0.93] tracking-[-0.03em] text-[#0B0B0C]" data-reveal>
+              Every call you miss<br />is a sale you just lost.
             </h1>
-            <p className="mt-7 text-[clamp(17px,1.6vw,21px)] text-[#4A4A4F] max-w-[54ch] mx-auto leading-[1.6]" data-reveal>
-              Weeber is a voice AI that answers and makes your customer calls for you — booking appointments, recovering abandoned carts, and following up on every order. It sounds human, runs 24/7, and never lets a lead go cold. No code.
+            <p className="mt-6 text-[1.1rem] text-[#67676C] max-w-[480px] mx-auto leading-[1.6]" data-reveal>
+              Voice AI that books, recovers carts, and follows up. 24/7. No code.
             </p>
-            <div className="mt-10" data-reveal>
+            <HeroWaveform />
+            <div className="mt-0" data-reveal>
               <HeroForm />
             </div>
           </div>
