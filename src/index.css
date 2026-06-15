@@ -419,17 +419,18 @@ textarea:disabled {
 
 .hero-wave-bar {
   flex: 1;
-  max-width: 8px;
-  border-radius: 4px 4px 0 0;
-  background: linear-gradient(180deg, #94A3B8 0%, #CBD5E1 100%);
-  opacity: 0.18;
-  animation: heroBgWave 4s ease-in-out infinite;
+  max-width: 12px;
+  min-width: 6px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, #0B0B0C 0%, #475569 50%, #94A3B8 100%);
+  opacity: 0.35;
+  animation: heroBgWave 3.5s ease-in-out infinite;
   transform-origin: bottom;
 }
 
 @keyframes heroBgWave {
-  0%, 100% { transform: scaleY(0.6); opacity: 0.12; }
-  50% { transform: scaleY(1); opacity: 0.22; }
+  0%, 100% { transform: scaleY(0.5); opacity: 0.25; }
+  50% { transform: scaleY(1); opacity: 0.4; }
 }
 
 .hero-bg {
@@ -438,7 +439,6 @@ textarea:disabled {
   z-index: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.6;
   pointer-events: none;
 }
 

@@ -31,7 +31,7 @@ export function MarketingNav({ darkLogo = false }: { darkLogo?: boolean }) {
     >
       <div className="max-w-[1100px] mx-auto px-6 h-[66px] flex items-center justify-between">
         <Link to="/" className="flex items-center">
-          <WeeberLogo size="md" className={darkLogo ? "brightness-0" : ""} />
+          <WeeberLogo size="md" className={darkLogo ? "[filter:brightness(0)]" : ""} />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
