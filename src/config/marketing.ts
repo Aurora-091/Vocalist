@@ -123,3 +123,137 @@ export const WAITLIST_BENEFITS = [
     body: "Early users get a direct line to our product team. Your use case drives what ships next.",
   },
 ] as const;
+
+export const STATS = [
+  { value: "62%", label: "of calls to small businesses go unanswered" },
+  { value: "85%", label: "of those callers never ring back — they call a competitor" },
+  { value: "~70%", label: "of online carts are abandoned before checkout" },
+  { value: "21×", label: "more likely to win a lead if you reply within 5 minutes" },
+] as const;
+
+export const VERTICALS = [
+  {
+    label: "Local & service",
+    headline: "Clinics, plumbers, salons & repair shops",
+    problem: "You're with a customer or closed for the night, so the phone rings out. Six of ten callers never reach you — and book the next name on Google.",
+    solution: "Weeber picks up every call on the first ring, qualifies the job, books into your calendar, and texts the confirmation.",
+    demoLabel: "Appointment booking",
+    demoAccent: "English · warm",
+    demoDuration: "0:22",
+    cta: { label: "Join the waitlist", href: "/#waitlist" },
+  },
+  {
+    label: "D2C & e-commerce",
+    headline: "Shopify, WordPress & custom stores",
+    problem: "Seven of ten carts get abandoned and ad leads go cold in minutes. Every step — order, shipping, delivery, review — leaks revenue.",
+    solution: "Weeber calls at every step automatically, then follows up on WhatsApp if the call's missed. Built by clicking, not coding.",
+    demoLabel: "Shopify cart recovery",
+    demoAccent: "English · friendly",
+    demoDuration: "0:25",
+    cta: { label: "Join the waitlist", href: "/#waitlist" },
+  },
+  {
+    label: "Enterprise",
+    headline: "High-volume & regulated teams",
+    problem: "Thousands of calls across locations and queues, legacy systems that don't talk, and compliance you can't bend on.",
+    solution: "A voice agent built to your scripts, systems and security bar — custom integrations, audit logs, SLAs. Our engineers, not a help doc.",
+    demoLabel: "Support triage",
+    demoAccent: "English · neutral",
+    demoDuration: "0:21",
+    cta: { label: "Talk to our team", href: "mailto:hello@weeber.ai" },
+  },
+] as const;
+
+export const VOICES = [
+  { name: "Aria", tag: "English · US" },
+  { name: "Kabir", tag: "Hindi · warm" },
+  { name: "Maya", tag: "English · Indian" },
+  { name: "Sam", tag: "English · UK" },
+] as const;
+
+export const PLATFORM_FEATURES = [
+  {
+    title: "Drag-and-drop call flows",
+    body: "For any moment in your customer journey.",
+  },
+  {
+    title: "Human-sounding voices",
+    body: "50+ voices, multiple languages, your script.",
+  },
+  {
+    title: "Every call in one dashboard",
+    body: "Recorded, transcribed, and scored.",
+  },
+  {
+    title: "Two-way sync",
+    body: "With your CRM, store, calendar, and ads.",
+  },
+] as const;
+
+export const READY_FLOWS = [
+  "Abandoned cart recovery",
+  "Appointment booking",
+  "Order & shipping updates",
+  "Review & feedback calls",
+] as const;
+
+export const UPCOMING_VERTICALS = [
+  {
+    title: "Hotels & hospitality",
+    body: "Booking confirmations, pre-arrival concierge, and review calls.",
+  },
+  {
+    title: "Hospitals & healthcare",
+    body: "Appointment reminders, no-show recovery, and follow-ups at scale.",
+  },
+  {
+    title: "Real estate",
+    body: "Instant lead callbacks, viewings, and status updates.",
+  },
+  {
+    title: "Logistics & delivery",
+    body: "Delivery windows, failed-attempt rescheduling, and confirmations.",
+  },
+] as const;
+
+export const SECURITY_FEATURES = [
+  {
+    title: "End-to-end encrypted",
+    body: "Every call and record, in transit and at rest.",
+  },
+  {
+    title: "Used only for your flows",
+    body: "Never sold, never shared, never used to train anyone else's models.",
+  },
+  {
+    title: "You control access",
+    body: "Role-based permissions and full audit logs on every action.",
+  },
+] as const;
+
+export const FAQ = [
+  {
+    q: "Will it actually sound human?",
+    a: "Yes — natural voices with real back-and-forth, not a phone-tree robot. Most callers don't realize it's AI.",
+  },
+  {
+    q: "Do I need a developer?",
+    a: "No. You build call flows by clicking. Most teams are live the same day.",
+  },
+  {
+    q: "Which platforms does it work with?",
+    a: "Shopify, WordPress/WooCommerce, custom sites, and 50+ tools. Missing one? Request it and we'll add the connector.",
+  },
+  {
+    q: "What will it cost?",
+    a: "The first waitlist customers lock in founder pricing for life. Full pricing is set at launch.",
+  },
+  {
+    q: "Is my customers' data safe?",
+    a: "Encrypted end to end, used only to run the flows you build, never sold or shared.",
+  },
+  {
+    q: "When does the beta open?",
+    a: "We're onboarding in small batches now. Join the list and we'll reach out by industry.",
+  },
+] as const;
