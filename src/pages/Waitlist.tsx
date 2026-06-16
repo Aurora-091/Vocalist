@@ -371,13 +371,13 @@ export default function Waitlist() {
             <div className="mb-14" data-reveal>
               <span className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[.16em] uppercase text-[var(--m-text-muted)]">
                 <span className="w-[6px] h-[6px] rounded-full bg-[var(--m-text)] animate-pulse" />
-                Live demo
+                Live demos
               </span>
               <h2 className="mt-4 font-display text-[clamp(28px,3.8vw,46px)] font-extrabold tracking-[-0.03em] leading-[1.04] text-[var(--m-text)] max-w-xl">
-                89 seconds. One confirmed order. Zero scripts.
+                Hear your agents in action.
               </h2>
               <p className="mt-3 text-[17px] text-[var(--m-text-secondary)] max-w-lg">
-                Listen to a real COD confirmation call — the agent switches to Hindi, confirms the order details, and closes in under 90 seconds.
+                Real calls, real conversations. Navigate between demos to hear how Weeber handles COD confirmations, appointment booking, and cart recovery.
               </p>
             </div>
             <div data-reveal>
