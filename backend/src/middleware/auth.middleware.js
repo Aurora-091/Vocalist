@@ -1,8 +1,5 @@
-const jwt = require("jsonwebtoken");
 const { Unauthorized, Forbidden } = require("../utils/errors");
-const { clientForToken } = require("../config/supabase");
-const env = require("../config/env");
-const logger = require("../config/logger");
+const { requireAdmin, clientForToken } = require("../config/supabase");
 const asyncHandler = require("../utils/asyncHandler");
 
 function decodeBearer(req) {
@@ -17,38 +14,19 @@ const requireAuth = asyncHandler(async (req, _res, next) => {
   const token = decodeBearer(req);
   if (!token) throw Unauthorized("Missing bearer token");
 
-  let decoded;
-  if (env.SUPABASE_JWT_SECRET) {
-    // Cryptographically verify the token signature before trusting any claims.
-    try {
-      decoded = jwt.verify(token, env.SUPABASE_JWT_SECRET, { algorithms: ["HS256"] });
-    } catch {
-      throw Unauthorized("Invalid or expired token");
-    }
-  } else if (env.NODE_ENV !== "production") {
-    // Dev/test convenience only: no secret configured, so fall back to an
-    // unverified decode. This branch is unreachable in production because
-    // SUPABASE_JWT_SECRET is required there (see config/env.js).
-    logger.warn("SUPABASE_JWT_SECRET not set — decoding JWT WITHOUT signature verification (non-production only)");
-    try {
-      decoded = jwt.decode(token);
-    } catch {
-      throw Unauthorized("Invalid token");
-    }
-  } else {
-    throw Unauthorized("Token verification unavailable");
-  }
-  if (!decoded || typeof decoded !== "object") throw Unauthorized("Invalid token");
+  // Verify via Supabase — compatible with both legacy HS256 and new ECC P-256 signing keys.
+  const admin = requireAdmin();
+  const { data, error } = await admin.auth.getUser(token);
+  if (error || !data?.user) throw Unauthorized("Invalid or expired token");
 
-  const sub = decoded.sub;
-  const orgId = decoded.org_id || decoded.app_metadata?.org_id;
-  if (!sub) throw Unauthorized("Token missing subject");
+  const user = data.user;
+  const orgId = user.app_metadata?.org_id || null;
 
   req.auth = {
-    userId: sub,
-    orgId: orgId || null,
-    email: decoded.email || null,
-    role: decoded.app_metadata?.role || decoded.role || null,
+    userId: user.id,
+    orgId,
+    email: user.email || null,
+    role: user.app_metadata?.role || user.role || null,
     token,
   };
   req.supabase = clientForToken(token);

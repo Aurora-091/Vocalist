@@ -15,7 +15,7 @@ const schema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(20),
   SUPABASE_SERVICE_ROLE_KEY: isProduction ? z.string().min(20) : z.string().min(20).optional(),
-  SUPABASE_JWT_SECRET: isProduction ? z.string().min(20) : z.string().min(20).optional(),
+  SUPABASE_JWT_SECRET: z.string().min(20).optional(),
 
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
@@ -80,7 +80,7 @@ if (!parsed.success) {
   console.error("FATAL: Invalid environment configuration:");
   console.error(JSON.stringify(fields, null, 2));
   if (isProduction) {
-    console.error("Production requires: SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET");
+    console.error("Production requires: SUPABASE_SERVICE_ROLE_KEY");
   }
   if (runWorkers) {
     console.error("Worker mode (RUN_WORKERS=1) requires: ELEVENLABS_API_KEY, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN");
