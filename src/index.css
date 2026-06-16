@@ -560,51 +560,48 @@ textarea:disabled {
   50% { transform: scale(1.04); }
 }
 
-.demo-call-btn {
-  margin-top: -24px;
-  position: relative;
+.demo-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: var(--m-accent-bg);
-  color: var(--m-accent-fg);
-  border: 3px solid var(--m-surface);
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1), background 0.15s ease;
 }
 
-.demo-call-btn:hover:not(:disabled) {
-  transform: scale(1.08);
+.demo-play-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.28);
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
-.demo-call-btn:active:not(:disabled) {
-  transform: scale(0.95);
+.demo-play-btn:active:not(:disabled) {
+  transform: translate(-50%, -50%) scale(0.95);
 }
 
-.demo-call-btn:disabled {
-  opacity: 0.4;
+.demo-play-btn:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
-}
-
-.demo-call-btn--active {
-  background: #dc2626;
-  border-color: var(--m-surface);
-  color: #fff;
 }
 
 .demo-progress-ring {
   position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-90deg);
-  width: 64px;
-  height: 64px;
   pointer-events: none;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  transform: rotate(-90deg);
 }
 
 .demo-bottom-bar {
@@ -624,23 +621,6 @@ textarea:disabled {
   flex-shrink: 0;
   background: radial-gradient(circle at 40% 35%, #8ECAE6, #264653);
   box-shadow: 0 2px 6px rgba(38, 70, 83, 0.3);
-}
-
-.demo-mode-pill {
-  padding: 5px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--m-text-muted);
-  transition: all 0.15s ease;
-}
-
-.demo-mode-pill--active {
-  background: var(--m-surface);
-  color: var(--m-text);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  border: 1px solid var(--m-border);
 }
 
 :is(.dark) .demo-orb-inner {
