@@ -73,6 +73,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   crm: "CRM",
   ehr: "Healthcare / EHR",
   automation: "Automation",
+  telephony: "Telephony",
 };
 
 const VERTICAL_LABELS: Record<string, string> = {

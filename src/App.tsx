@@ -21,6 +21,7 @@ const Outcomes = lazy(() => import("./pages/Outcomes"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Settings = lazy(() => import("./pages/Settings"));
 const SetupNumberPage = lazy(() => import("./pages/SetupNumber"));
+const Numbers = lazy(() => import("./pages/Numbers"));
 const VoiceLibrary = lazy(() => import("./pages/VoiceLibrary"));
 const ShopifyConnect = lazy(() => import("./pages/ShopifyConnect"));
 const IntegrationConnect = lazy(() => import("./pages/IntegrationConnect"));
@@ -92,6 +93,7 @@ export default function App() {
           <Route path="/campaigns/new" element={<CampaignNew />} />
           <Route path="/campaigns/:id" element={<CampaignDetail />} />
           <Route path="/calls" element={<Calls />} />
+          <Route path="/numbers" element={<Numbers />} />
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/integrations/numbers" element={<SetupNumberPage />} />

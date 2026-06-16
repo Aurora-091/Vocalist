@@ -157,18 +157,59 @@ export async function createCampaign(fields: {
 
 // ───── Calls ─────
 
-export async function listCalls(opts?: { direction?: string; limit?: number }) {
+export async function listCalls(opts?: {
+  direction?: string;
+  agent_id?: string;
+  campaign_id?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+  limit?: number;
+  offset?: number;
+}) {
   let query = supabase
     .from("calls")
-    .select("*")
+    .select("*, agents!inner(name)", { count: "exact" })
     .order("created_at", { ascending: false })
-    .limit(opts?.limit || 50);
-  if (opts?.direction) {
-    query = query.eq("direction", opts.direction);
-  }
+    .range(opts?.offset || 0, (opts?.offset || 0) + (opts?.limit || 20) - 1);
+  if (opts?.direction) query = query.eq("direction", opts.direction);
+  if (opts?.agent_id) query = query.eq("agent_id", opts.agent_id);
+  if (opts?.campaign_id) query = query.eq("campaign_id", opts.campaign_id);
+  if (opts?.status) query = query.eq("status", opts.status);
+  if (opts?.date_from) query = query.gte("created_at", opts.date_from);
+  if (opts?.date_to) query = query.lte("created_at", opts.date_to);
+  const { data, error, count } = await query;
+  if (error) throw error;
+  return { data: data || [], count: count || 0 };
+}
+
+export async function getCallsSummary(opts?: {
+  agent_id?: string;
+  campaign_id?: string;
+  date_from?: string;
+  date_to?: string;
+}) {
+  let query = supabase
+    .from("calls")
+    .select("cost_usd, duration_sec")
+    .not("status", "eq", "queued");
+  if (opts?.agent_id) query = query.eq("agent_id", opts.agent_id);
+  if (opts?.campaign_id) query = query.eq("campaign_id", opts.campaign_id);
+  if (opts?.date_from) query = query.gte("created_at", opts.date_from);
+  if (opts?.date_to) query = query.lte("created_at", opts.date_to);
   const { data, error } = await query;
   if (error) throw error;
-  return data || [];
+  const rows = data || [];
+  const totalCost = rows.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0);
+  const totalDuration = rows.reduce((s, r) => s + (Number(r.duration_sec) || 0), 0);
+  const completed = rows.filter((r) => r.duration_sec && r.duration_sec > 0);
+  return {
+    totalCost,
+    totalDuration,
+    avgCost: completed.length ? totalCost / completed.length : 0,
+    avgDuration: completed.length ? totalDuration / completed.length : 0,
+    count: rows.length,
+  };
 }
 
 export async function getCall(id: string) {
