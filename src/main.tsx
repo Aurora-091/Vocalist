@@ -1,18 +1,35 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import App from "./App";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { isAdminApp } from "@/lib/hostname";
 import "./index.css";
+
+const AdminApp = lazy(() => import("@/apps/admin/AdminApp"));
+const CustomerApp = lazy(() => import("@/apps/customer/CustomerApp"));
+
+function AppLoader() {
+  return (
+    <div className="h-screen flex items-center justify-center">
+      <img
+        src="/weeber_favicon_transparent.png"
+        alt="Loading"
+        className="h-8 w-8 object-contain dark:invert animate-pulse"
+      />
+    </div>
+  );
+}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider attribute="class" defaultTheme="system" storageKey="weeber-theme">
         <TooltipProvider delayDuration={150}>
-          <App />
+          <Suspense fallback={<AppLoader />}>
+            {isAdminApp ? <AdminApp /> : <CustomerApp />}
+          </Suspense>
           <Toaster richColors closeButton position="top-right" />
         </TooltipProvider>
       </ThemeProvider>

@@ -42,7 +42,12 @@ function buildCorsOptions() {
     .filter(Boolean);
 
   if (env.NODE_ENV === "development") {
-    allowed.push("http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173");
+    allowed.push(
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173",
+      "http://admin.localhost:5173"
+    );
   }
 
   return {
