@@ -7,7 +7,6 @@ import { useWaitlistCount } from "../lib/useWaitlistCount";
 import { trackFormSubmit, trackFormSuccess } from "../lib/analytics";
 import {
   STATS,
-  VERTICALS,
   HOW_IT_WORKS,
   PLATFORM_FEATURES,
   READY_FLOWS,
@@ -15,6 +14,7 @@ import {
   SECURITY_FEATURES,
   FAQ,
 } from "../config/marketing";
+import { AgentDemoWidget } from "../components/marketing/AgentDemoWidget";
 import {
   Dialog,
   DialogContent,
@@ -106,23 +106,6 @@ function AnimatedStat({ value, label, delay }: { value: string; label: string; d
         {displayed}
       </span>
       <p className="mt-2 text-[13.5px] text-[var(--m-text-secondary)] leading-snug">{label}</p>
-    </div>
-  );
-}
-
-function Waveform({ seed = 0 }: { seed?: number }) {
-  const bars = Array.from({ length: 18 }, (_, i) =>
-    4 + Math.round(11 * Math.abs(Math.sin(i * 1.1 + seed)))
-  );
-  return (
-    <div className="flex items-center gap-[2px] h-5 flex-1">
-      {bars.map((h, i) => (
-        <span
-          key={i}
-          className="waveform-bar w-[2px] rounded-sm flex-none"
-          style={{ height: `${h}px` }}
-        />
-      ))}
     </div>
   );
 }
@@ -431,46 +414,23 @@ export default function Waitlist() {
           </div>
         </section>
 
-        {/* Verticals */}
+        {/* Agent Demo */}
         <section className="border-b border-[var(--m-border)] bg-[var(--m-bg-alt)]">
           <div className="max-w-[1100px] mx-auto px-6 py-24 md:py-28">
             <div className="mb-14" data-reveal>
               <span className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[.16em] uppercase text-[var(--m-text-muted)]">
                 <span className="w-[6px] h-[6px] rounded-full bg-[var(--m-text)] animate-pulse" />
-                Built for how you sell
+                Hear it in action
               </span>
               <h2 className="mt-4 font-display text-[clamp(28px,3.8vw,46px)] font-extrabold tracking-[-0.03em] leading-[1.04] text-[var(--m-text)] max-w-xl">
-                Whatever you run, the lost sale is the same — a call that didn't happen.
+                Your AI agent, live on a real call.
               </h2>
+              <p className="mt-3 text-[17px] text-[var(--m-text-secondary)] max-w-lg">
+                Listen to a COD confirmation call — the agent verifies the order, confirms the address, and closes in under 90 seconds.
+              </p>
             </div>
-            <div className="grid md:grid-cols-3 gap-px bg-[var(--m-border)] border border-[var(--m-border)] rounded-[18px] overflow-hidden" data-reveal>
-              {VERTICALS.map((v, vi) => (
-                <div key={v.label} className="bg-[var(--m-bg)] p-7 flex flex-col card-lift">
-                  <span className="font-mono text-[11px] tracking-[.16em] uppercase text-[var(--m-text-muted)]">{v.label}</span>
-                  <h3 className="mt-3 mb-3 font-display text-[21px] font-bold tracking-[-0.02em] leading-snug text-[var(--m-text)]">{v.headline}</h3>
-                  <p className="text-[14.5px] text-[var(--m-text-secondary)] leading-relaxed">{v.problem}</p>
-                  <p className="mt-3 text-[14.5px] text-[var(--m-text)] leading-relaxed">{v.solution}</p>
-                  <div className="mt-5 flex items-center gap-3 border border-[var(--m-border)] rounded-[11px] p-3 bg-[var(--m-surface)]/60">
-                    <button
-                      aria-label={`Play ${v.demoLabel} sample`}
-                      className="flex-none w-[33px] h-[33px] rounded-full bg-[var(--m-accent-bg)] flex items-center justify-center hover:scale-[1.06] transition-transform"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 10 12" fill="var(--m-accent-fg)"><path d="M0 0l10 6-10 6z" /></svg>
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-semibold text-[var(--m-text)]">{v.demoLabel}</div>
-                      <div className="font-mono text-[11px] text-[var(--m-text-muted)] mt-0.5">{v.demoAccent}</div>
-                    </div>
-                    <Waveform seed={vi * 2.5} />
-                    <span className="font-mono text-[11px] text-[var(--m-text-muted)] flex-none">{v.demoDuration}</span>
-                  </div>
-                  <div className="mt-auto pt-5">
-                    <a href={v.cta.href} className="link-grow text-[14.5px] font-semibold inline-flex items-center gap-1.5 hover:gap-2.5 transition-all">
-                      {v.cta.label} <ArrowRight className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              ))}
+            <div data-reveal>
+              <AgentDemoWidget />
             </div>
           </div>
         </section>
