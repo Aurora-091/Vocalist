@@ -33,7 +33,7 @@ export const FOOTER_COLUMNS = [
 ] as const;
 
 export const TEAM = [
-  { name: "Ashutosh Pawar", role: "Co-founder", bio: "Built and scaled AdloomX. Performance marketing to voice AI." },
+  { name: "Ashutosh Tiwari", role: "Founder", bio: "Built and scaled AdloomX. Performance marketing to voice AI." },
   { name: "Rushikesh Pawar", role: "Co-founder", bio: "AI/ML engineer. Building the voice and compliance infrastructure." },
 ] as const;
 

@@ -699,8 +699,8 @@ export default function Waitlist() {
                 <span className="w-11 h-11 rounded-full bg-[var(--m-accent-bg)] text-[var(--m-accent-fg)] flex items-center justify-center font-display font-bold text-sm flex-none">W</span>
                 <div className="flex items-center gap-6">
                   <div>
-                    <strong className="text-[15px] font-semibold text-[var(--m-text)]">Ashutosh Pawar</strong>
-                    <span className="block text-[13.5px] text-[var(--m-text-secondary)]">Co-founder, Weeber</span>
+                    <strong className="text-[15px] font-semibold text-[var(--m-text)]">Ashutosh Tiwari</strong>
+                    <span className="block text-[13.5px] text-[var(--m-text-secondary)]">Founder, Weeber</span>
                   </div>
                   <span className="text-[var(--m-border)]">&</span>
                   <div>
