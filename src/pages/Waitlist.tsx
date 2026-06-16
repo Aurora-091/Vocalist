@@ -13,6 +13,7 @@ import {
   UPCOMING_VERTICALS,
   SECURITY_FEATURES,
   FAQ,
+  VERTICALS,
 } from "../config/marketing";
 import { AgentDemoWidget } from "../components/marketing/AgentDemoWidget";
 import {
@@ -364,8 +365,29 @@ export default function Waitlist() {
           </div>
         </section>
 
+        {/* Agent Demo */}
+        <section className="border-t border-b border-[var(--m-border)] bg-[var(--m-bg-alt)]">
+          <div className="max-w-[1100px] mx-auto px-6 py-24 md:py-28">
+            <div className="mb-14" data-reveal>
+              <span className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[.16em] uppercase text-[var(--m-text-muted)]">
+                <span className="w-[6px] h-[6px] rounded-full bg-[var(--m-text)] animate-pulse" />
+                Live demo
+              </span>
+              <h2 className="mt-4 font-display text-[clamp(28px,3.8vw,46px)] font-extrabold tracking-[-0.03em] leading-[1.04] text-[var(--m-text)] max-w-xl">
+                89 seconds. One confirmed order. Zero scripts.
+              </h2>
+              <p className="mt-3 text-[17px] text-[var(--m-text-secondary)] max-w-lg">
+                Listen to a real COD confirmation call — the agent handles a colour change, verifies the address, and closes the order.
+              </p>
+            </div>
+            <div data-reveal>
+              <AgentDemoWidget />
+            </div>
+          </div>
+        </section>
+
         {/* Stats */}
-        <section className="border-t border-b border-[var(--m-border)] bg-[var(--m-bg)]">
+        <section className="border-b border-[var(--m-border)] bg-[var(--m-bg)]">
           <div className="max-w-[1100px] mx-auto px-6 py-14 md:py-16" data-reveal>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-y-8">
               {STATS.map((s, i) => (
@@ -380,23 +402,46 @@ export default function Waitlist() {
           </div>
         </section>
 
-        {/* Agent Demo */}
+        {/* Verticals */}
         <section className="border-b border-[var(--m-border)] bg-[var(--m-bg-alt)]">
           <div className="max-w-[1100px] mx-auto px-6 py-24 md:py-28">
             <div className="mb-14" data-reveal>
               <span className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[.16em] uppercase text-[var(--m-text-muted)]">
                 <span className="w-[6px] h-[6px] rounded-full bg-[var(--m-text)] animate-pulse" />
-                Hear it in action
+                Use cases
               </span>
               <h2 className="mt-4 font-display text-[clamp(28px,3.8vw,46px)] font-extrabold tracking-[-0.03em] leading-[1.04] text-[var(--m-text)] max-w-xl">
-                Your AI agent, live on a real call.
+                Who is Weeber for?
               </h2>
-              <p className="mt-3 text-[17px] text-[var(--m-text-secondary)] max-w-lg">
-                Listen to a COD confirmation call — the agent verifies the order, confirms the address, and closes in under 90 seconds.
-              </p>
             </div>
-            <div data-reveal>
-              <AgentDemoWidget />
+            <div className="grid md:grid-cols-3 gap-4" data-reveal>
+              {VERTICALS.map((v, i) => (
+                <div
+                  key={v.label}
+                  className="p-6 md:p-8 bg-[var(--m-bg)] border border-[var(--m-border)] rounded-lg card-lift"
+                >
+                  <div className="font-mono text-[11px] tracking-[.12em] uppercase text-[var(--m-text-muted)] mb-3">{v.label}</div>
+                  <h3 className="font-display font-bold text-[var(--m-text)] text-[17px] leading-snug mb-4">{v.headline}</h3>
+                  <p className="text-sm text-[var(--m-text-secondary)] leading-relaxed mb-4">{v.problem}</p>
+                  <p className="text-sm text-[var(--m-text)] leading-relaxed mb-6">{v.solution}</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-[var(--m-border)]">
+                    <div>
+                      <div className="text-xs font-medium text-[var(--m-text)]">{v.demoLabel}</div>
+                      <div className="text-[11px] text-[var(--m-text-muted)]">{v.demoAccent} &middot; {v.demoDuration}</div>
+                    </div>
+                    {i === 2 ? (
+                      <span className="text-[11px] font-medium text-[var(--m-text-muted)] italic">Demo coming soon</span>
+                    ) : (
+                      <a
+                        href={v.cta.href}
+                        className="text-xs font-semibold text-[var(--m-text)] hover:opacity-70 transition-opacity"
+                      >
+                        {v.cta.label} &rarr;
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
