@@ -309,13 +309,13 @@ function HeroForm() {
       </p>
 
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="sm:max-w-[560px] p-0 bg-[var(--m-bg)] text-[var(--m-text)] border border-[var(--m-border)] shadow-[0_24px_64px_-16px_rgba(0,0,0,0.5)] overflow-hidden [&_button[data-slot=dialog-close]]:text-[var(--m-text-secondary)] [&_button[data-slot=dialog-close]]:hover:text-[var(--m-text)]" style={{ backgroundColor: 'var(--m-bg)' }}>
-          <div className="px-8 pt-8 pb-6">
-            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#22C55E]/10 mb-5">
+        <DialogContent className="marketing sm:max-w-[560px] p-0 !bg-white dark:!bg-[#0A0A0A] text-[var(--m-text)] border border-[#E6E5E2] dark:border-[rgba(255,255,255,0.12)] shadow-[0_24px_80px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_24px_80px_-12px_rgba(0,0,0,0.7)] overflow-hidden [&_button[data-slot=dialog-close]]:text-[var(--m-text-secondary)] [&_button[data-slot=dialog-close]]:hover:text-[var(--m-text)]">
+          <div className="px-8 pt-8 pb-8">
+            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[#22C55E]/10 border border-[#22C55E]/20 mb-6">
               <Sparkles className="w-7 h-7 text-[#22C55E]" />
             </div>
             <DialogHeader className="text-left">
-              <DialogTitle className="font-display text-[28px] md:text-[32px] font-extrabold tracking-[-0.035em] leading-[1.1]">
+              <DialogTitle className="font-display text-[26px] md:text-[30px] font-extrabold tracking-[-0.035em] leading-[1.1] text-[var(--m-text)]">
                 You're in — #{displayCount} in line.
               </DialogTitle>
               <DialogDescription className="text-[var(--m-text-secondary)] mt-3 text-[15px] leading-relaxed">
@@ -323,10 +323,10 @@ function HeroForm() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-6 flex items-center gap-3 px-4 py-3.5 bg-[var(--m-bg-alt)] border border-[var(--m-border)] rounded-lg">
+            <div className="mt-6 flex items-center gap-3 px-4 py-3.5 bg-[#F3F2EF] dark:bg-[#141414] border border-[#E6E5E2] dark:border-[rgba(255,255,255,0.08)] rounded-lg">
               <Mail className="w-4 h-4 text-[var(--m-text-secondary)] flex-shrink-0" />
               <span className="text-sm text-[var(--m-text)] truncate flex-1">{email}</span>
-              <span className="text-[11px] font-mono text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded">Confirmed</span>
+              <span className="text-[11px] font-mono text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded font-medium">Confirmed</span>
             </div>
 
             <ReferralCopyLink referralCode={referralCode} />
