@@ -100,14 +100,14 @@
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
   }
   .dark {
     --background: oklch(0 0 0);
@@ -133,14 +133,14 @@
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0 0 0);
-    --sidebar-accent: oklch(0.12 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 9%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
 
     /* Dark-mode overrides for legacy surface/text tokens — Vercel pure black */
     --color-bg: #000000;
@@ -167,10 +167,13 @@
   --m-surface: #FFFFFF;
   --m-border: #E6E5E2;
   --m-text: #0B0B0C;
-  --m-text-secondary: #67676C;
-  --m-text-muted: #9A9AA0;
+  --m-text-secondary: #45454C;
+  --m-text-muted: #7A7A82;
   --m-accent-bg: #0B0B0C;
   --m-accent-fg: #FCFCFB;
+  --m-input-border: #B7B6B1;
+  --m-input-shadow: 0 1px 2px rgba(11, 11, 12, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --m-input-focus-ring: rgba(11, 11, 12, 0.12);
   background-color: var(--m-bg);
   color: var(--m-text);
 }
@@ -181,10 +184,13 @@
   --m-surface: #141414;
   --m-border: rgba(255, 255, 255, 0.08);
   --m-text: #FAFAFA;
-  --m-text-secondary: #A1A1A1;
-  --m-text-muted: #666666;
+  --m-text-secondary: #C7C7CC;
+  --m-text-muted: #8A8A90;
   --m-accent-bg: #FAFAFA;
   --m-accent-fg: #000000;
+  --m-input-border: rgba(255, 255, 255, 0.16);
+  --m-input-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --m-input-focus-ring: rgba(255, 255, 255, 0.14);
 }
 
 html {

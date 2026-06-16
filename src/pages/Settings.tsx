@@ -13,46 +13,60 @@ import { supabase, getSession } from "../lib/supabase";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Button } from "../components/legacy-ui/Button";
 import { Skeleton } from "../components/legacy-ui/States";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Field, FieldLabel, FieldGroup, FieldDescription } from "@/components/ui/field";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 const TABS = ["Profile", "Organization", "Appearance", "Security", "Notifications", "Webhooks", "Compliance"] as const;
 type Tab = (typeof TABS)[number];
 
-export default function Settings() {
-  const [tab, setTab] = useState<Tab>("Profile");
+const PANELS: Record<Tab, React.ComponentType> = {
+  Profile: ProfilePanel,
+  Organization: OrgPanel,
+  Appearance: AppearancePanel,
+  Security: SecurityPanel,
+  Notifications: NotificationsPanel,
+  Webhooks: WebhooksPanel,
+  Compliance: CompliancePanel,
+};
 
+export default function Settings() {
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-text-muted mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Manage your account, organization, and preferences.
         </p>
       </div>
 
-      <div className="border-b border-border flex gap-4 overflow-x-auto">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`py-3 -mb-px border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              tab === t
-                ? "border-text text-text"
-                : "border-transparent text-text-muted hover:text-text"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {tab === "Profile" && <ProfilePanel />}
-      {tab === "Organization" && <OrgPanel />}
-      {tab === "Appearance" && <AppearancePanel />}
-      {tab === "Security" && <SecurityPanel />}
-      {tab === "Notifications" && <NotificationsPanel />}
-      {tab === "Webhooks" && <WebhooksPanel />}
-      {tab === "Compliance" && <CompliancePanel />}
+      <Tabs defaultValue="Profile">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          {TABS.map((t) => (
+            <TabsTrigger key={t} value={t}>
+              {t}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {TABS.map((t) => {
+          const Panel = PANELS[t];
+          return (
+            <TabsContent key={t} value={t}>
+              <Panel />
+            </TabsContent>
+          );
+        })}
+      </Tabs>
     </div>
   );
 }
@@ -106,41 +120,40 @@ function ProfilePanel() {
         <div className="font-medium">Your Profile</div>
       </CardHeader>
       <CardBody>
-        <div className="space-y-4 max-w-md">
-          <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">Display name</label>
-            <input
+        <FieldGroup className="max-w-md gap-4">
+          <Field>
+            <FieldLabel htmlFor="profile-name">Display name</FieldLabel>
+            <Input
+              id="profile-name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full h-10 px-3 rounded-md border border-border bg-surface"
               placeholder="Your name"
             />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">Email</label>
-            <input
-              value={email}
-              readOnly
-              className="w-full h-10 px-3 rounded-md border border-border bg-surface-2 text-text-muted cursor-not-allowed"
-            />
-            <p className="text-xs text-text-muted mt-1">Managed by your auth provider.</p>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">Timezone</label>
-            <select
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="w-full h-10 px-3 rounded-md border border-border bg-surface"
-            >
-              {Intl.supportedValuesOf("timeZone").map((tz) => (
-                <option key={tz} value={tz}>{tz}</option>
-              ))}
-            </select>
-          </div>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="profile-email">Email</FieldLabel>
+            <Input id="profile-email" value={email} readOnly disabled />
+            <FieldDescription>Managed by your auth provider.</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="profile-tz">Timezone</FieldLabel>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger id="profile-tz" className="w-full">
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {Intl.supportedValuesOf("timeZone").map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
           <Button onClick={save} disabled={busy}>
             {busy ? "Saving..." : "Save profile"}
           </Button>
-        </div>
+        </FieldGroup>
       </CardBody>
     </Card>
   );
@@ -271,18 +284,18 @@ function SecurityPanel() {
               Change password
             </Button>
           ) : (
-            <div className="space-y-3 max-w-sm">
-              <div>
-                <label className="block text-xs font-medium text-text-muted mb-1">New password</label>
-                <input
+            <div className="flex flex-col gap-3 max-w-sm">
+              <Field>
+                <FieldLabel htmlFor="new-password">New password</FieldLabel>
+                <Input
+                  id="new-password"
                   type="password"
                   value={newPw}
                   onChange={(e) => setNewPw(e.target.value)}
                   minLength={8}
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface"
                   placeholder="8+ characters"
                 />
-              </div>
+              </Field>
               <div className="flex gap-2">
                 <Button onClick={changePassword} disabled={pwBusy || newPw.length < 8}>
                   {pwBusy ? "Updating..." : "Update password"}
@@ -398,24 +411,22 @@ function OrgPanel() {
         <div className="font-medium">Organization</div>
       </CardHeader>
       <CardBody>
-        <div className="space-y-4 max-w-md">
-          <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">
-              Organization name
-            </label>
-            <input
+        <FieldGroup className="max-w-md gap-4">
+          <Field>
+            <FieldLabel htmlFor="org-name">Organization name</FieldLabel>
+            <Input
+              id="org-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-10 px-3 rounded-md border border-border bg-surface"
             />
-          </div>
+          </Field>
           <div className="flex items-center gap-3">
             <Button onClick={save} disabled={busy || !name}>
               {busy ? "Saving..." : "Save"}
             </Button>
             {saved && <span className="text-sm text-success">Saved.</span>}
           </div>
-        </div>
+        </FieldGroup>
       </CardBody>
     </Card>
   );
@@ -538,21 +549,7 @@ function Toggle({
   return (
     <label className="flex items-center justify-between py-2 cursor-pointer">
       <span className="text-sm">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={value}
-        onClick={() => onChange(!value)}
-        className={`relative inline-flex h-5 w-9 rounded-full transition-colors ${
-          value ? "bg-primary" : "bg-surface-2"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-            value ? "translate-x-4" : ""
-          }`}
-        />
-      </button>
+      <Switch checked={value} onCheckedChange={onChange} />
     </label>
   );
 }
@@ -594,11 +591,12 @@ function WebhooksPanel() {
           We sign every event with HMAC-SHA256 in the <code className="font-mono">X-Weeber-Signature</code> header.
         </p>
         <div className="flex gap-2 mb-4">
-          <input
+          <Input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://your.app/webhook"
-            className="flex-1 h-10 px-3 rounded-md border border-border bg-surface text-sm"
+            aria-label="Webhook endpoint URL"
+            className="flex-1"
           />
           <Button onClick={add} disabled={busy || !url}>
             {busy ? "Adding..." : "Add endpoint"}

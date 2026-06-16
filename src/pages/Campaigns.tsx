@@ -5,6 +5,15 @@ import { listCampaigns } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 import { Badge } from "../components/legacy-ui/Badge";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from "@/components/ui/table";
 
 type Campaign = {
   id: string;
@@ -114,26 +123,26 @@ export default function Campaigns() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block bg-surface border border-border rounded-md shadow-card overflow-hidden">
-            <table className="w-full text-sm" aria-label="Campaigns list">
-              <caption className="sr-only">
+          <div className="hidden md:block bg-card border border-border rounded-md shadow-card overflow-hidden">
+            <Table aria-label="Campaigns list">
+              <TableCaption srOnly>
                 {visible.length} campaign{visible.length !== 1 ? "s" : ""}
                 {filter !== "all" ? ` with status ${filter}` : ""}
-              </caption>
-              <thead className="bg-surface-2 text-text-muted">
-                <tr>
-                  <Th scope="col">Name</Th>
-                  <Th scope="col">Status</Th>
-                  <Th scope="col">Concurrency</Th>
-                  <Th scope="col">Retries</Th>
-                  <Th scope="col">Created</Th>
-                </tr>
-              </thead>
-              <tbody>
+              </TableCaption>
+              <TableHeader className="bg-muted">
+                <TableRow>
+                  <Th>Name</Th>
+                  <Th>Status</Th>
+                  <Th>Concurrency</Th>
+                  <Th>Retries</Th>
+                  <Th>Created</Th>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {visible.map((c) => (
-                  <tr
+                  <TableRow
                     key={c.id}
-                    className="border-t border-border hover:bg-surface-2 cursor-pointer focus-within:bg-surface-2"
+                    className="cursor-pointer focus-within:bg-muted/50"
                   >
                     <Td>
                       <Link
@@ -141,7 +150,7 @@ export default function Campaigns() {
                         className="flex items-center gap-2 focus-visible:outline-none focus-visible:underline"
                         aria-label={`Open campaign: ${c.name}`}
                       >
-                        <Megaphone className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
+                        <Megaphone className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
                         <span className="font-medium">{c.name}</span>
                       </Link>
                     </Td>
@@ -154,15 +163,15 @@ export default function Campaigns() {
                     <Td className="font-mono">
                       <span aria-label={`Max retries: ${c.max_retries}`}>{c.max_retries}</span>
                     </Td>
-                    <Td className="text-text-muted">
+                    <Td className="text-muted-foreground">
                       <time dateTime={c.created_at}>
                         {new Date(c.created_at).toLocaleDateString()}
                       </time>
                     </Td>
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Mobile cards */}
@@ -211,13 +220,13 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function Th({ children, scope = "col" }: { children: React.ReactNode; scope?: "col" | "row" }) {
+function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th scope={scope} className="text-left px-4 py-3 text-xs uppercase tracking-widest font-medium">
+    <TableHead scope="col" className="text-xs uppercase tracking-widest font-medium">
       {children}
-    </th>
+    </TableHead>
   );
 }
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 ${className}`}>{children}</td>;
+function Td({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <TableCell className={className}>{children}</TableCell>;
 }

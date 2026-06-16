@@ -1,11 +1,33 @@
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Bot, Megaphone, Phone, Users, Plug, TrendingUp, ChartBar as BarChart2, BookOpen, CreditCard, Settings, LogOut, ShieldCheck, Volume2, Sun, Moon, Monitor, Menu, X } from "lucide-react";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { LayoutDashboard, Bot, Megaphone, Phone, Users, Plug, TrendingUp, ChartBar as BarChart2, BookOpen, CreditCard, Settings, LogOut, ShieldCheck, Volume2, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import { supabase } from "../../lib/supabase";
 import { useEffect, useState } from "react";
 import { getUsageSummary, getOrg } from "../../lib/db";
 import { NotificationsBell } from "./NotificationsBell";
 import { WeeberLogo } from "../WeeberLogo";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const items = [
   { to: "/dashboard", label: "Home", icon: LayoutDashboard, end: true },
@@ -24,20 +46,32 @@ const items = [
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const next = theme === "dark" ? "light" : theme === "light" ? "system" : "dark";
   const Icon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
+  const options = [
+    { value: "light", label: "Light", icon: Sun },
+    { value: "dark", label: "Dark", icon: Moon },
+    { value: "system", label: "System", icon: Monitor },
+  ] as const;
   return (
-    <button
-      onClick={() => setTheme(next)}
-      className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-      aria-label={`Switch to ${next} theme`}
-    >
-      <Icon className="w-4 h-4" />
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Switch theme">
+          <Icon className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {options.map((o) => (
+          <DropdownMenuItem key={o.value} onClick={() => setTheme(o.value)}>
+            <o.icon className="h-4 w-4" />
+            {o.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function AppSidebar() {
   const navigate = useNavigate();
 
   async function signOut() {
@@ -46,54 +80,49 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <>
-      <div className="h-14 px-5 flex items-center border-b border-border">
-        <div className="font-semibold tracking-tight"><WeeberLogo size="sm" /></div>
-      </div>
-      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {items.map((it) => (
-          <NavLink
-            key={it.to}
-            to={it.to}
-            end={it.end}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-                isActive
-                  ? "bg-surface-2 text-text font-semibold border border-border"
-                  : "text-text-muted hover:text-text hover:bg-surface-2"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <it.icon className="w-4 h-4" aria-hidden="true" />
-                <span aria-current={isActive ? "page" : undefined}>{it.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-      <button
-        onClick={() => { signOut(); onNavigate?.(); }}
-        className="m-3 flex items-center gap-3 px-3 py-2 rounded-md text-sm text-text-muted hover:text-text hover:bg-surface-2"
-      >
-        <LogOut className="w-4 h-4" />
-        Sign out
-      </button>
-    </>
+    <Sidebar>
+      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-4">
+        <WeeberLogo size="sm" />
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((it) => (
+                <SidebarMenuItem key={it.to}>
+                  <NavLink to={it.to} end={it.end}>
+                    {({ isActive }) => (
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={it.label}>
+                        <span>
+                          <it.icon aria-hidden="true" />
+                          <span>{it.label}</span>
+                        </span>
+                      </SidebarMenuButton>
+                    )}
+                  </NavLink>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={signOut}>
+              <LogOut aria-hidden="true" />
+              <span>Sign out</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
 
 export function AppShell() {
   const [usage, setUsage] = useState<{ used: number; included: number } | null>(null);
   const [orgName, setOrgName] = useState<string>("");
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const location = useLocation();
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
 
   useEffect(() => {
     (async () => {
@@ -115,51 +144,17 @@ export function AppShell() {
 
   const pct = usage && usage.included ? (usage.used / usage.included) * 100 : 0;
   const usageTone =
-    pct >= 100 ? "text-danger" : pct >= 80 ? "text-warning" : "text-text-muted";
+    pct >= 100 ? "text-destructive" : pct >= 80 ? "text-warning" : "text-muted-foreground";
 
   return (
-    <div className="flex h-full">
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-60 shrink-0 border-r border-border bg-surface flex-col">
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Mobile sidebar drawer */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface border-r border-border flex flex-col transform transition-transform duration-200 ease-out lg:hidden ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="absolute top-3 right-3">
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <SidebarContent onNavigate={() => setMobileOpen(false)} />
-      </aside>
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b border-border bg-surface flex items-center justify-between px-4 md:px-6">
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider>
+        <AppSidebar />
+      <SidebarInset>
+        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 lg:hidden"
-              aria-label="Open menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="text-sm text-text-muted truncate">
+            <SidebarTrigger className="-ml-1" />
+            <div className="text-sm text-muted-foreground truncate">
               {orgName || "Your organization"}
             </div>
           </div>
@@ -172,7 +167,7 @@ export function AppShell() {
             <ShieldCheck className="w-4 h-4 text-success hidden sm:block" aria-label="Compliance: healthy" />
             <a
               href="mailto:support@weeber.ai"
-              className="text-sm text-text-muted hover:text-text transition-colors hidden sm:block"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
             >
               Help
             </a>
@@ -180,12 +175,13 @@ export function AppShell() {
             <NotificationsBell />
           </div>
         </header>
-        <main className="flex-1 overflow-auto bg-bg">
+        <main className="flex-1 overflow-auto bg-background">
           <div className="max-w-[1280px] mx-auto px-4 md:px-6 py-6 md:py-8">
             <Outlet />
           </div>
         </main>
-      </div>
-    </div>
+      </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }

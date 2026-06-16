@@ -9,6 +9,16 @@ import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Badge } from "../components/legacy-ui/Badge";
 import { Skeleton } from "../components/legacy-ui/States";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
 import VoiceLibrary from "./VoiceLibrary";
 
 const TONE_PRESETS = [
@@ -312,93 +322,89 @@ export default function AgentDetail() {
         <CardBody>
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Display name">
-              <input
+              <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface"
               />
             </Field>
             <Field label="Business name">
-              <input
+              <Input
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 placeholder="Lakeshore Family Clinic"
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface"
               />
             </Field>
             <Field label="Objective" full>
-              <textarea
+              <Textarea
                 value={objective}
                 onChange={(e) => setObjective(e.target.value)}
                 rows={3}
                 placeholder="Answer questions and book appointments. Route billing questions to a human."
-                className="w-full p-3 rounded-md border border-border bg-surface text-sm"
               />
             </Field>
             <Field label="Opening message (first_message)">
-              <input
+              <Input
                 value={firstMessage}
                 onChange={(e) => setFirstMessage(e.target.value)}
                 placeholder="Hello, thanks for calling. How can I help?"
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
               />
             </Field>
             <Field label="Tone">
-              <select
-                value={toneMode}
-                onChange={(e) => setToneMode(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
-              >
-                {TONE_PRESETS.map((t) => (
-                  <option key={t} value={t}>
-                    {t === "custom" ? "Custom…" : t.charAt(0).toUpperCase() + t.slice(1)}
-                  </option>
-                ))}
-              </select>
+              <Select value={toneMode} onValueChange={setToneMode}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select tone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {TONE_PRESETS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t === "custom" ? "Custom…" : t.charAt(0).toUpperCase() + t.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             {toneMode === "custom" && (
               <Field label="Custom tone">
-                <input
+                <Input
                   value={customTone}
                   onChange={(e) => setCustomTone(e.target.value)}
                   placeholder="Playful yet authoritative, like a knowledgeable friend"
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
                 />
               </Field>
             )}
             <Field label="Guardrails (one per line)" full>
-              <textarea
+              <Textarea
                 value={guardrails}
                 onChange={(e) => setGuardrails(e.target.value)}
                 rows={3}
                 placeholder={"Do not discuss pricing unless asked.\nAlways offer to transfer to a human for complex issues."}
-                className="w-full p-3 rounded-md border border-border bg-surface text-sm font-mono"
+                className="font-mono"
               />
             </Field>
             <Field label="Identity (optional)">
-              <input
+              <Input
                 value={identity}
                 onChange={(e) => setIdentity(e.target.value)}
                 placeholder="You are Maya, a billing assistant at Acme Corp."
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
               />
             </Field>
             <Field label="Timezone">
-              <input
+              <Input
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface"
               />
             </Field>
             <Field label="Languages">
               <LanguagePicker selected={selectedLanguages} onChange={setSelectedLanguages} />
             </Field>
             <Field label="Human transfer number">
-              <input
+              <Input
                 value={transferNumber}
                 onChange={(e) => setTransferNumber(e.target.value)}
                 placeholder="+14155551234"
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface font-mono text-sm"
+                className="font-mono"
               />
             </Field>
           </div>
@@ -517,12 +523,13 @@ export default function AgentDetail() {
             Requires ElevenLabs provider to be configured.
           </p>
           <div className="flex flex-wrap gap-3">
-            <input
+            <Input
               value={testNumber}
               onChange={(e) => setTestNumber(e.target.value)}
               disabled={!agent.provider_ref || calling}
               placeholder="+1 415 555 0199"
-              className="h-10 px-3 rounded-md border border-border bg-surface flex-1 min-w-[240px] font-mono text-sm disabled:bg-surface-2 disabled:text-text-muted"
+              aria-label="Test call phone number"
+              className="flex-1 min-w-[240px] font-mono"
             />
             <Button
               disabled={!agent.provider_ref || !testNumber.trim() || calling}

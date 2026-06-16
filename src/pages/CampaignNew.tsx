@@ -4,6 +4,21 @@ import { ArrowLeft } from "lucide-react";
 import { listAgents, createCampaign } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
+import { Input } from "@/components/ui/input";
+import {
+  Field,
+  FieldLabel,
+  FieldGroup,
+  FieldError,
+} from "@/components/ui/field";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
 
 export default function CampaignNew() {
   const navigate = useNavigate();
@@ -77,52 +92,64 @@ export default function CampaignNew() {
               .
             </div>
           ) : (
-            <form onSubmit={submit} className="space-y-4">
-              <Field label="Name">
-                <input
+            <form onSubmit={submit}>
+              <FieldGroup className="gap-4">
+              <Field>
+                <FieldLabel htmlFor="campaign-name">Name</FieldLabel>
+                <Input
+                  id="campaign-name"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface"
                   placeholder="June recovery push"
                 />
               </Field>
-              <Field label="Agent">
-                <select
-                  value={agentId}
-                  onChange={(e) => setAgentId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface"
-                >
-                  {agents.map((a: any) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
+              <Field>
+                <FieldLabel htmlFor="campaign-agent">Agent</FieldLabel>
+                <Select value={agentId} onValueChange={setAgentId}>
+                  <SelectTrigger id="campaign-agent" className="w-full">
+                    <SelectValue placeholder="Select an agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {agents.map((a: any) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </Field>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Concurrency">
-                  <input
+                <Field>
+                  <FieldLabel htmlFor="campaign-concurrency">Concurrency</FieldLabel>
+                  <Input
+                    id="campaign-concurrency"
                     type="number"
                     min={1}
                     max={100}
                     value={concurrency}
                     onChange={(e) => setConcurrency(Number(e.target.value))}
-                    className="w-full h-10 px-3 rounded-md border border-border bg-surface"
                   />
                 </Field>
-                <Field label="Max retries">
-                  <input
+                <Field>
+                  <FieldLabel htmlFor="campaign-retries">Max retries</FieldLabel>
+                  <Input
+                    id="campaign-retries"
                     type="number"
                     min={0}
                     max={10}
                     value={maxRetries}
                     onChange={(e) => setMaxRetries(Number(e.target.value))}
-                    className="w-full h-10 px-3 rounded-md border border-border bg-surface"
                   />
                 </Field>
               </div>
-              {err && <div className="text-sm text-danger">{err}</div>}
+              {err && (
+                <Field data-invalid>
+                  <FieldError>{err}</FieldError>
+                </Field>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   variant="ghost"
@@ -135,6 +162,7 @@ export default function CampaignNew() {
                   {submitting ? "Creating…" : "Create campaign"}
                 </Button>
               </div>
+              </FieldGroup>
             </form>
           )}
         </CardBody>
@@ -143,19 +171,4 @@ export default function CampaignNew() {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-text-muted mb-1">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
+
