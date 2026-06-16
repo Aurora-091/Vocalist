@@ -23,7 +23,7 @@ import {
   DialogDescription,
 } from "../components/ui/dialog";
 
-const FALLBACK_COUNT = 58;
+const BASE_COUNT = 58;
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -167,7 +167,7 @@ function HeroBgWaveform() {
 
 function HeroBadge() {
   const { count } = useWaitlistCount();
-  const displayCount = count !== null ? count : FALLBACK_COUNT;
+  const displayCount = BASE_COUNT + (count ?? 0);
   return (
     <div className="mb-6 inline-flex items-center gap-2 bg-[var(--m-bg-alt)] border border-[var(--m-border)] rounded-full px-3.5 py-1.5 text-[13px] text-[var(--m-text-secondary)]" data-reveal>
       <span className="w-[7px] h-[7px] rounded-full bg-[#22c55e] inline-block hero-pulse-dot" />
@@ -191,7 +191,7 @@ function HeroForm() {
   const phoneValid = isValidPhone(phone);
   const nameValid = name.trim().length > 0;
   const canSubmit = nameValid && emailValid && phoneValid;
-  const displayCount = count !== null ? count : FALLBACK_COUNT;
+  const displayCount = BASE_COUNT + (count ?? 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -364,7 +364,7 @@ export default function Waitlist() {
             <h1 className="font-display text-[clamp(2.8rem,6vw,5.5rem)] font-extrabold leading-[0.93] tracking-[-0.03em] text-[var(--m-text)]" data-reveal>
               Every call you miss<br />is a sale you just lost.
             </h1>
-            <p className="mt-6 text-[1.1rem] text-[var(--m-text-secondary)] max-w-[480px] mx-auto leading-[1.6]" data-reveal>
+            <p className="mt-6 text-[1.1rem] font-medium text-[var(--m-text-secondary)] max-w-[480px] mx-auto leading-[1.6]" data-reveal>
               Voice AI that books, recovers carts, and follows up. 24/7. No code.
             </p>
             <div className="mt-10" data-reveal>
