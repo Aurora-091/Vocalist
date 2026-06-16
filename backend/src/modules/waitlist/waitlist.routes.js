@@ -15,6 +15,8 @@ const joinSchema = z.object({
   ref: z.string().max(20).optional(),
 });
 
+const OFFSET = 43;
+
 router.post("/join", authLimiter, async (req, res) => {
   const parsed = joinSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -64,7 +66,7 @@ router.post("/join", authLimiter, async (req, res) => {
   const { broadcastWaitlistCount } = require("./waitlist.ws");
   broadcastWaitlistCount();
 
-  void sendWaitlistWelcome(email, name, inserted.id, position || 1);
+  void sendWaitlistWelcome(email, name, inserted.id, OFFSET + (position || 1));
 
   return res.status(201).json({ success: true, referral_code: shortCode });
 });

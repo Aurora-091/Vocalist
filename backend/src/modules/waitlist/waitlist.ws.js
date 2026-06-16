@@ -2,7 +2,7 @@ const { WebSocketServer } = require("ws");
 const { requireAdmin } = require("../../config/supabase");
 const logger = require("../../config/logger");
 
-const OFFSET = 58;
+const OFFSET = 43;
 
 const waitlistWss = new WebSocketServer({ noServer: true });
 const clients = new Set();

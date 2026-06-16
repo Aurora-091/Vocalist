@@ -24,7 +24,7 @@ import {
   DialogDescription,
 } from "../components/ui/dialog";
 
-const BASE_COUNT = 58;
+const BASE_COUNT = 43;
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
