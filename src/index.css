@@ -171,6 +171,9 @@
   --m-text-muted: #7A7A82;
   --m-accent-bg: #0B0B0C;
   --m-accent-fg: #FCFCFB;
+  --m-input-border: #B7B6B1;
+  --m-input-shadow: 0 1px 2px rgba(11, 11, 12, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --m-input-focus-ring: rgba(11, 11, 12, 0.12);
   background-color: var(--m-bg);
   color: var(--m-text);
 }
@@ -185,6 +188,9 @@
   --m-text-muted: #8A8A90;
   --m-accent-bg: #FAFAFA;
   --m-accent-fg: #000000;
+  --m-input-border: rgba(255, 255, 255, 0.16);
+  --m-input-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --m-input-focus-ring: rgba(255, 255, 255, 0.14);
 }
 
 html {

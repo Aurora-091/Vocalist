@@ -217,7 +217,7 @@ function HeroForm() {
     }
   }
 
-  const inputClass = "w-full h-12 px-4 pr-10 text-[16px] bg-[var(--m-bg)] border-[1.5px] border-[var(--m-border)] text-[var(--m-text)] placeholder:text-[var(--m-text-muted)] focus:border-[var(--m-text-muted)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(154,154,160,0.1)] transition-all rounded-lg";
+  const inputClass = "w-full h-12 px-4 pr-10 text-[16px] font-medium bg-[var(--m-surface)] border-[1.5px] border-[var(--m-input-border)] text-[var(--m-text)] placeholder:text-[var(--m-text-muted)] placeholder:font-normal shadow-[var(--m-input-shadow)] focus:border-[var(--m-text)] focus:outline-none focus:shadow-[0_0_0_3px_var(--m-input-focus-ring)] transition-all rounded-lg";
 
   return (
     <div className="max-w-[430px] mx-auto">
