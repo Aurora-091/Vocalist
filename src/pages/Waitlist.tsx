@@ -377,7 +377,7 @@ export default function Waitlist() {
                 89 seconds. One confirmed order. Zero scripts.
               </h2>
               <p className="mt-3 text-[17px] text-[var(--m-text-secondary)] max-w-lg">
-                Listen to a real COD confirmation call — the agent handles a colour change, verifies the address, and closes the order.
+                Listen to a real COD confirmation call — the agent switches to Hindi, confirms the order details, and closes in under 90 seconds.
               </p>
             </div>
             <div data-reveal>

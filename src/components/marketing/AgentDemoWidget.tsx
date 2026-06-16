@@ -6,17 +6,13 @@ const TRANSCRIPT_TIMINGS: Array<{
   speaker: "agent" | "customer";
   text: string;
 }> = [
-  { pct: 4, speaker: "agent", text: "Hi, this is Weeber calling on behalf of your store. Am I speaking with Priya?" },
-  { pct: 12, speaker: "customer", text: "Yes, this is Priya." },
-  { pct: 17, speaker: "agent", text: "Great. You placed an order for a wireless charger and a phone case — cash on delivery. I'm calling to confirm you'd still like us to ship it." },
-  { pct: 30, speaker: "customer", text: "Yeah, I do. But can I change the colour of the case?" },
-  { pct: 40, speaker: "agent", text: "Of course. We have black, navy, and sage green in stock. Which would you prefer?" },
-  { pct: 52, speaker: "customer", text: "Sage green, please." },
-  { pct: 58, speaker: "agent", text: "Done — I've updated the order to sage green. Your delivery address is 14 MG Road, Pune. Is that still correct?" },
-  { pct: 72, speaker: "customer", text: "Yes, that's right." },
-  { pct: 78, speaker: "agent", text: "Perfect. Your order is confirmed and will arrive within 3–5 business days. You'll get a tracking link by SMS shortly. Anything else I can help with?" },
-  { pct: 90, speaker: "customer", text: "No, that's all. Thanks!" },
-  { pct: 95, speaker: "agent", text: "You're welcome, Priya. Have a great day!" },
+  { pct: 3, speaker: "agent", text: "Hello, my name is Amit, and I'm calling from Weeber Retail Store. Can I have two minutes of your time?" },
+  { pct: 15, speaker: "customer", text: "Yes." },
+  { pct: 20, speaker: "agent", text: "Before we begin, would you like to continue this conversation in Hindi or English?" },
+  { pct: 30, speaker: "customer", text: "Hindi please." },
+  { pct: 36, speaker: "agent", text: "जी, call आपके Cash on Delivery order को confirm करने के लिए है, जो आपने हाल ही में place करी थी. इसमें एक winter cap है और आपको delivery के time ₹550 का payment करना होगा। तो just to check, क्या आप ये delivery confirm करना चाहते हैं?" },
+  { pct: 68, speaker: "customer", text: "हां confirm करो।" },
+  { pct: 75, speaker: "agent", text: "Alright, मैंने आपका order confirm कर दिया है, जो की 7–10 दिनों में deliver हो जाएगी। Weeber Retail Store के customer बनने के लिए thanks. अगर कोई और help चाहिए तो please contact जरूर करें। आपका दिन शुभ हो।" },
 ];
 
 type Status = "idle" | "playing" | "done";
