@@ -304,7 +304,7 @@ function HeroForm() {
       </p>
 
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="sm:max-w-[560px] p-0 bg-[var(--m-bg)] text-[var(--m-text)] border border-[var(--m-border)] shadow-[0_24px_64px_-16px_rgba(0,0,0,0.4)] overflow-hidden [&_button[data-slot=dialog-close]]:text-[var(--m-text-secondary)] [&_button[data-slot=dialog-close]]:hover:text-[var(--m-text)]">
+        <DialogContent className="sm:max-w-[560px] p-0 bg-[var(--m-bg)] text-[var(--m-text)] border border-[var(--m-border)] shadow-[0_24px_64px_-16px_rgba(0,0,0,0.5)] overflow-hidden [&_button[data-slot=dialog-close]]:text-[var(--m-text-secondary)] [&_button[data-slot=dialog-close]]:hover:text-[var(--m-text)]" style={{ backgroundColor: 'var(--m-bg)' }}>
           <div className="px-8 pt-8 pb-6">
             <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#22C55E]/10 mb-5">
               <Sparkles className="w-7 h-7 text-[#22C55E]" />
