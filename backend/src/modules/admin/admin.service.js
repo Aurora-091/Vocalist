@@ -235,6 +235,34 @@ async function updateSetting(key, value, userId) {
   return data;
 }
 
+async function listBroadcasts({ page = 1, limit = 10 }) {
+  const admin = requireAdmin();
+  const offset = (page - 1) * limit;
+  const { data, count, error } = await admin
+    .from("broadcasts")
+    .select("id, template, subject, recipient_type, recipient_count, sent_at, status, sent_by, users!broadcasts_sent_by_fkey(email)", { count: "exact" })
+    .order("sent_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw error;
+  return {
+    data: (data || []).map((r) => ({ ...r, sent_by_email: r.users?.email || null, users: undefined })),
+    total: count || 0,
+    page,
+    limit,
+  };
+}
+
+async function logBroadcast({ template, subject, variables, recipient_type, recipient_count, sent_by }) {
+  const admin = requireAdmin();
+  const { data, error } = await admin
+    .from("broadcasts")
+    .insert({ template, subject, variables, recipient_type, recipient_count, sent_by })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 module.exports = {
   getStats,
   getRecentSignups,
@@ -251,4 +279,6 @@ module.exports = {
   listLogs,
   getSettings,
   updateSetting,
+  listBroadcasts,
+  logBroadcast,
 };

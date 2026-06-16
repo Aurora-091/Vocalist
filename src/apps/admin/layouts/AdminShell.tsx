@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Users,
   ClipboardList,
+  Mail,
   Bot,
   CreditCard,
   ScrollText,
@@ -44,6 +45,7 @@ const coreItems: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/users", label: "Users", icon: Users },
   { to: "/waitlist", label: "Waitlist", icon: ClipboardList },
+  { to: "/broadcasts", label: "Broadcasts", icon: Mail },
   { to: "/agents", label: "Agents", icon: Bot },
 ];
 

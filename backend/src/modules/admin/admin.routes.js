@@ -2,7 +2,9 @@ const { Router } = require("express");
 const { requireAuth } = require("../../middleware/auth.middleware");
 const { requireSuperAdmin } = require("../../middleware/admin.middleware");
 const adminService = require("./admin.service");
+const { sendBroadcastEmail, resolveRecipients, buildBroadcastHtml } = require("../../services/email.service");
 const asyncHandler = require("../../utils/asyncHandler");
+const logger = require("../../config/logger");
 
 const router = Router();
 
@@ -101,6 +103,65 @@ router.patch("/settings", asyncHandler(async (req, res) => {
   if (!key) return res.status(400).json({ error: { code: "validation_error", message: "Key required" } });
   const data = await adminService.updateSetting(key, value, req.auth.userId);
   res.json(data);
+}));
+
+// ─── Broadcasts ──────────────────────────────────────────────────────────────
+
+const VALID_TEMPLATES = ["waitlist_update", "product_update", "custom"];
+const VALID_RECIPIENTS = ["waitlist_pending", "waitlist_approved", "waitlist_all", "users_all"];
+
+router.get("/broadcasts", asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const result = await adminService.listBroadcasts({ page: +page, limit: +limit });
+  res.json(result);
+}));
+
+router.post("/broadcasts", asyncHandler(async (req, res) => {
+  const { template, subject, variables, recipient_type, preview_only } = req.body;
+
+  if (!VALID_TEMPLATES.includes(template)) {
+    return res.status(400).json({ error: { code: "validation_error", message: "Invalid template" } });
+  }
+  if (!subject || typeof subject !== "string") {
+    return res.status(400).json({ error: { code: "validation_error", message: "Subject required" } });
+  }
+  if (!VALID_RECIPIENTS.includes(recipient_type)) {
+    return res.status(400).json({ error: { code: "validation_error", message: "Invalid recipient_type" } });
+  }
+
+  const recipients = await resolveRecipients(recipient_type);
+
+  if (preview_only) {
+    const sample = recipients[0] || { name: "Test User", email: "test@example.com", id: "preview" };
+    const sample_html = buildBroadcastHtml(sample.name, sample.id, template, variables || {});
+    return res.json({ count: recipients.length, sample_email: sample.email, sample_html });
+  }
+
+  // Batch send in groups of 50 with 200ms delay between batches
+  let sent = 0;
+  const batchSize = 50;
+  for (let i = 0; i < recipients.length; i += batchSize) {
+    const batch = recipients.slice(i, i + batchSize);
+    await Promise.allSettled(
+      batch.map((r) => sendBroadcastEmail(r.email, r.name, template, subject, variables || {}, r.id))
+    );
+    sent += batch.length;
+    if (i + batchSize < recipients.length) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  }
+
+  const record = await adminService.logBroadcast({
+    template,
+    subject,
+    variables: variables || {},
+    recipient_type,
+    recipient_count: sent,
+    sent_by: req.auth.userId,
+  });
+
+  logger.info({ broadcastId: record.id, recipient_count: sent, template }, "Broadcast sent");
+  res.json({ id: record.id, recipient_count: sent, status: "sent" });
 }));
 
 module.exports = router;

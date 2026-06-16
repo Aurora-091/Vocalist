@@ -8,6 +8,7 @@ const AdminLogin = lazy(() => import("@/apps/admin/pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminWaitlist = lazy(() => import("@/pages/admin/AdminWaitlist"));
+const AdminBroadcasts = lazy(() => import("@/pages/admin/AdminBroadcasts"));
 const AdminAgents = lazy(() => import("@/pages/admin/AdminAgents"));
 const AdminBilling = lazy(() => import("@/pages/admin/AdminBilling"));
 const AdminLogs = lazy(() => import("@/pages/admin/AdminLogs"));
@@ -109,6 +110,7 @@ export default function AdminApp() {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="waitlist" element={<AdminWaitlist />} />
+          <Route path="broadcasts" element={<AdminBroadcasts />} />
           <Route path="agents" element={<AdminAgents />} />
           <Route path="billing" element={<AdminBilling />} />
           <Route path="logs" element={<AdminLogs />} />

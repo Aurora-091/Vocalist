@@ -82,6 +82,34 @@ export interface PlatformSettings {
   [key: string]: { value: unknown; updated_at: string };
 }
 
+export interface BroadcastPayload {
+  template: "waitlist_update" | "product_update" | "custom";
+  subject: string;
+  variables: Record<string, string>;
+  recipient_type: "waitlist_pending" | "waitlist_approved" | "waitlist_all" | "users_all";
+  preview_only?: boolean;
+}
+
+export interface BroadcastResult {
+  id?: string;
+  recipient_count: number;
+  status: string;
+  sample_html?: string;
+  sample_email?: string;
+  count?: number;
+}
+
+export interface BroadcastEntry {
+  id: string;
+  template: string;
+  subject: string;
+  recipient_type: string;
+  recipient_count: number;
+  sent_at: string;
+  status: string;
+  sent_by_email?: string | null;
+}
+
 export const adminApi = {
   checkAccess: () => api.get<{ platform_role: string }>("/v1/admin/me"),
   getStats: () => api.get<AdminStats>("/v1/admin/stats"),
@@ -129,4 +157,11 @@ export const adminApi = {
   },
   getSettings: () => api.get<PlatformSettings>("/v1/admin/settings"),
   updateSetting: (key: string, value: unknown) => api.patch("/v1/admin/settings", { key, value }),
+  sendBroadcast: (data: BroadcastPayload) => api.post<BroadcastResult>("/v1/admin/broadcasts", data),
+  listBroadcasts: (opts: { page?: number; limit?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (opts.page) params.set("page", String(opts.page));
+    if (opts.limit) params.set("limit", String(opts.limit));
+    return api.get<PaginatedResult<BroadcastEntry>>(`/v1/admin/broadcasts?${params}`);
+  },
 };
