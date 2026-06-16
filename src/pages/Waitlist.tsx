@@ -434,13 +434,13 @@ export default function Waitlist() {
                 Beta testing soon — waitlist customers go first
               </div>
               <div className="mt-3">
-                <span className="font-mono text-[11px] tracking-[.16em] uppercase text-[var(--m-text-muted)]">Built and ready</span>
+                <span className="font-mono text-[11px] tracking-[.16em] uppercase text-[var(--m-text-muted)]">What we're shipping</span>
               </div>
               <h2 className="mt-3 font-display text-[clamp(28px,3.8vw,46px)] font-extrabold tracking-[-0.03em] leading-[1.04] text-[var(--m-text)] max-w-2xl">
                 A no-code voice platform that fits the tools you already run.
               </h2>
               <p className="mt-4 text-[17.5px] text-[var(--m-text-secondary)] max-w-xl">
-                Everything here is built today. Build and launch call flows yourself — no engineers, no scripts to record.
+                Here is what we are building for our first cohort. No engineers, no scripts to record.
               </p>
             </div>
 
@@ -461,13 +461,13 @@ export default function Waitlist() {
             <div className="text-center mb-10" data-reveal>
               <span className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[.16em] uppercase text-[var(--m-text-muted)] justify-center">
                 <span className="w-[6px] h-[6px] rounded-full bg-[var(--m-text)] animate-pulse" />
-                Connected
+                Integrations
               </span>
               <h2 className="mt-3 font-display text-[clamp(24px,3vw,38px)] font-extrabold tracking-[-0.03em] leading-[1.1] text-[var(--m-text)] max-w-xl mx-auto">
-                Imagine the conversions when everything's connected to Weeber.
+                Connect Weeber to the tools you already run.
               </h2>
               <p className="mt-3 text-[17px] text-[var(--m-text-secondary)] max-w-lg mx-auto">
-                Plug in the tools you already run and every order, lead, and missed call becomes a call worth making — automatically.
+                Launching with Shopify and WhatsApp. More connectors ship with each cohort based on waitlist demand.
               </p>
             </div>
 
@@ -477,17 +477,15 @@ export default function Waitlist() {
                   <span className="w-7 h-7 rounded-[8px] border border-[var(--m-border)] flex items-center justify-center text-[var(--m-text)]">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 8h16v11H4zM4 8l2-4h12l2 4" /></svg>
                   </span>
-                  Store & site
+                  Launching with
                 </div>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   {[
                     { label: "Shopify", dark: true, letter: "S" },
-                    { label: "WordPress", dark: false, letter: "W" },
-                    { label: "WooCommerce", dark: true, letter: "Woo" },
-                    { label: "Custom site", dark: false, letter: "</>" },
+                    { label: "WhatsApp", dark: true, letter: "WA" },
                   ].map((t) => (
                     <div key={t.label} className="flex flex-col items-center gap-2 text-center">
-                      <span className={`w-12 h-12 rounded-[13px] border flex items-center justify-center font-display text-[15px] font-extrabold ${t.dark ? "bg-[var(--m-accent-bg)] text-[var(--m-accent-fg)] border-[var(--m-accent-bg)]" : "bg-[var(--m-surface)] text-[var(--m-text)] border-[var(--m-border)]"}`}>
+                      <span className="w-12 h-12 rounded-[13px] border flex items-center justify-center font-display text-[15px] font-extrabold bg-[var(--m-accent-bg)] text-[var(--m-accent-fg)] border-[var(--m-accent-bg)]">
                         {t.letter}
                       </span>
                       <span className="text-[11px] text-[var(--m-text-secondary)]">{t.label}</span>
@@ -501,17 +499,17 @@ export default function Waitlist() {
                   <span className="w-7 h-7 rounded-[8px] border border-[var(--m-border)] flex items-center justify-center text-[var(--m-text)]">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 19V11M10 19V5M16 19v-7M2 19h20" /></svg>
                   </span>
-                  Marketing & data
+                  On the roadmap
                 </div>
                 <div className="grid grid-cols-4 gap-4">
                   {[
-                    { label: "Meta", dark: true, letter: "M" },
-                    { label: "Google", dark: false, letter: "G" },
-                    { label: "Analytics", dark: true, letter: "GA" },
-                    { label: "WhatsApp", dark: false, letter: "WA" },
+                    { label: "WordPress", letter: "W" },
+                    { label: "Google Cal", letter: "G" },
+                    { label: "HubSpot", letter: "H" },
+                    { label: "Meta", letter: "M" },
                   ].map((t) => (
                     <div key={t.label} className="flex flex-col items-center gap-2 text-center">
-                      <span className={`w-12 h-12 rounded-[13px] border flex items-center justify-center font-display text-[13px] font-extrabold ${t.dark ? "bg-[var(--m-accent-bg)] text-[var(--m-accent-fg)] border-[var(--m-accent-bg)]" : "bg-[var(--m-surface)] text-[var(--m-text)] border-[var(--m-border)]"}`}>
+                      <span className="w-12 h-12 rounded-[13px] border flex items-center justify-center font-display text-[13px] font-extrabold bg-[var(--m-surface)] text-[var(--m-text)] border-[var(--m-border)]">
                         {t.letter}
                       </span>
                       <span className="text-[11px] text-[var(--m-text-secondary)]">{t.label}</span>
@@ -525,7 +523,7 @@ export default function Waitlist() {
                   <span className="w-7 h-7 rounded-[8px] border border-[var(--m-border)] flex items-center justify-center text-[var(--m-text)]">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12l4 4 10-10" /></svg>
                   </span>
-                  Ready-made call flows
+                  Use cases we are building for
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {READY_FLOWS.map((f) => (
@@ -542,7 +540,7 @@ export default function Waitlist() {
                   <span className="w-7 h-7 rounded-[8px] border border-[var(--m-border)] flex items-center justify-center">
                     <span className="w-2 h-2 rounded-full bg-[var(--m-text)] animate-pulse" />
                   </span>
-                  Live now · in private beta
+                  Beta testing soon
                 </div>
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex gap-2 flex-wrap">
@@ -558,7 +556,7 @@ export default function Waitlist() {
             </div>
 
             <p className="mt-5 text-[14.5px] text-[var(--m-text-secondary)]" data-reveal>
-              <strong className="text-[var(--m-text)]">Connects to 50+ tools — and counting.</strong> Don't see the one you need?{" "}
+              <strong className="text-[var(--m-text)]">Launching with Shopify and WhatsApp. More connectors ship with each cohort.</strong> Don't see the one you need?{" "}
               <a href="mailto:hello@weeber.ai" className="link-grow font-semibold text-[var(--m-text)]">Request a connector →</a>
             </p>
           </div>

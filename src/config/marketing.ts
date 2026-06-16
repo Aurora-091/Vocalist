@@ -164,29 +164,24 @@ export const VERTICALS = [
   },
 ] as const;
 
-export const VOICES = [
-  { name: "Aria", tag: "English · US" },
-  { name: "Kabir", tag: "Hindi · warm" },
-  { name: "Maya", tag: "English · Indian" },
-  { name: "Sam", tag: "English · UK" },
-] as const;
+export const VOICES = [] as const;
 
 export const PLATFORM_FEATURES = [
   {
-    title: "Drag-and-drop call flows",
-    body: "For any moment in your customer journey.",
+    title: "No-code agent builder",
+    body: "Configure voice, tone, and business rules — no engineers needed.",
   },
   {
-    title: "Human-sounding voices",
-    body: "50+ voices, multiple languages, your script.",
+    title: "Voices powered by ElevenLabs",
+    body: "Natural-sounding AI voices in multiple languages, tuned to your brand.",
   },
   {
     title: "Every call in one dashboard",
-    body: "Recorded, transcribed, and scored.",
+    body: "Recorded and transcribed, with full audit trail.",
   },
   {
-    title: "Two-way sync",
-    body: "With your CRM, store, calendar, and ads.",
+    title: "Shopify + WhatsApp sync",
+    body: "Orders, carts, and messages stay connected automatically.",
   },
 ] as const;
 
@@ -234,15 +229,15 @@ export const SECURITY_FEATURES = [
 export const FAQ = [
   {
     q: "Will it actually sound human?",
-    a: "Yes — natural voices with real back-and-forth, not a phone-tree robot. Most callers don't realize it's AI.",
+    a: "Yes — natural voices powered by ElevenLabs with real back-and-forth, not a phone-tree robot. Most callers don't realize it's AI.",
   },
   {
     q: "Do I need a developer?",
-    a: "No. You build call flows by clicking. Most teams are live the same day.",
+    a: "No. You configure your agent with simple rules and prompts. Most setups take under an hour.",
   },
   {
     q: "Which platforms does it work with?",
-    a: "Shopify, WordPress/WooCommerce, custom sites, and 50+ tools. Missing one? Request it and we'll add the connector.",
+    a: "Launching with Shopify and WhatsApp. WordPress, WooCommerce, and more connectors follow based on waitlist demand.",
   },
   {
     q: "What will it cost?",
@@ -254,6 +249,6 @@ export const FAQ = [
   },
   {
     q: "When does the beta open?",
-    a: "We're onboarding in small batches now. Join the list and we'll reach out by industry.",
+    a: "We're onboarding in small batches soon. Join the list and we'll reach out by industry.",
   },
 ] as const;
