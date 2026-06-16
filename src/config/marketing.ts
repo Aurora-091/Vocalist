@@ -27,6 +27,7 @@ export const FOOTER_COLUMNS = [
     links: [
       { label: "Twitter / X", href: "https://x.com/weeberai" },
       { label: "LinkedIn", href: "https://www.linkedin.com/company/weeberai" },
+      { label: "Instagram", href: "https://www.instagram.com/weeberai" },
     ],
   },
 ] as const;
