@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowRight, CircleCheck as CheckCircle2, Circle as XCircle, Mail, Shield, Lock, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, CircleCheck as CheckCircle2, Circle as XCircle, Mail, Shield, Lock, SlidersHorizontal, Copy, Check, Sparkles } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { joinWaitlist } from "../lib/api";
@@ -176,6 +176,39 @@ function HeroBadge() {
   );
 }
 
+function ReferralCopyLink() {
+  const [copied, setCopied] = useState(false);
+  const referralUrl = "https://weeber.ai/?ref=yours";
+
+  function handleCopy() {
+    navigator.clipboard.writeText(referralUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="mt-5">
+      <p className="text-[12.5px] font-medium text-[var(--m-text-secondary)] mb-2">Your referral link</p>
+      <div className="flex items-center gap-2 bg-[var(--m-bg-alt)] border border-[var(--m-border)] rounded-lg px-3.5 py-2.5">
+        <span className="flex-1 text-[13px] font-mono text-[var(--m-text-muted)] truncate select-all">{referralUrl}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-md bg-[var(--m-text)] text-[var(--m-bg)] hover:opacity-90 transition-opacity flex-shrink-0"
+        >
+          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <p className="mt-2 text-[11.5px] text-[var(--m-text-muted)] flex items-center gap-1">
+        <ArrowRight className="w-3 h-3" />
+        Each referral moves you up 2 spots in line
+      </p>
+    </div>
+  );
+}
+
 
 function HeroForm() {
   const { count } = useWaitlistCount();
@@ -288,48 +321,57 @@ function HeroForm() {
       </p>
 
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="sm:max-w-[460px] p-6 bg-[var(--m-bg)] text-[var(--m-text)] border border-[var(--m-border)] shadow-[0_20px_50px_-34px_rgba(0,0,0,0.35)] [&_button[data-slot=dialog-close]]:text-[var(--m-text-secondary)] [&_button[data-slot=dialog-close]]:hover:text-[var(--m-text)]">
-          <DialogHeader className="text-left">
-            <DialogTitle className="font-display text-2xl font-extrabold tracking-[-0.03em]">
-              You're in — you're #{displayCount} in line.
-            </DialogTitle>
-            <DialogDescription className="text-[var(--m-text-secondary)] mt-2 text-[14.5px]">
-              Want in sooner? Share Weeber and move up the list.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-[var(--m-bg-alt)] border border-[var(--m-border)] rounded-[9px]">
-            <Mail className="w-4 h-4 text-[var(--m-text-secondary)] flex-shrink-0" />
-            <span className="text-sm text-[var(--m-text)] truncate">{email}</span>
+        <DialogContent className="sm:max-w-[560px] p-0 bg-[var(--m-bg)] text-[var(--m-text)] border border-[var(--m-border)] shadow-[0_24px_64px_-16px_rgba(0,0,0,0.4)] overflow-hidden [&_button[data-slot=dialog-close]]:text-[var(--m-text-secondary)] [&_button[data-slot=dialog-close]]:hover:text-[var(--m-text)]">
+          <div className="px-8 pt-8 pb-6">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#22C55E]/10 mb-5">
+              <Sparkles className="w-7 h-7 text-[#22C55E]" />
+            </div>
+            <DialogHeader className="text-left">
+              <DialogTitle className="font-display text-[28px] md:text-[32px] font-extrabold tracking-[-0.035em] leading-[1.1]">
+                You're in — #{displayCount} in line.
+              </DialogTitle>
+              <DialogDescription className="text-[var(--m-text-secondary)] mt-3 text-[15px] leading-relaxed">
+                Every referral moves you up 2 spots. Share your link and skip the queue.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-6 flex items-center gap-3 px-4 py-3.5 bg-[var(--m-bg-alt)] border border-[var(--m-border)] rounded-lg">
+              <Mail className="w-4 h-4 text-[var(--m-text-secondary)] flex-shrink-0" />
+              <span className="text-sm text-[var(--m-text)] truncate flex-1">{email}</span>
+              <span className="text-[11px] font-mono text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded">Confirmed</span>
+            </div>
+
+            <ReferralCopyLink />
+
+            <div className="mt-5 grid grid-cols-3 gap-2.5">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent("I just joined the Weeber waitlist — AI voice agents that answer and make your customer calls. Get early access: https://weeber.ai")}`}
+                target="_blank"
+                rel="noopener"
+                className="text-center border border-[var(--m-border)] rounded-lg px-3 py-3 text-[14px] font-semibold hover:bg-[var(--m-bg-alt)] hover:border-[var(--m-text-muted)] transition-all"
+              >
+                WhatsApp
+              </a>
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("Just joined the @weeber_ai waitlist — AI voice agents that answer customer calls 24/7. https://weeber.ai")}`}
+                target="_blank"
+                rel="noopener"
+                className="text-center border border-[var(--m-border)] rounded-lg px-3 py-3 text-[14px] font-semibold hover:bg-[var(--m-bg-alt)] hover:border-[var(--m-text-muted)] transition-all"
+              >
+                Post on X
+              </a>
+              <a
+                href={`mailto:?subject=${encodeURIComponent("Weeber — early access")}&body=${encodeURIComponent("I just joined the Weeber waitlist — AI voice agents that answer and make your customer calls. Get early access: https://weeber.ai")}`}
+                className="text-center border border-[var(--m-border)] rounded-lg px-3 py-3 text-[14px] font-semibold hover:bg-[var(--m-bg-alt)] hover:border-[var(--m-text-muted)] transition-all"
+              >
+                Email
+              </a>
+            </div>
           </div>
 
-          <div className="mt-4 flex gap-2">
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent("I just joined the Weeber waitlist — AI voice agents that answer and make your customer calls. Get early access: https://weeber.ai")}`}
-              target="_blank"
-              rel="noopener"
-              className="flex-1 text-center border border-[var(--m-border)] rounded-[9px] px-3 py-2.5 text-[13.5px] font-semibold hover:bg-[var(--m-bg-alt)] transition-colors"
-            >
-              WhatsApp
-            </a>
-            <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("Just joined the @weeber_ai waitlist — AI voice agents that answer customer calls 24/7. https://weeber.ai")}`}
-              target="_blank"
-              rel="noopener"
-              className="flex-1 text-center border border-[var(--m-border)] rounded-[9px] px-3 py-2.5 text-[13.5px] font-semibold hover:bg-[var(--m-bg-alt)] transition-colors"
-            >
-              Post on X
-            </a>
-            <a
-              href={`mailto:?subject=${encodeURIComponent("Weeber — early access")}&body=${encodeURIComponent("I just joined the Weeber waitlist — AI voice agents that answer and make your customer calls. Get early access: https://weeber.ai")}`}
-              className="flex-1 text-center border border-[var(--m-border)] rounded-[9px] px-3 py-2.5 text-[13.5px] font-semibold hover:bg-[var(--m-bg-alt)] transition-colors"
-            >
-              Email
-            </a>
-          </div>
-
-          <div className="mt-4 border-t border-[var(--m-border)] pt-4">
-            <label className="text-[12.5px] text-[var(--m-text-secondary)] block mb-2">What do you run? (so we prioritize the right fit)</label>
-            <select className="w-full bg-[var(--m-bg)] border border-[var(--m-border)] rounded-[9px] text-[var(--m-text)] text-[14.5px] px-3 py-2.5 focus:outline-none focus:border-[var(--m-text-muted)]">
+          <div className="border-t border-[var(--m-border)] bg-[var(--m-bg-alt)] px-8 py-5">
+            <label className="text-[12.5px] font-medium text-[var(--m-text-secondary)] block mb-2">What do you run? (helps us prioritize your batch)</label>
+            <select className="w-full bg-[var(--m-bg)] border border-[var(--m-border)] rounded-lg text-[var(--m-text)] text-[14.5px] px-3.5 py-2.5 focus:outline-none focus:border-[var(--m-text-muted)] transition-colors">
               <option value="">Select your business...</option>
               <option>Clinic / healthcare</option>
               <option>Home & repair services</option>

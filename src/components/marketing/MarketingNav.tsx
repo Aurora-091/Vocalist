@@ -46,10 +46,16 @@ export function MarketingNav() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-2.5">
+          <Link
+            to="/about"
+            className="px-4 py-2 text-[14px] font-medium text-[var(--m-text-secondary)] border border-[var(--m-border)] rounded-full hover:text-[var(--m-text)] hover:border-[var(--m-text-muted)] transition-all"
+          >
+            About
+          </Link>
           <a
             href="#faq"
-            className="text-[15px] text-[var(--m-text-secondary)] hover:text-[var(--m-text)] transition-colors"
+            className="px-4 py-2 text-[14px] font-medium text-[var(--m-text-secondary)] border border-[var(--m-border)] rounded-full hover:text-[var(--m-text)] hover:border-[var(--m-text-muted)] transition-all"
           >
             Help
           </a>
@@ -78,10 +84,16 @@ export function MarketingNav() {
               </Link>
             ))}
           </nav>
-          <div className="flex flex-col gap-3">
+          <div className="flex gap-3">
+            <Link
+              to="/about"
+              className="flex-1 text-center px-4 py-2.5 text-[14px] font-medium text-[var(--m-text-secondary)] border border-[var(--m-border)] rounded-full hover:text-[var(--m-text)] transition-colors"
+            >
+              About
+            </Link>
             <a
               href="#faq"
-              className="text-sm text-[var(--m-text-secondary)] hover:text-[var(--m-text)]"
+              className="flex-1 text-center px-4 py-2.5 text-[14px] font-medium text-[var(--m-text-secondary)] border border-[var(--m-border)] rounded-full hover:text-[var(--m-text)] transition-colors"
             >
               Help
             </a>

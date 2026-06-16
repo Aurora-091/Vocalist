@@ -1,11 +1,10 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, Link } from "react-router-dom";
 import { LayoutDashboard, Bot, Megaphone, Phone, Users, Plug, TrendingUp, ChartBar as BarChart2, BookOpen, CreditCard, Settings, LogOut, ShieldCheck, Volume2, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import { supabase } from "../../lib/supabase";
 import { useEffect, useState } from "react";
 import { getUsageSummary, getOrg } from "../../lib/db";
 import { NotificationsBell } from "./NotificationsBell";
-import { WeeberLogo } from "../WeeberLogo";
 import {
   Sidebar,
   SidebarContent,
@@ -80,9 +79,15 @@ function AppSidebar() {
   }
 
   return (
-    <Sidebar>
-      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-4">
-        <WeeberLogo size="sm" />
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="h-14 justify-center px-3">
+        <NavLink to="/dashboard" className="flex items-center">
+          <img
+            src="/weeber_favicon_transparent.png"
+            alt="Weeber"
+            className="h-7 w-7 object-contain dark:invert flex-shrink-0"
+          />
+        </NavLink>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -109,7 +114,7 @@ function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={signOut}>
+            <SidebarMenuButton onClick={signOut} tooltip="Sign out">
               <LogOut aria-hidden="true" />
               <span>Sign out</span>
             </SidebarMenuButton>
@@ -151,7 +156,7 @@ export function AppShell() {
       <SidebarProvider>
         <AppSidebar />
       <SidebarInset>
-        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
+        <header className="h-14 bg-background flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3">
             <SidebarTrigger className="-ml-1" />
             <div className="text-sm text-muted-foreground truncate">
@@ -161,10 +166,16 @@ export function AppShell() {
           <div className="flex items-center gap-2 md:gap-4">
             {usage && (
               <div className={`text-xs font-mono ${usageTone} hidden sm:block`}>
-                {usage.used} / {usage.included || "—"} min
+                {usage.used} / {usage.included || "\u2014"} min
               </div>
             )}
             <ShieldCheck className="w-4 h-4 text-success hidden sm:block" aria-label="Compliance: healthy" />
+            <Link
+              to="/about"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+            >
+              About
+            </Link>
             <a
               href="mailto:support@weeber.ai"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
