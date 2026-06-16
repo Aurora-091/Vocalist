@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { api } from "@/lib/api";
-import { adminApi } from "@/lib/admin-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,14 +26,39 @@ export default function AdminLogin() {
         user: { id: string };
       }>("/v1/auth/login", { email, password });
 
-      if (result.session) {
-        await supabase.auth.setSession({
-          access_token: result.session.access_token,
-          refresh_token: result.session.refresh_token,
-        });
+      if (!result.session?.access_token) {
+        setErr("Login failed. No session returned.");
+        setLoading(false);
+        return;
       }
 
-      const access = await adminApi.checkAccess();
+      const token = result.session.access_token;
+
+      await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: result.session.refresh_token,
+      });
+
+      const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+      const meRes = await fetch(`${BASE_URL}/v1/admin/me`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!meRes.ok) {
+        await supabase.auth.signOut();
+        if (meRes.status === 403) {
+          setErr("You don't have access to the Weeber Admin Portal.");
+        } else {
+          setErr("Admin verification failed. Please contact support.");
+        }
+        setLoading(false);
+        return;
+      }
+
+      const access = await meRes.json();
       if (access.platform_role !== "super_admin") {
         await supabase.auth.signOut();
         setErr("You don't have access to the Weeber Admin Portal.");
