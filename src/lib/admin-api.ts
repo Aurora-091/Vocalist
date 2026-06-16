@@ -40,6 +40,7 @@ export interface WaitlistEntry {
   source: string;
   status: string;
   referral_code: string | null;
+  referrals_count: number;
   referred_by: string | null;
   unsubscribed: boolean;
   created_at: string;

@@ -528,11 +528,6 @@ textarea:disabled {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: radial-gradient(ellipse at 35% 30%, #8ECAE6 0%, #3FADA8 30%, #1B6B6F 60%, #264653 100%);
-  box-shadow:
-    0 20px 60px -10px rgba(63, 173, 168, 0.3),
-    0 8px 20px rgba(27, 107, 111, 0.15),
-    inset 0 -20px 40px rgba(38, 70, 83, 0.4);
 }
 
 .demo-orb-shine {
@@ -602,33 +597,6 @@ textarea:disabled {
   top: 0;
   left: 0;
   transform: rotate(-90deg);
-}
-
-.demo-bottom-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--m-border);
-  background: var(--m-surface);
-}
-
-.demo-agent-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: radial-gradient(circle at 40% 35%, #8ECAE6, #264653);
-  box-shadow: 0 2px 6px rgba(38, 70, 83, 0.3);
-}
-
-:is(.dark) .demo-orb-inner {
-  background: radial-gradient(ellipse at 35% 30%, #4ECDC4 0%, #1A9CA0 30%, #0D4D4D 60%, #0A2E2E 100%);
-  box-shadow:
-    0 20px 60px -10px rgba(78, 205, 196, 0.2),
-    0 8px 20px rgba(26, 156, 160, 0.1),
-    inset 0 -20px 40px rgba(10, 46, 46, 0.5);
 }
 
 :is(.dark) .demo-call-btn {

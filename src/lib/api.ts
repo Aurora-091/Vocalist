@@ -93,7 +93,7 @@ export const api = {
 
 export { ApiError };
 
-export async function joinWaitlist(data: { name: string; email: string; phone?: string }): Promise<{ success: boolean; duplicate?: boolean; error?: string }> {
+export async function joinWaitlist(data: { name: string; email: string; phone?: string }): Promise<{ success: boolean; duplicate?: boolean; referral_code?: string; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/v1/waitlist/join`, {
       method: "POST",

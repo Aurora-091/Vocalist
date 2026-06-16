@@ -12,7 +12,7 @@ const joinSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(7).max(20).optional(),
   source: z.string().max(50).default("website"),
-  ref: z.string().uuid().optional(),
+  ref: z.string().max(20).optional(),
 });
 
 router.post("/join", authLimiter, async (req, res) => {
@@ -24,10 +24,10 @@ router.post("/join", authLimiter, async (req, res) => {
   const { name, email, phone, source, ref } = parsed.data;
   const admin = requireAdmin();
 
-  // Resolve referrer row id from referral code (ref param = row UUID)
+  // Resolve referrer by short referral code (format: weeber-XXXXXXX)
   let referred_by = null;
   if (ref) {
-    const { data: referrer } = await admin.from("waitlist").select("id").eq("id", ref).maybeSingle();
+    const { data: referrer } = await admin.from("waitlist").select("id").eq("referral_code", ref).maybeSingle();
     if (referrer) referred_by = referrer.id;
   }
 
@@ -43,11 +43,17 @@ router.post("/join", authLimiter, async (req, res) => {
 
   if (error) {
     if (error.code === "23505") {
-      return res.status(200).json({ success: true, duplicate: true });
+      // Duplicate — fetch existing referral code to return it
+      const { data: existing } = await admin.from("waitlist").select("referral_code").eq("email", email).maybeSingle();
+      return res.status(200).json({ success: true, duplicate: true, referral_code: existing?.referral_code || null });
     }
     logger.error({ err: error }, "Waitlist insert failed");
     return res.status(500).json({ error: { code: "internal", message: "Something went wrong" } });
   }
+
+  // Generate short referral code: weeber-<first 7 chars of uuid without dashes>
+  const shortCode = "weeber-" + inserted.id.replace(/-/g, "").slice(0, 7);
+  await admin.from("waitlist").update({ referral_code: shortCode }).eq("id", inserted.id);
 
   // Get position in queue (count of rows with created_at <= this row)
   const { count: position } = await admin
@@ -60,7 +66,7 @@ router.post("/join", authLimiter, async (req, res) => {
 
   void sendWaitlistWelcome(email, name, inserted.id, position || 1);
 
-  return res.status(201).json({ success: true });
+  return res.status(201).json({ success: true, referral_code: shortCode });
 });
 
 // GET /api/waitlist/unsubscribe?token=<uuid>

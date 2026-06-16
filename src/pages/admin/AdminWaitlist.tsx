@@ -63,10 +63,11 @@ export default function AdminWaitlist() {
 
   function exportCsv() {
     if (!result?.data.length) return;
-    const headers = ["Name", "Email", "Phone", "Source", "Status", "Date"];
+    const headers = ["Name", "Email", "Phone", "Source", "Referral Code", "Referrals", "Status", "Date"];
     const rows = result.data.map((r) => [
-      r.name || "", r.email, r.phone || "", r.source, r.status,
-      new Date(r.created_at).toLocaleDateString(),
+      r.name || "", r.email, r.phone || "", r.source,
+      r.referral_code || "", String(r.referrals_count),
+      r.status, new Date(r.created_at).toLocaleDateString(),
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -138,6 +139,8 @@ export default function AdminWaitlist() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Phone</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Source</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">Referral Code</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">Referrals</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Date</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
@@ -145,10 +148,10 @@ export default function AdminWaitlist() {
             </thead>
             <tbody className="divide-y divide-border">
               {loading && !result && (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">Loading...</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">Loading...</td></tr>
               )}
               {result?.data.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">No entries found</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">No entries found</td></tr>
               )}
               {result?.data.map((entry) => (
                 <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
@@ -158,7 +161,17 @@ export default function AdminWaitlist() {
                   <td className="px-4 py-3 font-medium">{entry.name || "---"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{entry.email}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{entry.phone || "---"}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{entry.source}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{entry.source}{entry.referred_by ? <span className="ml-2 text-[10px] font-semibold bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded">Referred</span> : null}</td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    {entry.referral_code ? (
+                      <span className="font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded">{entry.referral_code}</span>
+                    ) : "---"}
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    {entry.referrals_count > 0 ? (
+                      <span className="text-[12px] font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">{entry.referrals_count}</span>
+                    ) : <span className="text-muted-foreground text-[12px]">0</span>}
+                  </td>
                   <td className="px-4 py-3">
                     <Badge variant="secondary" className={`text-xs capitalize ${STATUS_STYLES[entry.status] || ""}`}>
                       {entry.status}

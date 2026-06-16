@@ -159,9 +159,9 @@ function HeroBadge() {
   );
 }
 
-function ReferralCopyLink() {
+function ReferralCopyLink({ referralCode }: { referralCode: string }) {
   const [copied, setCopied] = useState(false);
-  const referralUrl = "https://weeber.ai/?ref=yours";
+  const referralUrl = `https://weeber.ai/?ref=${referralCode}`;
 
   function handleCopy() {
     navigator.clipboard.writeText(referralUrl).then(() => {
@@ -202,6 +202,7 @@ function HeroForm() {
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
 
   const emailValid = isValidEmail(email);
   const phoneValid = isValidPhone(phone);
@@ -216,15 +217,18 @@ function HeroForm() {
     setErrorMsg("");
     trackFormSubmit();
 
-    const payload: { name: string; email: string; phone?: string } = {
+    const payload: { name: string; email: string; phone?: string; ref?: string } = {
       name: name.trim(),
       email: email.trim(),
     };
     if (phone.trim()) payload.phone = phone.trim();
+    const urlRef = new URLSearchParams(window.location.search).get("ref");
+    if (urlRef) payload.ref = urlRef;
 
     const result = await joinWaitlist(payload);
     if (result.success) {
       setState("success");
+      setReferralCode(result.referral_code || "");
       setShowSuccess(true);
       trackFormSuccess();
     } else {
@@ -324,45 +328,7 @@ function HeroForm() {
               <span className="text-[11px] font-mono text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded">Confirmed</span>
             </div>
 
-            <ReferralCopyLink />
-
-            <div className="mt-5 grid grid-cols-3 gap-2.5">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent("I just joined the Weeber waitlist — AI voice agents that answer and make your customer calls. Get early access: https://weeber.ai")}`}
-                target="_blank"
-                rel="noopener"
-                className="text-center border border-[var(--m-border)] rounded-lg px-3 py-3 text-[14px] font-semibold hover:bg-[var(--m-bg-alt)] hover:border-[var(--m-text-muted)] transition-all"
-              >
-                WhatsApp
-              </a>
-              <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("Just joined the @weeber_ai waitlist — AI voice agents that answer customer calls 24/7. https://weeber.ai")}`}
-                target="_blank"
-                rel="noopener"
-                className="text-center border border-[var(--m-border)] rounded-lg px-3 py-3 text-[14px] font-semibold hover:bg-[var(--m-bg-alt)] hover:border-[var(--m-text-muted)] transition-all"
-              >
-                Post on X
-              </a>
-              <a
-                href={`mailto:?subject=${encodeURIComponent("Weeber — early access")}&body=${encodeURIComponent("I just joined the Weeber waitlist — AI voice agents that answer and make your customer calls. Get early access: https://weeber.ai")}`}
-                className="text-center border border-[var(--m-border)] rounded-lg px-3 py-3 text-[14px] font-semibold hover:bg-[var(--m-bg-alt)] hover:border-[var(--m-text-muted)] transition-all"
-              >
-                Email
-              </a>
-            </div>
-          </div>
-
-          <div className="border-t border-[var(--m-border)] bg-[var(--m-bg-alt)] px-8 py-5">
-            <label className="text-[12.5px] font-medium text-[var(--m-text-secondary)] block mb-2">What do you run? (helps us prioritize your batch)</label>
-            <select className="w-full bg-[var(--m-bg)] border border-[var(--m-border)] rounded-lg text-[var(--m-text)] text-[14.5px] px-3.5 py-2.5 focus:outline-none focus:border-[var(--m-text-muted)] transition-colors">
-              <option value="">Select your business...</option>
-              <option>Clinic / healthcare</option>
-              <option>Home & repair services</option>
-              <option>Salon / beauty</option>
-              <option>D2C / e-commerce</option>
-              <option>Enterprise</option>
-              <option>Other</option>
-            </select>
+            <ReferralCopyLink referralCode={referralCode} />
           </div>
         </DialogContent>
       </Dialog>

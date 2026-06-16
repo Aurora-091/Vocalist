@@ -1,10 +1,28 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Square, ChevronDown } from "lucide-react";
+import { Play, Square } from "lucide-react";
 
 const AGENTS = [
   { key: "cod", label: "COD Confirmation", audio: "/audio/webber-cod-converstaion_FWQnrw94.mp3" },
   { key: "cart", label: "Cart Recovery", audio: null },
   { key: "booking", label: "Appointment Booking", audio: null },
+];
+
+const ORB_PALETTES = [
+  {
+    gradient: "radial-gradient(ellipse at 35% 30%, #8ECAE6 0%, #3FADA8 30%, #1B6B6F 60%, #264653 100%)",
+    shadow: "0 20px 60px -10px rgba(63,173,168,0.3), 0 8px 20px rgba(27,107,111,0.15), inset 0 -20px 40px rgba(38,70,83,0.4)",
+    avatarGradient: "radial-gradient(circle at 40% 35%, #8ECAE6, #264653)",
+  },
+  {
+    gradient: "radial-gradient(ellipse at 35% 30%, #FCD34D 0%, #F59E0B 30%, #B45309 60%, #78350F 100%)",
+    shadow: "0 20px 60px -10px rgba(245,158,11,0.3), 0 8px 20px rgba(180,83,9,0.15), inset 0 -20px 40px rgba(120,53,15,0.4)",
+    avatarGradient: "radial-gradient(circle at 40% 35%, #FCD34D, #78350F)",
+  },
+  {
+    gradient: "radial-gradient(ellipse at 35% 30%, #FDA4AF 0%, #F43F5E 30%, #BE123C 60%, #881337 100%)",
+    shadow: "0 20px 60px -10px rgba(244,63,94,0.3), 0 8px 20px rgba(190,18,60,0.15), inset 0 -20px 40px rgba(136,19,55,0.4)",
+    avatarGradient: "radial-gradient(circle at 40% 35%, #FDA4AF, #881337)",
+  },
 ];
 
 export function AgentDemoWidget() {
@@ -15,6 +33,7 @@ export function AgentDemoWidget() {
   const rafRef = useRef<number>(0);
 
   const active = AGENTS[activeIdx];
+  const palette = ORB_PALETTES[activeIdx];
 
   useEffect(() => {
     return () => {
@@ -76,7 +95,7 @@ export function AgentDemoWidget() {
             <span
               className="w-[7px] h-[7px] rounded-full flex-none"
               style={{
-                background: idx === activeIdx ? "#22c55e" : "var(--m-text-muted)",
+                background: idx === activeIdx ? ORB_PALETTES[idx].avatarGradient : "var(--m-text-muted)",
                 opacity: idx === activeIdx ? 1 : 0.4,
               }}
             />
@@ -88,7 +107,14 @@ export function AgentDemoWidget() {
       {/* Main orb area */}
       <div className="flex flex-col items-center justify-center py-10 md:py-16 relative">
         <div className={`demo-orb ${isPlaying ? "demo-orb--playing" : ""}`}>
-          <div className="demo-orb-inner" />
+          <div
+            className="demo-orb-inner"
+            style={{
+              background: palette.gradient,
+              boxShadow: palette.shadow,
+              transition: "background 0.4s ease, box-shadow 0.4s ease",
+            }}
+          />
           <div className="demo-orb-shine" />
 
           {/* Play button centered on orb */}
@@ -124,24 +150,6 @@ export function AgentDemoWidget() {
             />
           </svg>
         )}
-      </div>
-
-      {/* Bottom bar */}
-      <div className="demo-bottom-bar">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="demo-agent-avatar" />
-          <span className="text-[14px] font-semibold text-[var(--m-text)] truncate">
-            {active.label} Agent
-          </span>
-          <ChevronDown className="w-3.5 h-3.5 text-[var(--m-text-muted)] flex-none" />
-        </div>
-
-        <a
-          href="#waitlist"
-          className="inline-flex items-center gap-1.5 h-9 px-5 text-[13px] font-semibold bg-[var(--m-accent-bg)] text-[var(--m-accent-fg)] rounded-lg hover:opacity-85 transition-opacity"
-        >
-          Join waitlist
-        </a>
       </div>
 
       {active.audio && (
