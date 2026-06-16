@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { Outlet, NavLink, useNavigate, Link } from "react-router-dom";
 import { LayoutDashboard, Users, ClipboardList, Bot, CreditCard, ScrollText, Headset, Settings, ChartBar as BarChart3, ArrowLeft, LogOut } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { PageSkeleton } from "./PageSkeleton";
 import {
   Sidebar,
   SidebarContent,
@@ -141,7 +143,9 @@ export function AdminShell() {
           </header>
           <main className="flex-1 overflow-auto bg-background">
             <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-6 md:py-8">
-              <Outlet />
+              <Suspense fallback={<PageSkeleton />}>
+                <Outlet />
+              </Suspense>
             </div>
           </main>
         </SidebarInset>

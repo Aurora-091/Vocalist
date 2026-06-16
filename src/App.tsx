@@ -46,8 +46,12 @@ const RevenueAnalytics = lazy(() => import("./pages/admin/analytics/RevenueAnaly
 
 function PageLoader() {
   return (
-    <div className="h-full flex items-center justify-center text-sm text-text-muted">
-      Loading...
+    <div className="h-screen flex flex-col items-center justify-center gap-3">
+      <img
+        src="/weeber_favicon_transparent.png"
+        alt="Loading"
+        className="h-8 w-8 object-contain dark:invert animate-pulse"
+      />
     </div>
   );
 }

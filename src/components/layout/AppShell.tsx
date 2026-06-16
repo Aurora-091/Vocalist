@@ -2,7 +2,8 @@ import { Outlet, NavLink, useNavigate, Link } from "react-router-dom";
 import { LayoutDashboard, Bot, Megaphone, Phone, Users, Plug, TrendingUp, ChartBar as BarChart2, BookOpen, CreditCard, Settings, LogOut, ShieldCheck, Volume2, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import { supabase } from "../../lib/supabase";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { PageSkeleton } from "./PageSkeleton";
 import { getUsageSummary, getOrg } from "../../lib/db";
 import { NotificationsBell } from "./NotificationsBell";
 import {
@@ -188,7 +189,9 @@ export function AppShell() {
         </header>
         <main className="flex-1 overflow-auto bg-background">
           <div className="max-w-[1280px] mx-auto px-4 md:px-6 py-6 md:py-8">
-            <Outlet />
+            <Suspense fallback={<PageSkeleton />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </SidebarInset>
