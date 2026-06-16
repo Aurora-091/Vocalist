@@ -167,7 +167,7 @@ function HeroBgWaveform() {
 
 function HeroBadge() {
   const { count } = useWaitlistCount();
-  const displayCount = BASE_COUNT + (count ?? 0);
+  const displayCount = Math.max(BASE_COUNT, count ?? BASE_COUNT);
   return (
     <div className="mb-6 inline-flex items-center gap-2 bg-[var(--m-bg-alt)] border border-[var(--m-border)] rounded-full px-3.5 py-1.5 text-[13px] text-[var(--m-text-secondary)]" data-reveal>
       <span className="w-[7px] h-[7px] rounded-full bg-[#22c55e] inline-block hero-pulse-dot" />
@@ -191,7 +191,7 @@ function HeroForm() {
   const phoneValid = isValidPhone(phone);
   const nameValid = name.trim().length > 0;
   const canSubmit = nameValid && emailValid && phoneValid;
-  const displayCount = BASE_COUNT + (count ?? 0);
+  const displayCount = Math.max(BASE_COUNT, count ?? BASE_COUNT);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
