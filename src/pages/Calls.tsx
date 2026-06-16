@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
-  Phone,
+  MessageSquare,
   RefreshCw,
   Download,
   Copy,
@@ -14,8 +15,14 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Phone,
+  MessageCircle,
+  Mail,
+  Globe,
 } from "lucide-react";
+import { useState } from "react";
 import { listCalls, getCallsSummary, getCall, listAgents } from "../lib/db";
+import { StatCard } from "@/components/legacy-ui/StatCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,16 +40,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 type Agent = { id: string; name: string };
-type CallRow = {
+type ConversationRow = {
   id: string;
   agent_id: string;
   campaign_id: string | null;
+  channel: string;
   direction: string;
   status: string;
   provider: string;
@@ -54,6 +63,7 @@ type CallRow = {
   hangup_by: string | null;
   recording_url: string | null;
   transcript: any;
+  outcome: any;
   created_at: string;
   agents: { name: string };
 };
@@ -76,38 +86,80 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   queued: "outline",
 };
 
+const CHANNEL_ICON: Record<string, React.ElementType> = {
+  voice: Phone,
+  sms: MessageCircle,
+  chat: MessageSquare,
+  email: Mail,
+  whatsapp: Globe,
+};
+
 const PAGE_SIZES = [10, 20, 50];
 
-export default function Calls() {
+function defaultDateFrom() {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return d.toISOString().split("T")[0];
+}
+
+export default function Conversations() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [calls, setCalls] = useState<CallRow[] | null>(null);
+  const [conversations, setConversations] = useState<ConversationRow[] | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Filters
-  const [agentId, setAgentId] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [directionFilter, setDirectionFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
-  });
-  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split("T")[0]);
-
-  // Pagination
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
-
-  // Detail drawer
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Filter state from URL
+  const agentId = searchParams.get("agent") || "";
+  const statusFilter = searchParams.get("status") || "";
+  const directionFilter = searchParams.get("direction") || "";
+  const dateFrom = searchParams.get("from") || defaultDateFrom();
+  const dateTo = searchParams.get("to") || new Date().toISOString().split("T")[0];
+  const page = Number(searchParams.get("page") || "0");
+  const pageSize = Number(searchParams.get("size") || "20");
+
+  function setParam(key: string, value: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (!value || value === "__all__") {
+        next.delete(key);
+      } else {
+        next.set(key, value);
+      }
+      if (key !== "page") next.delete("page");
+      return next;
+    });
+  }
+
+  function setPage(p: number) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (p === 0) next.delete("page");
+      else next.set("page", String(p));
+      return next;
+    });
+  }
+
+  function setPageSize(s: number) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("size", String(s));
+      next.delete("page");
+      return next;
+    });
+  }
+
+  function resetFilters() {
+    setSearchParams({});
+  }
 
   useEffect(() => {
     listAgents().then(setAgents).catch(() => setAgents([]));
   }, []);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const filterOpts = {
@@ -117,32 +169,23 @@ export default function Calls() {
         date_from: dateFrom ? `${dateFrom}T00:00:00Z` : undefined,
         date_to: dateTo ? `${dateTo}T23:59:59Z` : undefined,
       };
-      const [callsResult, summaryResult] = await Promise.all([
+      const [result, summaryResult] = await Promise.all([
         listCalls({ ...filterOpts, limit: pageSize, offset: page * pageSize }),
         getCallsSummary(filterOpts),
       ]);
-      setCalls(callsResult.data as CallRow[]);
-      setTotalCount(callsResult.count);
+      setConversations(result.data as ConversationRow[]);
+      setTotalCount(result.count);
       setSummary(summaryResult);
     } catch {
-      setCalls([]);
+      setConversations([]);
       setTotalCount(0);
       setSummary(null);
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    load();
   }, [agentId, statusFilter, directionFilter, dateFrom, dateTo, page, pageSize]);
 
-  function resetFilters() {
-    setAgentId("");
-    setStatusFilter("");
-    setDirectionFilter("");
-    setPage(0);
-  }
+  useEffect(() => { load(); }, [load]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -151,9 +194,9 @@ export default function Calls() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Calls</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Conversations</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Monitor every conversation. Filter by agent, date, or status.
+            Every conversation across all channels. Filter, inspect, and replay.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -161,16 +204,16 @@ export default function Calls() {
             <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", loading && "animate-spin")} />
             Refresh
           </Button>
-          <Button variant="outline" size="sm" disabled={!calls || calls.length === 0}>
+          <Button variant="outline" size="sm" disabled={!conversations || conversations.length === 0}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
             Download
           </Button>
         </div>
       </div>
 
-      {/* Filters row */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={agentId || "__all__"} onValueChange={(v) => { setAgentId(v === "__all__" ? "" : v); setPage(0); }}>
+        <Select value={agentId || "__all__"} onValueChange={(v) => setParam("agent", v)}>
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="All agents" />
           </SelectTrigger>
@@ -185,18 +228,18 @@ export default function Calls() {
         <Input
           type="date"
           value={dateFrom}
-          onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+          onChange={(e) => setParam("from", e.target.value)}
           className="w-[150px]"
         />
         <span className="text-muted-foreground text-sm">to</span>
         <Input
           type="date"
           value={dateTo}
-          onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+          onChange={(e) => setParam("to", e.target.value)}
           className="w-[150px]"
         />
 
-        <Select value={statusFilter || "__all__"} onValueChange={(v) => { setStatusFilter(v === "__all__" ? "" : v); setPage(0); }}>
+        <Select value={statusFilter || "__all__"} onValueChange={(v) => setParam("status", v)}>
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -210,65 +253,69 @@ export default function Calls() {
           </SelectContent>
         </Select>
 
-        <Select value={directionFilter || "__all__"} onValueChange={(v) => { setDirectionFilter(v === "__all__" ? "" : v); setPage(0); }}>
+        <Select value={directionFilter || "__all__"} onValueChange={(v) => setParam("direction", v)}>
           <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Call type" />
+            <SelectValue placeholder="Direction" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">All types</SelectItem>
+            <SelectItem value="__all__">All directions</SelectItem>
             <SelectItem value="outbound">Outbound</SelectItem>
             <SelectItem value="inbound">Inbound</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Stats cards */}
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={DollarSign}
+          icon={<DollarSign className="h-4 w-4" />}
           label="Total Cost"
-          value={summary ? `$${summary.totalCost.toFixed(2)}` : null}
-          sub="Campaign spend"
+          value={summary ? `$${summary.totalCost.toFixed(2)}` : "—"}
+          hint="Campaign spend"
+          loading={loading && summary === null}
         />
         <StatCard
-          icon={Clock}
+          icon={<Clock className="h-4 w-4" />}
           label="Total Duration"
-          value={summary ? `${summary.totalDuration.toFixed(1)}s` : null}
-          sub="Talk time"
+          value={summary ? `${summary.totalDuration.toFixed(0)}s` : "—"}
+          hint="Talk time"
+          loading={loading && summary === null}
         />
         <StatCard
-          icon={TrendingUp}
+          icon={<TrendingUp className="h-4 w-4" />}
           label="Avg Cost"
-          value={summary ? `$${summary.avgCost.toFixed(2)}` : null}
-          sub="per call"
+          value={summary ? `$${summary.avgCost.toFixed(2)}` : "—"}
+          hint="Per conversation"
+          loading={loading && summary === null}
         />
         <StatCard
-          icon={BarChart2}
+          icon={<BarChart2 className="h-4 w-4" />}
           label="Avg Duration"
-          value={summary ? `${summary.avgDuration.toFixed(1)}s` : null}
-          sub="per call"
+          value={summary ? `${summary.avgDuration.toFixed(0)}s` : "—"}
+          hint="Per conversation"
+          loading={loading && summary === null}
         />
       </div>
 
-      {/* Count badge */}
-      {summary && (
+      {/* Count */}
+      {!loading && (
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">
-            {totalCount} call{totalCount !== 1 ? "s" : ""} found
+            {totalCount} conversation{totalCount !== 1 ? "s" : ""}
           </Badge>
         </div>
       )}
 
       {/* Table */}
-      {calls === null || loading ? (
+      {conversations === null || (loading && conversations === null) ? (
         <div className="space-y-3">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
-      ) : calls.length === 0 ? (
+      ) : conversations.length === 0 ? (
         <div className="text-center py-16 border border-border rounded-lg bg-card">
-          <Phone className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No calls match your filters.</p>
+          <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">No conversations match your filters.</p>
           <Button variant="ghost" size="sm" className="mt-3" onClick={resetFilters}>
             Clear filters
           </Button>
@@ -280,65 +327,73 @@ export default function Calls() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="text-xs font-medium">Execution ID</TableHead>
+                    <TableHead className="text-xs font-medium">ID</TableHead>
+                    <TableHead className="text-xs font-medium">Channel</TableHead>
                     <TableHead className="text-xs font-medium">Agent</TableHead>
-                    <TableHead className="text-xs font-medium">Call Type</TableHead>
+                    <TableHead className="text-xs font-medium">Direction</TableHead>
                     <TableHead className="text-xs font-medium">Duration</TableHead>
                     <TableHead className="text-xs font-medium">Hangup By</TableHead>
                     <TableHead className="text-xs font-medium">Initiated At</TableHead>
                     <TableHead className="text-xs font-medium">Cost</TableHead>
                     <TableHead className="text-xs font-medium">Status</TableHead>
-                    <TableHead className="text-xs font-medium">Conversation</TableHead>
+                    <TableHead className="text-xs font-medium">Data</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {calls.map((c) => (
-                    <TableRow
-                      key={c.id}
-                      className="cursor-pointer hover:bg-muted/30 transition-colors"
-                      onClick={() => setSelectedId(c.id)}
-                    >
-                      <TableCell className="font-mono text-xs">
-                        <CopyableId id={c.id} />
-                      </TableCell>
-                      <TableCell className="text-sm">{c.agents?.name || "—"}</TableCell>
-                      <TableCell className="text-sm">
-                        <span className="capitalize">{c.provider} {c.direction}</span>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {c.duration_sec != null ? c.duration_sec : "—"}
-                      </TableCell>
-                      <TableCell className="text-sm capitalize">
-                        {c.hangup_by || "—"}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {c.started_at
-                          ? new Date(c.started_at).toLocaleString(undefined, {
-                              month: "short",
-                              day: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {c.cost_usd != null ? `$${Number(c.cost_usd).toFixed(3)}` : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANT[c.status] || "outline"} className="capitalize text-xs">
-                          {c.status.replace(/_/g, " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {c.recording_url || c.transcript ? (
-                          <span className="text-xs text-primary">Recordings</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {conversations.map((c) => {
+                    const ChannelIcon = CHANNEL_ICON[c.channel || "voice"] || Phone;
+                    return (
+                      <TableRow
+                        key={c.id}
+                        className="cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => setSelectedId(c.id)}
+                      >
+                        <TableCell className="font-mono text-xs">
+                          <CopyableId id={c.id} />
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5 text-sm">
+                            <ChannelIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="capitalize">{c.channel || "voice"}</span>
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm">{c.agents?.name || "—"}</TableCell>
+                        <TableCell className="text-sm capitalize">{c.direction}</TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {c.duration_sec != null ? `${c.duration_sec}s` : "—"}
+                        </TableCell>
+                        <TableCell className="text-sm capitalize">
+                          {c.hangup_by || "—"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {c.started_at
+                            ? new Date(c.started_at).toLocaleString(undefined, {
+                                month: "short",
+                                day: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {c.cost_usd != null ? `$${Number(c.cost_usd).toFixed(3)}` : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={STATUS_VARIANT[c.status] || "outline"} className="capitalize text-xs">
+                            {c.status.replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {c.recording_url || c.transcript ? (
+                            <span className="text-xs text-primary font-medium">View</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -348,7 +403,7 @@ export default function Calls() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Rows per page</span>
-              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
                 <SelectTrigger className="w-[70px] h-8">
                   <SelectValue />
                 </SelectTrigger>
@@ -363,16 +418,16 @@ export default function Calls() {
               <span className="text-sm text-muted-foreground mr-2">
                 Page {page + 1} of {totalPages}
               </span>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page === 0} onClick={() => setPage(0)}>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page === 0} onClick={() => setPage(0)} aria-label="First page">
                 <ChevronsLeft className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Previous page">
                 <ChevronLeft className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} aria-label="Next page">
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)} aria-label="Last page">
                 <ChevronsRight className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -380,44 +435,15 @@ export default function Calls() {
         </>
       )}
 
-      {/* Detail drawer */}
-      {selectedId && <CallDrawer id={selectedId} onClose={() => setSelectedId(null)} />}
+      {selectedId && (
+        <ConversationDrawer id={selectedId} onClose={() => setSelectedId(null)} />
+      )}
     </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | null;
-  sub: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-          <Icon className="h-3.5 w-3.5" />
-          <span className="uppercase tracking-wide font-medium">{label}</span>
-        </div>
-        {value === null ? (
-          <Skeleton className="h-7 w-20 mt-1" />
-        ) : (
-          <div className="text-2xl font-bold font-mono tracking-tight">{value}</div>
-        )}
-        <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>
-      </CardContent>
-    </Card>
   );
 }
 
 function CopyableId({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
-  const short = id.slice(0, 6) + "...";
 
   function handleCopy(e: React.MouseEvent) {
     e.stopPropagation();
@@ -428,11 +454,11 @@ function CopyableId({ id }: { id: string }) {
 
   return (
     <span className="inline-flex items-center gap-1">
-      <span>{short}</span>
+      <span>{id.slice(0, 7)}…</span>
       <button
         onClick={handleCopy}
         className="text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Copy execution ID"
+        aria-label="Copy ID"
       >
         {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
       </button>
@@ -440,11 +466,11 @@ function CopyableId({ id }: { id: string }) {
   );
 }
 
-function CallDrawer({ id, onClose }: { id: string; onClose: () => void }) {
-  const [call, setCall] = useState<any>(null);
+function ConversationDrawer({ id, onClose }: { id: string; onClose: () => void }) {
+  const [conversation, setConversation] = useState<any>(null);
 
   useEffect(() => {
-    getCall(id).then(setCall).catch(() => setCall(null));
+    getCall(id).then(setConversation).catch(() => setConversation(null));
   }, [id]);
 
   useEffect(() => {
@@ -455,87 +481,200 @@ function CallDrawer({ id, onClose }: { id: string; onClose: () => void }) {
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  const transcript = call?.transcript || [];
+  const transcript: any[] = Array.isArray(conversation?.transcript) ? conversation.transcript : [];
+  const toolCalls = conversation?.outcome?.tool_calls || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label="Call detail">
+    <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label="Conversation detail">
       <div className="flex-1 bg-black/40" onClick={onClose} aria-hidden="true" />
-      <aside className="w-full max-w-xl bg-background border-l border-border h-full overflow-y-auto shadow-xl">
-        <div className="h-14 flex items-center justify-between px-5 border-b border-border">
-          <span className="font-medium text-sm">Call Detail</span>
+      <aside className="w-full max-w-2xl bg-background border-l border-border h-full flex flex-col shadow-xl">
+        {/* Drawer header */}
+        <div className="h-14 flex items-center justify-between px-5 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm">Conversation</span>
+            {conversation && (
+              <Badge variant="outline" className="text-xs font-mono">
+                {conversation.id.slice(0, 8)}
+              </Badge>
+            )}
+          </div>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <div className="p-5 space-y-5">
-          {!call ? (
-            <div className="space-y-3">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-32 w-full" />
+
+        {/* Tabs */}
+        {!conversation ? (
+          <div className="p-5 space-y-3">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : (
+          <Tabs defaultValue="summary" className="flex-1 min-h-0 flex flex-col">
+            <div className="px-5 pt-3 border-b border-border shrink-0">
+              <TabsList variant="line" className="gap-4">
+                <TabsTrigger value="summary">Summary</TabsTrigger>
+                <TabsTrigger value="transcript">Transcript</TabsTrigger>
+                <TabsTrigger value="recording">Recording</TabsTrigger>
+                <TabsTrigger value="tool-calls">
+                  Tool Calls
+                  {toolCalls.length > 0 && (
+                    <span className="ml-1 text-xs bg-muted rounded-full px-1.5 py-0.5">
+                      {toolCalls.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="raw">Raw</TabsTrigger>
+              </TabsList>
             </div>
-          ) : (
-            <>
-              <dl className="grid grid-cols-2 gap-4 text-sm">
-                <Field label="Direction" value={call.direction} />
-                <Field label="Status" value={call.status} />
-                <Field label="Provider" value={call.provider} />
-                <Field label="Hangup By" value={call.hangup_by || "—"} />
-                <Field
-                  label="Started"
-                  value={call.started_at ? new Date(call.started_at).toLocaleString() : "—"}
-                />
-                <Field
-                  label="Duration"
-                  value={call.duration_sec != null ? `${call.duration_sec}s` : "—"}
-                />
-                <Field
-                  label="Cost"
-                  value={call.cost_usd != null ? `$${Number(call.cost_usd).toFixed(3)}` : "—"}
-                />
-                <Field label="Execution ID" value={call.id} />
-              </dl>
 
-              {call.recording_url && (
-                <section>
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2 font-medium">
-                    Recording
-                  </div>
-                  <audio src={call.recording_url} controls className="w-full" />
-                </section>
-              )}
+            <ScrollArea className="flex-1">
+              <div className="p-5">
+                {/* Summary tab */}
+                <TabsContent value="summary">
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                    <Field label="Channel" value={
+                      <span className="capitalize">{conversation.channel || "voice"}</span>
+                    } />
+                    <Field label="Direction" value={
+                      <span className="capitalize">{conversation.direction}</span>
+                    } />
+                    <Field label="Status" value={
+                      <Badge variant={STATUS_VARIANT[conversation.status] || "outline"} className="capitalize text-xs">
+                        {conversation.status.replace(/_/g, " ")}
+                      </Badge>
+                    } />
+                    <Field label="Provider" value={conversation.provider} />
+                    <Field label="Hangup By" value={
+                      <span className="capitalize">{conversation.hangup_by || "—"}</span>
+                    } />
+                    <Field label="Started" value={
+                      conversation.started_at
+                        ? new Date(conversation.started_at).toLocaleString()
+                        : "—"
+                    } />
+                    <Field label="Duration" value={
+                      conversation.duration_sec != null
+                        ? `${conversation.duration_sec}s`
+                        : "—"
+                    } />
+                    <Field label="Cost" value={
+                      conversation.cost_usd != null
+                        ? `$${Number(conversation.cost_usd).toFixed(4)}`
+                        : "—"
+                    } />
+                  </dl>
+                </TabsContent>
 
-              <section>
-                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2 font-medium">
-                  Transcript
-                </div>
-                {!Array.isArray(transcript) || transcript.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No transcript available.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {transcript.map((t: any, i: number) => (
-                      <div key={i} className="text-sm">
-                        <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                          {t.role || t.speaker || "agent"}
-                        </span>
-                        <p className="mt-0.5">{t.text || t.content}</p>
-                      </div>
-                    ))}
+                {/* Transcript tab */}
+                <TabsContent value="transcript">
+                  {transcript.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No transcript available.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {transcript.map((t: any, i: number) => {
+                        const speaker = t.role || t.speaker || "agent";
+                        const isAgent = speaker === "agent" || speaker === "assistant";
+                        return (
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex gap-3",
+                              isAgent ? "flex-row" : "flex-row-reverse"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center text-xs font-medium",
+                                isAgent
+                                  ? "bg-primary/10 text-primary"
+                                  : "bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {isAgent ? "A" : "U"}
+                            </div>
+                            <div
+                              className={cn(
+                                "max-w-[80%] rounded-lg px-3 py-2 text-sm",
+                                isAgent
+                                  ? "bg-muted text-foreground"
+                                  : "bg-primary/10 text-foreground"
+                              )}
+                            >
+                              <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">
+                                {speaker}
+                              </p>
+                              {t.text || t.content}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Recording tab */}
+                <TabsContent value="recording">
+                  {conversation.recording_url ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
+                        Call Recording
+                      </p>
+                      <audio
+                        src={conversation.recording_url}
+                        controls
+                        className="w-full"
+                        aria-label="Call recording"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No recording available.</p>
+                  )}
+                </TabsContent>
+
+                {/* Tool Calls tab */}
+                <TabsContent value="tool-calls">
+                  {toolCalls.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No tool calls were made during this conversation.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {toolCalls.map((tc: any, i: number) => (
+                        <div key={i} className="rounded-md border border-border p-3 text-sm">
+                          <div className="font-mono text-xs text-primary mb-1">{tc.name || tc.tool}</div>
+                          <pre className="text-xs text-muted-foreground overflow-x-auto">
+                            {JSON.stringify(tc.args || tc.input || tc, null, 2)}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Raw tab */}
+                <TabsContent value="raw">
+                  <div className="rounded-md border border-border bg-muted/50 p-3">
+                    <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap break-words">
+                      {JSON.stringify(conversation, null, 2)}
+                    </pre>
                   </div>
-                )}
-              </section>
-            </>
-          )}
-        </div>
+                </TabsContent>
+              </div>
+            </ScrollArea>
+          </Tabs>
+        )}
       </aside>
     </div>
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-widest text-muted-foreground font-medium">{label}</dt>
-      <dd className="mt-1">{value}</dd>
+      <dt className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1">
+        {label}
+      </dt>
+      <dd className="text-sm">{value}</dd>
     </div>
   );
 }

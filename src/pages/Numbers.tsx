@@ -33,6 +33,7 @@ type PhoneNumber = {
   byo: boolean;
   owner: string;
   status: string | null;
+  lifecycle_status: string | null;
   agent_id: string | null;
   telephony_provider: string | null;
   purchased_at: string | null;
@@ -140,6 +141,7 @@ export default function Numbers() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="text-xs font-medium">Phone number</TableHead>
+                  <TableHead className="text-xs font-medium">Status</TableHead>
                   <TableHead className="text-xs font-medium">Agent answering</TableHead>
                   <TableHead className="text-xs font-medium">Telephony</TableHead>
                   <TableHead className="text-xs font-medium">Purchased on</TableHead>
@@ -157,6 +159,9 @@ export default function Numbers() {
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         {n.e164}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <NumberStatusBadge status={n.lifecycle_status || n.status || "unassigned"} />
                     </TableCell>
                     <TableCell className="text-sm">
                       {n.agent_id ? (
@@ -242,5 +247,24 @@ export default function Numbers() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  active:           { label: "Active",           variant: "default" },
+  assigned:         { label: "Assigned",         variant: "default" },
+  unassigned:       { label: "Unassigned",       variant: "secondary" },
+  pending_purchase: { label: "Pending Purchase", variant: "outline" },
+  pending_release:  { label: "Pending Release",  variant: "outline" },
+  released:         { label: "Released",         variant: "secondary" },
+  failed:           { label: "Failed",           variant: "destructive" },
+};
+
+function NumberStatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status] || { label: status, variant: "outline" as const };
+  return (
+    <Badge variant={cfg.variant} className="text-xs capitalize">
+      {cfg.label}
+    </Badge>
   );
 }
