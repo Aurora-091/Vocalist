@@ -491,6 +491,29 @@ export async function listVoices(opts?: { gender?: string; language?: string; se
   return data || [];
 }
 
+/**
+ * Pull the latest voice library from ElevenLabs (via the `voice-sync` edge
+ * function) and upsert it into voice_catalog. Admin/owner only.
+ */
+export async function syncVoices(): Promise<{ count: number }> {
+  const { data, error } = await supabase.functions.invoke("voice-sync", {
+    body: {},
+  });
+  if (error) {
+    // Surface the function's JSON error message when available.
+    const ctx = (error as any).context;
+    let message = error.message;
+    try {
+      const body = ctx && typeof ctx.json === "function" ? await ctx.json() : null;
+      if (body?.error) message = body.error;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message || "Voice sync failed");
+  }
+  return { count: data?.count ?? 0 };
+}
+
 // ───── Integration Catalog ─────
 
 export async function listIntegrationCatalog(opts?: { category?: string; vertical?: string }) {
