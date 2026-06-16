@@ -2,6 +2,8 @@ import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import { RequireAuth, PublicOnly } from "./components/RequireAuth";
 import { AppShell } from "./components/layout/AppShell";
+import { AdminShell } from "./components/layout/AdminShell";
+import { RequireAdmin } from "./components/admin/RequireAdmin";
 
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -29,6 +31,18 @@ const About = lazy(() => import("./pages/About"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Waitlist = lazy(() => import("./pages/Waitlist"));
+
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminWaitlist = lazy(() => import("./pages/admin/AdminWaitlist"));
+const AdminAgents = lazy(() => import("./pages/admin/AdminAgents"));
+const AdminBilling = lazy(() => import("./pages/admin/AdminBilling"));
+const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
+const AdminSupport = lazy(() => import("./pages/admin/AdminSupport"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const ProductAnalytics = lazy(() => import("./pages/admin/analytics/ProductAnalytics"));
+const MarketingAnalytics = lazy(() => import("./pages/admin/analytics/MarketingAnalytics"));
+const RevenueAnalytics = lazy(() => import("./pages/admin/analytics/RevenueAnalytics"));
 
 function PageLoader() {
   return (
@@ -85,6 +99,29 @@ export default function App() {
           <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/settings" element={<Settings />} />
+        </Route>
+
+        {/* Admin panel */}
+        <Route
+          element={
+            <RequireAuth>
+              <RequireAdmin>
+                <AdminShell />
+              </RequireAdmin>
+            </RequireAuth>
+          }
+        >
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+          <Route path="/admin/agents" element={<AdminAgents />} />
+          <Route path="/admin/billing" element={<AdminBilling />} />
+          <Route path="/admin/logs" element={<AdminLogs />} />
+          <Route path="/admin/support" element={<AdminSupport />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/analytics/product" element={<ProductAnalytics />} />
+          <Route path="/admin/analytics/marketing" element={<MarketingAnalytics />} />
+          <Route path="/admin/analytics/revenue" element={<RevenueAnalytics />} />
         </Route>
       </Routes>
     </Suspense>
