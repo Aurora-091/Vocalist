@@ -483,6 +483,10 @@ function ConversationDrawer({ id, onClose }: { id: string; onClose: () => void }
 
   const transcript: any[] = Array.isArray(conversation?.transcript) ? conversation.transcript : [];
   const toolCalls = conversation?.outcome?.tool_calls || [];
+  const analysis = conversation?.outcome;
+  const dataCollection = analysis?.data_collection_results || analysis?.data_collection || null;
+  const evalCriteria = analysis?.evaluation_criteria_results || analysis?.evaluation_criteria || null;
+  const hasAnalysis = dataCollection || evalCriteria;
 
   return (
     <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label="Conversation detail">
@@ -525,6 +529,9 @@ function ConversationDrawer({ id, onClose }: { id: string; onClose: () => void }
                     </span>
                   )}
                 </TabsTrigger>
+                {hasAnalysis && (
+                  <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                )}
                 <TabsTrigger value="raw">Raw</TabsTrigger>
               </TabsList>
             </div>
@@ -647,6 +654,69 @@ function ConversationDrawer({ id, onClose }: { id: string; onClose: () => void }
                           </pre>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Analysis tab */}
+                <TabsContent value="analysis">
+                  {!hasAnalysis ? (
+                    <p className="text-sm text-muted-foreground">No analysis data for this call.</p>
+                  ) : (
+                    <div className="space-y-6">
+                      {dataCollection && (
+                        <div>
+                          <h4 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">
+                            Extracted Data
+                          </h4>
+                          <div className="space-y-2">
+                            {Object.entries(dataCollection).map(([key, val]: [string, any]) => {
+                              const value = typeof val === "object" && val !== null ? val.value : val;
+                              return (
+                                <div key={key} className="flex items-baseline justify-between gap-4 py-2 border-b border-border last:border-0">
+                                  <span className="text-sm font-medium text-foreground">
+                                    {key.replace(/_/g, " ")}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground text-right max-w-[60%]">
+                                    {value === true ? "Yes" : value === false ? "No" : value || "—"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {evalCriteria && (
+                        <div>
+                          <h4 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">
+                            Evaluation Criteria
+                          </h4>
+                          <div className="space-y-2">
+                            {Object.entries(evalCriteria).map(([key, val]: [string, any]) => {
+                              const result = typeof val === "object" && val !== null ? val.result : val;
+                              const rationale = typeof val === "object" && val !== null ? val.rationale : null;
+                              return (
+                                <div key={key} className="py-2 border-b border-border last:border-0">
+                                  <div className="flex items-center justify-between gap-4">
+                                    <span className="text-sm font-medium text-foreground">
+                                      {key.replace(/_/g, " ")}
+                                    </span>
+                                    <Badge
+                                      variant={result === "success" ? "default" : result === "failure" ? "destructive" : "outline"}
+                                      className="text-xs capitalize"
+                                    >
+                                      {result || "unknown"}
+                                    </Badge>
+                                  </div>
+                                  {rationale && (
+                                    <p className="text-xs text-muted-foreground mt-1">{rationale}</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </TabsContent>

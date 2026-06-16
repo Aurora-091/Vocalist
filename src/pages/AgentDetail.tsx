@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy } from "lucide-react";
+import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { getAgent, listVoices } from "../lib/db";
 import { api } from "../lib/api";
@@ -117,6 +117,11 @@ export default function AgentDetail() {
   const [calling, setCalling] = useState(false);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
 
+  // Skills
+  const [allSkills, setAllSkills] = useState<any[]>([]);
+  const [activeSkillIds, setActiveSkillIds] = useState<Set<string>>(new Set());
+  const [skillsLoading, setSkillsLoading] = useState(false);
+
   async function load() {
     try {
       const a = await getAgent(id!);
@@ -169,6 +174,15 @@ export default function AgentDetail() {
         .select("*, knowledge_sources(*)")
         .eq("agent_id", id!);
       setKnowledge(kb || []);
+
+      // Load skills catalog and active skills for this agent
+      const [skillsRes, activeRes] = await Promise.all([
+        api.get<{ skills: any[] }>("/v1/skills"),
+        api.get<{ skills: any[] }>(`/v1/agents/${id}/skills`),
+      ]);
+      setAllSkills(skillsRes.skills || []);
+      const ids = new Set((activeRes.skills || []).map((s: any) => s.skill_id));
+      setActiveSkillIds(ids);
     } catch {
       setAgent(null);
     } finally {
@@ -509,6 +523,69 @@ export default function AgentDetail() {
               </div>
             </Field>
           </div>
+        </CardBody>
+      </Card>
+
+      {/* Skills card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 font-medium">
+            <Zap className="w-4 h-4" />
+            Skills
+          </div>
+        </CardHeader>
+        <CardBody>
+          <p className="text-sm text-text-muted mb-4">
+            Toggle capabilities for this agent. Changes sync to the provider on next save.
+          </p>
+          {allSkills.length === 0 ? (
+            <div className="text-xs text-text-muted">No skills available.</div>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {allSkills.map((skill: any) => {
+                const isActive = activeSkillIds.has(skill.id);
+                return (
+                  <button
+                    key={skill.id}
+                    type="button"
+                    disabled={skillsLoading}
+                    onClick={async () => {
+                      setSkillsLoading(true);
+                      try {
+                        await api.post(`/v1/agents/${id}/skills/${skill.id}/toggle`, { enabled: !isActive });
+                        setActiveSkillIds((prev) => {
+                          const next = new Set(prev);
+                          if (isActive) next.delete(skill.id);
+                          else next.add(skill.id);
+                          return next;
+                        });
+                      } catch (e: any) {
+                        toast.error(e.message || "Failed to toggle skill.");
+                      } finally {
+                        setSkillsLoading(false);
+                      }
+                    }}
+                    className={`text-left p-3 rounded-lg border transition-colors ${
+                      isActive
+                        ? "border-text/20 bg-text/5"
+                        : "border-border bg-surface hover:bg-surface-2"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">{skill.name}</span>
+                      <div className={`w-8 h-4.5 rounded-full transition-colors flex items-center px-0.5 ${
+                        isActive ? "bg-green-500 justify-end" : "bg-border justify-start"
+                      }`}>
+                        <div className="w-3.5 h-3.5 rounded-full bg-white shadow-sm" />
+                      </div>
+                    </div>
+                    <div className="text-xs text-text-muted line-clamp-2">{skill.description}</div>
+                    <Badge tone="neutral" className="mt-2 text-[10px]">{skill.category}</Badge>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </CardBody>
       </Card>
 

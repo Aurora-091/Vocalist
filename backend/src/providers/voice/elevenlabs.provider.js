@@ -107,53 +107,97 @@ class ElevenLabsProvider extends VoiceProvider {
     return data.arrayBuffer();
   }
 
-  // Agent Management
-  async createAgent(agent, systemPrompt) {
+  _buildAgentPayload(agent, systemPrompt) {
+    const firstMessage = agent.first_message || agent.persona?.first_message || agent.persona?.opening_message || "Hello!";
+    const language = agent.language || (agent.languages && agent.languages[0]) || "en";
+    const voiceId = agent.voice_id || "21m00Tcm4TlvDq8ikWAM";
+
+    const promptConfig = {
+      prompt: systemPrompt,
+      llm: "gpt-4o-mini",
+      temperature: 0.5,
+    };
+
+    const tools = this._resolveTools(agent);
+    if (tools.length > 0) {
+      promptConfig.tools = tools;
+    }
+
+    if (agent.knowledge_base_ids && Array.isArray(agent.knowledge_base_ids)) {
+      promptConfig.knowledge_base = agent.knowledge_base_ids;
+    }
+
     const payload = {
       name: agent.name,
       conversation_config: {
         agent: {
-          prompt: {
-            prompt: systemPrompt,
-            llm: "gpt-4o-mini",
-            temperature: 0.5,
-          },
-          first_message: agent.first_message || agent.persona?.opening_message || "Hello!",
-          language: agent.language || (agent.languages && agent.languages[0]) || "en",
+          prompt: promptConfig,
+          first_message: firstMessage,
+          language,
         },
         tts: {
-          voice_id: agent.voice_id || "21m00Tcm4TlvDq8ikWAM", // Default Rachel voice
+          voice_id: voiceId,
         },
       },
     };
+
+    const platformSettings = this._buildPlatformSettings(agent);
+    if (platformSettings) {
+      payload.platform_settings = platformSettings;
+    }
+
+    return payload;
+  }
+
+  _resolveTools(agent) {
+    const tools = [];
+    const rawTools = agent.tools || agent.persona?.tools || [];
+    for (const tool of rawTools) {
+      if (!tool || !tool.name) continue;
+      const resolved = {
+        name: tool.name,
+        description: tool.description || "",
+      };
+      if (tool.method) resolved.method = tool.method;
+      if (tool.url) resolved.url = tool.url;
+      if (tool.authentication) resolved.authentication = tool.authentication;
+      if (tool.body_parameters) resolved.body_parameters = tool.body_parameters;
+      if (tool.parameters) resolved.parameters = tool.parameters;
+      if (tool.path_parameters) resolved.path_parameters = tool.path_parameters;
+      if (tool.query_parameters) resolved.query_parameters = tool.query_parameters;
+      if (tool.headers) resolved.headers = tool.headers;
+      tools.push(resolved);
+    }
+    return tools;
+  }
+
+  _buildPlatformSettings(agent) {
+    const analysisConfig = agent.analysis_config || agent.persona?.analysis_config;
+    if (!analysisConfig) return null;
+
+    const settings = {};
+
+    if (analysisConfig.data_collection && Array.isArray(analysisConfig.data_collection)) {
+      settings.data_collection = analysisConfig.data_collection;
+    }
+
+    if (analysisConfig.evaluation_criteria && Array.isArray(analysisConfig.evaluation_criteria)) {
+      settings.evaluation_criteria = analysisConfig.evaluation_criteria;
+    }
+
+    return Object.keys(settings).length > 0 ? settings : null;
+  }
+
+  // Agent Management
+  async createAgent(agent, systemPrompt) {
+    const payload = this._buildAgentPayload(agent, systemPrompt);
     const result = await this._call("POST", "/v1/convai/agents/create", payload);
     return { provider_ref: result.agent_id, provider_meta: result };
   }
 
   async updateAgent(providerRef, agent, systemPrompt) {
     if (!providerRef) throw new Error("Missing providerRef");
-    const payload = {
-      name: agent.name,
-      conversation_config: {
-        agent: {
-          prompt: {
-            prompt: systemPrompt,
-            llm: "gpt-4o-mini",
-            temperature: 0.5,
-          },
-          first_message: agent.first_message || agent.persona?.opening_message || "Hello!",
-          language: agent.language || (agent.languages && agent.languages[0]) || "en",
-        },
-        tts: {
-          voice_id: agent.voice_id || "21m00Tcm4TlvDq8ikWAM",
-        },
-      },
-    };
-
-    if (agent.knowledge_base_ids && Array.isArray(agent.knowledge_base_ids)) {
-      payload.conversation_config.agent.prompt.knowledge_base = agent.knowledge_base_ids;
-    }
-
+    const payload = this._buildAgentPayload(agent, systemPrompt);
     const result = await this._call("PATCH", `/v1/convai/agents/${providerRef}`, payload);
     return { provider_ref: providerRef, provider_meta: result };
   }

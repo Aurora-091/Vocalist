@@ -33,6 +33,7 @@ const webhooksOutRoutes = require("./modules/webhooks-out/webhooks-out.routes");
 const twilioRoutes = require("./modules/twilio/twilio.routes");
 const waitlistRoutes = require("./modules/waitlist/waitlist.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
+const skillRoutes = require("./modules/skills/skills.routes");
 
 function buildCorsOptions() {
   const allowed = (process.env.CORS_ALLOWED_ORIGINS || "")
@@ -119,6 +120,7 @@ function createApp() {
   app.use("/v1/webhooks-out", webhooksOutRoutes);
   app.use("/v1/twilio", twilioRoutes);
   app.use("/v1/admin", adminRoutes);
+  app.use("/v1/skills", skillRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

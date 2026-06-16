@@ -12,6 +12,28 @@ class AgentService {
     return intRow?.config || {};
   }
 
+  async resolveSkills(supabase, agentId) {
+    const { data: activeSkills } = await supabase
+      .from("agent_active_skills")
+      .select("config, skill:agent_skills(tool_definition, prompt_module)")
+      .eq("agent_id", agentId)
+      .eq("enabled", true);
+
+    if (!activeSkills || activeSkills.length === 0) return { tools: [], promptModules: [] };
+
+    const tools = [];
+    const promptModules = [];
+
+    for (const row of activeSkills) {
+      if (!row.skill) continue;
+      if (row.skill.prompt_module) promptModules.push(row.skill.prompt_module);
+      const defs = row.skill.tool_definition;
+      if (Array.isArray(defs)) tools.push(...defs);
+    }
+
+    return { tools, promptModules };
+  }
+
   async createAgent(supabase, orgId, agentData) {
     const { provider = "elevenlabs", persona = {}, name } = agentData;
     if (!name) throw new Error("Agent name is required");
@@ -43,9 +65,9 @@ class AgentService {
       integrationConfig
     });
 
-    // 3. Create Assistant in Provider
+    // 3. Create Assistant in Provider (tools + analysis_config pass through agentData)
     const { provider_ref, provider_meta } = await providerInstance.createAgent(
-      agentData,
+      { ...agentData, persona },
       systemPrompt
     );
 
@@ -101,8 +123,8 @@ class AgentService {
 
     const newPersona = updateData.persona || existing.persona;
     const systemPrompt = personaService.generateSystemPrompt(newPersona);
-    
-    const mergedAgent = { ...existing, ...updateData };
+
+    const mergedAgent = { ...existing, ...updateData, persona: newPersona };
 
     // 2. Update Provider Assistant
     const integrationConfig = await this.getIntegrationConfig(supabase, orgId);
@@ -212,13 +234,19 @@ class AgentService {
       .single();
     if (fetchErr || !existing) throw new Error("Agent not found or access denied");
 
-    const systemPrompt = personaService.generateSystemPrompt(existing.persona || {});
+    const { tools: skillTools, promptModules } = await this.resolveSkills(supabase, agentId);
+    const persona = existing.persona || {};
+
+    const allTools = [...(existing.tools || []), ...skillTools];
+    const systemPrompt = personaService.generateSystemPrompt(persona)
+      + (promptModules.length > 0 ? "\n\n# ACTIVE SKILLS\n" + promptModules.join("\n\n") : "");
+
     const integrationConfig = await this.getIntegrationConfig(supabase, orgId);
     const providerInstance = buildVoiceProvider({ agent: existing, integrationConfig });
 
     if (!existing.provider_ref) throw new Error("Agent has no provider reference to sync");
 
-    await providerInstance.updateAgent(existing.provider_ref, existing, systemPrompt);
+    await providerInstance.updateAgent(existing.provider_ref, { ...existing, tools: allTools }, systemPrompt);
 
     const { data: updated, error: updateErr } = await supabase
       .from("agents")
