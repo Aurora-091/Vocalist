@@ -1,40 +1,45 @@
-# Aurora — Specification Documents
+# Weeber — Specification Documents
 
-Canonical project specs. These are the source of truth that all implementation
-work (backend, frontend, ops) should be measured against.
+Welcome to the Weeber platform documentation directory. This folder houses all technical specifications, architecture decisions, deployment manifests, testing configurations, and compliance documents.
 
-## Specs (the master)
+---
 
-| Document | What it covers |
+## 1. Active Developer Reference
+
+| Document | Purpose |
 |---|---|
-| [`Aurora-v1-Scope-and-Build-Contract.md`](./Aurora-v1-Scope-and-Build-Contract.md) | **The master.** v1 scope (#1-26 + 7b), per-capability acceptance criteria, the 12 non-negotiables, inbound admission flow, spend guards, pricing tiers, settings, error/empty states, deferred items. Read this first. |
-| [`Aurora-BlackBook.md`](./Aurora-BlackBook.md) | Comprehensive technical black book — system architecture, database design, ER diagrams, RLS policies, pricing model (all markets), unit economics, security model. |
-| [`Aurora-UIUX-Spec.md`](./Aurora-UIUX-Spec.md) | UI/UX & frontend spec — design system, sitemap, navigation/IA, role-based views, component library, per-page wireframes, user flows, state matrix. |
-| [`database-guide.md`](./database-guide.md) | Database guide companion to the migrations in `supabase/migrations/`. |
+| [`Weeber-Cursor-Rules.md`](./Weeber-Cursor-Rules.md) | Standard system parameters, environment constraints, codebase structures, and tech stack bindings for Cursor or other AI coding agents. |
+| [`CHANGELOG.md`](./CHANGELOG.md) | Audit trail of all shipped features, patches, dependencies fixes, and tests configurations. |
+| [`DECISIONS.md`](./DECISIONS.md) | Living log tracking architectural decisions, pivots, integrations constraints, and system boundaries. |
+| [`DEPLOYMENT.md`](./DEPLOYMENT.md) | Pipeline workflows, server host requirements, Supabase Vault sync, and environment variables list. |
+| [`POC-Checklist.md`](./POC-Checklist.md) | "Definition of Done" criteria detailing the 5 core deliverables required for validation demos. |
 
-## Active implementation plans
+---
 
-| Document | Status | Covers |
-|---|---|---|
-| [`implementation-plan-phase-1.md`](./implementation-plan-phase-1.md) | **ACTIVE** | v1 build sequence. 5 phases, 25 ordered PRs, scope mapping. |
-| [`implementation-plan-phase-3-india.md`](./implementation-plan-phase-3-india.md) | **FUTURE** | India telephony (Plivo + Exotel BYO), TRAI compliance, INR pricing. |
+## 2. Platform Core Architecture Specs
 
-## Research / decision audit trail
-
-| Document | What it covers |
+| Document | Purpose |
 |---|---|
-| [`research/elevenlabs-cai-evidence.md`](./research/elevenlabs-cai-evidence.md) | Cost/capability evidence behind the ElevenLabs CAI pivot. True COGS math, startup grant terms, competitor positioning. |
-| [`research/critique-response-and-decisions.md`](./research/critique-response-and-decisions.md) | Four red-team findings and decisions. Audit trail — do not delete. |
+| [`Weeber-Platform-Blackbook.md`](./Weeber-Platform-Blackbook.md) | Technical architecture overview — database patterns, spend boundaries, multi-tenancy schemas, and security design. |
+| [`Weeber-Agents-Reference.md`](./Weeber-Agents-Reference.md) | Complete directory of voice agent structures, prompts layout, and integration mappings. |
+| [`database-guide.md`](./database-guide.md) | Technical schema catalog detailing Supabase migrations, triggers, and column indexes. |
 
-## Developer reference
+---
 
-| Document | What it covers |
+## 3. Active Implementation Plans
+
+| Document | Purpose |
 |---|---|
-| [`AURORA_CURSOR_PROMPT.md`](./AURORA_CURSOR_PROMPT.md) | Living AI/developer prompt — what Aurora is, tech stack bindings, decision constraints. |
+| [`implementation-plan-phase-3-india.md`](./implementation-plan-phase-3-india.md) | Telephony integration specifications for Indian markets (Plivo, Exotel, TRAI compliance, and INR billing flows). |
 
-## Where the implementation lives
+---
 
-- Backend (Node + Express + Supabase): `backend/`
-- Database migrations: `supabase/migrations/`
-- Frontend (Vite + React + Tailwind v4 + shadcn/ui): `src/`
-- Edge Functions: `supabase/functions/`
+## 4. Specification Archives
+
+Historical Aurora-branded documents are preserved in the `archive/` folder for reference, audit tracks, and compliance verification:
+
+- [`archive/Aurora-v1-Scope-and-Build-Contract.md`](./archive/Aurora-v1-Scope-and-Build-Contract.md) — Scope contracts.
+- [`archive/Aurora-BlackBook.md`](./archive/Aurora-BlackBook.md) — Original technical blueprints.
+- [`archive/Aurora-UIUX-Spec.md`](./archive/Aurora-UIUX-Spec.md) — Frontend layout mocks.
+- [`archive/implementation-plan-phase-1.md`](./archive/implementation-plan-phase-1.md) — Phase 1 build contract milestones.
+- [`archive/AURORA_CURSOR_PROMPT.md`](./archive/AURORA_CURSOR_PROMPT.md) — Outdated rules catalog.
