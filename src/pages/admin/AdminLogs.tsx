@@ -158,11 +158,11 @@ export default function AdminLogs() {
                             </div>
                           </div>
                           
-                          {(log as any).metadata && (
+                          {log.metadata && (
                             <div className="space-y-1">
                               <span className="text-muted-foreground block text-xs font-semibold uppercase tracking-wider">Metadata</span>
                               <pre className="font-mono text-xs bg-muted rounded p-3 overflow-x-auto text-foreground max-w-full">
-                                {JSON.stringify((log as any).metadata, null, 2)}
+                                {JSON.stringify(log.metadata, null, 2)}
                               </pre>
                             </div>
                           )}

@@ -150,18 +150,18 @@ export default function AdminBilling() {
                             <div>
                               <span className="text-muted-foreground block text-xs font-semibold uppercase tracking-wider mb-1">Period Dates</span>
                               <div className="space-y-1 text-xs text-foreground">
-                                <div><span className="text-muted-foreground">Start:</span> {(entry as any).period_start ? new Date((entry as any).period_start).toLocaleDateString() : "---"}</div>
-                                <div><span className="text-muted-foreground">End:</span> {(entry as any).period_end ? new Date((entry as any).period_end).toLocaleDateString() : "---"}</div>
+                                <div><span className="text-muted-foreground">Start:</span> {entry.period_start ? new Date(entry.period_start).toLocaleDateString() : "---"}</div>
+                                <div><span className="text-muted-foreground">End:</span> {entry.period_end ? new Date(entry.period_end).toLocaleDateString() : "---"}</div>
                                 <div><span className="text-muted-foreground">Created:</span> {new Date(entry.created_at).toLocaleDateString()}</div>
                               </div>
                             </div>
                             <div>
                               <span className="text-muted-foreground block text-xs font-semibold uppercase tracking-wider mb-1">Usage This Month</span>
                               <span className="text-foreground font-mono">
-                                {(entry as any).usage_this_month !== undefined 
-                                  ? `$${(entry as any).usage_this_month.toFixed(2)}` 
-                                  : (entry as any).usage !== undefined 
-                                    ? String((entry as any).usage) 
+                                {entry.usage_this_month != null
+                                  ? `$${entry.usage_this_month.toFixed(2)}`
+                                  : entry.usage != null
+                                    ? String(entry.usage)
                                     : "---"}
                               </span>
                             </div>

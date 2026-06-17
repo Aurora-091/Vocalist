@@ -71,6 +71,10 @@ export interface BillingEntry {
   status: string;
   stripe_subscription_id: string | null;
   current_period_end: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  usage_this_month: number | null;
+  usage: number | null;
   created_at: string;
   orgs: { name: string } | null;
   monthly_amount?: number;
@@ -85,6 +89,7 @@ export interface LogEntry {
   retry_count: number;
   resolved_at: string | null;
   created_at: string;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface PlatformSettings {
@@ -154,7 +159,7 @@ export const adminApi = {
     if (opts.q) params.set("q", opts.q);
     return api.get<PaginatedResult<AdminAgent>>(`/v1/admin/agents?${params}`);
   },
-  getAgentDetail: (id: string) => api.get<any>(`/v1/admin/agents/${id}`),
+  getAgentDetail: (id: string) => api.get<AdminAgent & { config?: Record<string, unknown> }>(`/v1/admin/agents/${id}`),
   listBilling: (opts: { page?: number; limit?: number } = {}) => {
     const params = new URLSearchParams();
     if (opts.page) params.set("page", String(opts.page));
