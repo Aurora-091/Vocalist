@@ -1,65 +1,67 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ShieldCheck, Phone, Zap } from "lucide-react";
+import { ArrowRight, ShieldCheck, Phone, Zap, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { api, ApiError } from "../lib/api";
 import { WeeberLogo } from "../components/WeeberLogo";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { toast } from "sonner";
+
+const signupSchema = z.object({
+  orgName: z.string().min(2, "Organization name must be at least 2 characters."),
+  email: z.string().email("Please enter a valid email address."),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters.")
+    .regex(/[A-Z]/, "Password needs at least one uppercase letter.")
+    .regex(/[0-9]/, "Password needs at least one number."),
+});
+
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function Signup() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [orgName, setOrgName] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setErr(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { orgName: "", email: "", password: "" },
+  });
 
-    if (password.length < 8) {
-      setErr("Password must be at least 8 characters.");
-      return;
-    }
-    if (!/[A-Z]/.test(password)) {
-      setErr("Password needs at least one uppercase letter.");
-      return;
-    }
-    if (!/[0-9]/.test(password)) {
-      setErr("Password needs at least one number.");
-      return;
-    }
-
-    setLoading(true);
+  async function submit(data: SignupFormValues) {
     try {
       const result = await api.post<{
         session: { access_token: string; refresh_token: string };
         user: { id: string };
         org: { id: string };
-      }>("/v1/auth/signup", { email, password, org_name: orgName });
+      }>("/v1/auth/signup", { email: data.email, password: data.password, org_name: data.orgName });
 
       if (result.session) {
         await supabase.auth.setSession({
           access_token: result.session.access_token,
           refresh_token: result.session.refresh_token,
         });
+        toast.success("Account created successfully!");
         navigate("/onboarding");
       } else {
+        toast.success("Account created! Please log in.");
         navigate("/login");
       }
     } catch (error: any) {
       if (error instanceof ApiError) {
-        setErr(error.message);
+        toast.error(error.message);
       } else {
-        setErr(error.message || "Couldn't create your account.");
+        toast.error(error.message || "Couldn't create your account.");
       }
-    } finally {
-      setLoading(false);
     }
   }
 
   async function signUpWithGoogle() {
-    setErr(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -67,7 +69,7 @@ export default function Signup() {
         queryParams: { prompt: "select_account" },
       },
     });
-    if (error) setErr(error.message);
+    if (error) toast.error(error.message);
   }
 
   return (
@@ -135,18 +137,19 @@ export default function Signup() {
             </div>
           </div>
 
-          <form className="space-y-5" onSubmit={submit}>
+          <form className="space-y-5" onSubmit={handleSubmit(submit)}>
             <div>
               <label className="block text-xs font-medium text-[#475569] mb-1.5">
                 Organization name
               </label>
               <input
-                required
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
+                {...register("orgName")}
                 className="w-full h-12 px-4 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#111] transition-colors"
                 placeholder="Bloom Dental"
               />
+              {errors.orgName && (
+                <p className="mt-1 text-xs text-red-600">{errors.orgName.message}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-[#475569] mb-1.5">
@@ -154,12 +157,13 @@ export default function Signup() {
               </label>
               <input
                 type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register("email")}
                 className="w-full h-12 px-4 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#111] transition-colors"
                 placeholder="you@company.com"
               />
+              {errors.email && (
+                <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-[#475569] mb-1.5">
@@ -167,22 +171,30 @@ export default function Signup() {
               </label>
               <input
                 type="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register("password")}
                 className="w-full h-12 px-4 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#111] transition-colors"
                 placeholder="8+ characters"
               />
+              {errors.password && (
+                <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+              )}
             </div>
-            {err && <div className="text-sm text-red-600">{err}</div>}
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full h-12 bg-[#0F172A] text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#1E293B] transition-colors disabled:opacity-50"
             >
-              {loading ? "Creating account..." : "Create account"}
-              {!loading && <ArrowRight className="w-4 h-4" />}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  Create account
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 

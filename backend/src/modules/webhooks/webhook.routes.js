@@ -15,11 +15,11 @@ const elevenlabsHandler = require("./handlers/elevenlabs.handler");
 const router = express.Router();
 router.use(webhookLimiter);
 
-const stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY) : null;
+const stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" }) : null;
 
 router.post(
   "/vapi",
-  express.raw({ type: "application/json" }),
+  express.raw({ type: "application/json", limit: "2mb" }),
   asyncHandler(async (req, res) => {
     const raw = req.body;
     const rawString = raw instanceof Buffer ? raw.toString("utf8") : JSON.stringify(raw || {});
@@ -65,7 +65,7 @@ router.post(
 
 router.post(
   "/elevenlabs",
-  express.raw({ type: "application/json" }),
+  express.raw({ type: "application/json", limit: "2mb" }),
   asyncHandler(async (req, res) => {
     const raw = req.body;
     const rawString = raw instanceof Buffer ? raw.toString("utf8") : JSON.stringify(raw || {});
@@ -113,7 +113,7 @@ router.post(
 
 router.post(
   "/stripe",
-  express.raw({ type: "application/json" }),
+  express.raw({ type: "application/json", limit: "2mb" }),
   asyncHandler(async (req, res) => {
     if (!stripe || !env.STRIPE_WEBHOOK_SECRET) {
       return res.status(503).json({ error: { code: "stripe_not_configured" } });

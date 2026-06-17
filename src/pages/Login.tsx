@@ -1,30 +1,44 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, ArrowRight, Phone, ShieldCheck, Zap } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Phone, ShieldCheck, Zap, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
 import { WeeberLogo } from "../components/WeeberLogo";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { toast } from "sonner";
 
-const DEMO_EMAIL = "demo@weeber.dev";
-const DEMO_PASSWORD = "weeber-demo-2026";
+const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL || "";
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || "";
+
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(1, "Password is required."),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setErr(null);
-    setLoading(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  async function submit(data: LoginFormValues) {
     try {
       const result = await api.post<{
         session: { access_token: string; refresh_token: string };
         user: { id: string };
-      }>("/v1/auth/login", { email, password });
+      }>("/v1/auth/login", data);
       if (result.session) {
         await supabase.auth.setSession({
           access_token: result.session.access_token,
@@ -33,14 +47,11 @@ export default function Login() {
       }
       navigate("/dashboard");
     } catch {
-      setErr("That email and password didn't match. Try again.");
-    } finally {
-      setLoading(false);
+      toast.error("That email and password didn't match. Try again.");
     }
   }
 
   async function signInWithGoogle() {
-    setErr(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -48,14 +59,15 @@ export default function Login() {
         queryParams: { prompt: "select_account" },
       },
     });
-    if (error) setErr(error.message);
+    if (error) toast.error(error.message);
   }
 
   function loginAsDemo() {
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
-    setErr(null);
-    setLoading(true);
+    if (!DEMO_EMAIL || !DEMO_PASSWORD) {
+      toast.error("Demo account not configured.");
+      return;
+    }
+    setDemoLoading(true);
     api.post<{
       session: { access_token: string; refresh_token: string };
     }>("/v1/auth/login", { email: DEMO_EMAIL, password: DEMO_PASSWORD }).then(async (result) => {
@@ -65,11 +77,11 @@ export default function Login() {
           refresh_token: result.session.refresh_token,
         });
       }
-      setLoading(false);
+      setDemoLoading(false);
       navigate("/dashboard");
     }).catch(() => {
-      setLoading(false);
-      setErr("Demo account not available. Please sign up.");
+      setDemoLoading(false);
+      toast.error("Demo account not available. Please sign up.");
     });
   }
 
@@ -138,19 +150,20 @@ export default function Login() {
             </div>
           </div>
 
-          <form className="space-y-5" onSubmit={submit}>
+          <form className="space-y-5" onSubmit={handleSubmit(submit)}>
             <div>
               <label className="block text-xs font-medium text-[#475569] mb-1.5">
                 Email
               </label>
               <input
                 type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register("email")}
                 className="w-full h-12 px-4 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#0F172A] rounded-md transition-colors"
                 placeholder="you@company.com"
               />
+              {errors.email && (
+                <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-[#475569] mb-1.5">
@@ -159,9 +172,7 @@ export default function Login() {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register("password")}
                   className="w-full h-12 px-4 pr-12 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm placeholder:text-[#94A3B8] focus:outline-none focus:border-[#0F172A] rounded-md transition-colors"
                   placeholder="Your password"
                 />
@@ -173,34 +184,48 @@ export default function Login() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+              )}
             </div>
-            {err && <div className="text-sm text-red-600">{err}</div>}
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full h-12 bg-[#0F172A] text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#1E293B] rounded-md transition-colors disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign in"}
-              {!loading && <ArrowRight className="w-4 h-4" />}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
           {/* Demo account card */}
-          <div className="mt-6 border border-[#E2E8F0] bg-[#F1F5F9] p-4 rounded-md">
-            <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-2">
-              Try Weeber instantly
+          {DEMO_EMAIL && DEMO_PASSWORD && (
+            <div className="mt-6 border border-[#E2E8F0] bg-[#F1F5F9] p-4 rounded-md">
+              <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-2">
+                Try Weeber instantly
+              </div>
+              <p className="text-sm text-[#475569] mb-3">
+                Explore the full platform with pre-loaded data.
+              </p>
+              <button
+                onClick={loginAsDemo}
+                disabled={demoLoading || isSubmitting}
+                className="w-full h-10 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm font-medium rounded-md hover:bg-[#F8F9FB] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {demoLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Login as Demo Account
+              </button>
             </div>
-            <p className="text-sm text-[#475569] mb-3">
-              Explore the full platform with pre-loaded data.
-            </p>
-            <button
-              onClick={loginAsDemo}
-              disabled={loading}
-              className="w-full h-10 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm font-medium rounded-md hover:bg-[#F8F9FB] transition-colors disabled:opacity-50"
-            >
-              Login as Demo Account
-            </button>
-          </div>
+          )}
 
           <div className="mt-8 pt-6 border-t border-[#E2E8F0] text-sm text-[#475569]">
             New to Weeber?{" "}

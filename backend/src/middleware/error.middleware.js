@@ -15,7 +15,7 @@ function errorHandler(err, req, res, _next) {
     }
 
     const details =
-      err.status >= 500 && env.NODE_ENV === "production" ? undefined : err.details;
+      env.NODE_ENV === "production" && err.code !== "validation_error" ? undefined : err.details;
 
     return res.status(err.status).json({
       error: { code: err.code, message: err.message, details },

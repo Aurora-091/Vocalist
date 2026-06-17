@@ -28,13 +28,15 @@ export function Badge({
   tone = "neutral",
   children,
   dot = false,
+  className,
 }: {
   tone?: Tone;
   children: ReactNode;
   dot?: boolean;
+  className?: string;
 }) {
   return (
-    <UiBadge variant="secondary" className={cn(tones[tone])}>
+    <UiBadge variant="secondary" className={cn(tones[tone], className)}>
       {dot && <span className={cn("size-1.5 rounded-full", dotColors[tone])} />}
       {children}
     </UiBadge>

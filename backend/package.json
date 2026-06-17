@@ -10,7 +10,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "node -e \"require('./server.js')\" --check 2>/dev/null || node --check server.js && echo backend syntax ok",
-    "test": "node --test src/tests/invariants/*.test.js",
+    "test": "cross-env SUPABASE_URL=http://localhost SUPABASE_ANON_KEY=dummy_key_must_be_20_chars node --test src/tests/invariants/*.test.js",
     "lint:syntax": "node --check server.js && find src -name '*.js' -exec node --check {} +"
   },
   "keywords": [],
@@ -36,6 +36,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "nodemon": "^3.1.14"
   }
 }
