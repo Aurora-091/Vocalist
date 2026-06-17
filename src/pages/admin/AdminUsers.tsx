@@ -1,9 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { Search } from "lucide-react";
 import { adminApi, type AdminUser, type PaginatedResult } from "../../lib/admin-api";
+import { api } from "../../lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function AdminUsers() {
   const [result, setResult] = useState<PaginatedResult<AdminUser> | null>(null);
@@ -12,6 +16,12 @@ export default function AdminUsers() {
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  const [showPlanSelect, setShowPlanSelect] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState("starter");
+  const [planLoading, setPlanLoading] = useState(false);
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [suspendLoading, setSuspendLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -30,8 +40,51 @@ export default function AdminUsers() {
     try {
       const data = await adminApi.getUserDetail(id);
       setDetail(data);
+      setSelectedPlan(data.orgs?.plan_id || "starter");
+      setShowPlanSelect(false);
     } finally {
       setDetailLoading(false);
+    }
+  }
+
+  async function handleChangePlan() {
+    setPlanLoading(true);
+    try {
+      await adminApi.updateUser(detail.id, { plan_id: selectedPlan });
+      toast.success("Plan updated");
+      setDetail((prev: any) => ({
+        ...prev,
+        orgs: prev.orgs ? { ...prev.orgs, plan_id: selectedPlan } : { name: "---", plan_id: selectedPlan }
+      }));
+      setShowPlanSelect(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update plan");
+    } finally {
+      setPlanLoading(false);
+    }
+  }
+
+  async function handleResetPassword() {
+    setPasswordResetLoading(true);
+    try {
+      await api.post(`/v1/admin/users/${detail.id}/reset-password`);
+      toast.success("Password reset email sent");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset email");
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  }
+
+  async function handleSuspendAccount() {
+    setSuspendLoading(true);
+    try {
+      await adminApi.updateUser(detail.id, { suspended: true });
+      toast.success("Account suspended");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to suspend account");
+    } finally {
+      setSuspendLoading(false);
     }
   }
 
@@ -72,6 +125,105 @@ export default function AdminUsers() {
                 </div>
               ))}
             </dl>
+          </div>
+        </div>
+
+        {/* Actions Card */}
+        <div className="bg-card border border-border rounded-lg p-5 space-y-4 max-w-2xl">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            
+            {/* Change Plan Action */}
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground font-medium block">Change Plan</label>
+              {!showPlanSelect ? (
+                <Button 
+                  className="w-full justify-start text-left font-normal" 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedPlan(detail.orgs?.plan_id || "starter");
+                    setShowPlanSelect(true);
+                  }}
+                >
+                  Change Plan...
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="starter">Starter</SelectItem>
+                      <SelectItem value="growth">Growth</SelectItem>
+                      <SelectItem value="scale">Scale</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      className="flex-1" 
+                      disabled={planLoading}
+                      onClick={handleChangePlan}
+                    >
+                      {planLoading ? "Saving..." : "Confirm"}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      disabled={planLoading}
+                      onClick={() => setShowPlanSelect(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Reset Password Action */}
+            <div className="space-y-2 flex flex-col justify-end">
+              <label className="text-xs text-muted-foreground font-medium block">Password Reset</label>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleResetPassword}
+                disabled={passwordResetLoading}
+              >
+                {passwordResetLoading ? "Sending..." : "Reset Password"}
+              </Button>
+            </div>
+
+            {/* Suspend Account Action */}
+            <div className="space-y-2 flex flex-col justify-end">
+              <label className="text-xs text-muted-foreground font-medium block">Account Status</label>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full" disabled={suspendLoading}>
+                    {suspendLoading ? "Suspending..." : "Suspend Account"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will suspend this user's account immediately. They will not be able to log in or access platform features.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                      onClick={handleSuspendAccount}
+                    >
+                      Suspend
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
           </div>
         </div>
       </div>

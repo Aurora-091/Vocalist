@@ -7,6 +7,14 @@ export interface AdminStats {
   calls_today: number;
   monthly_cost: number;
   active_subscriptions: number;
+  total_calls?: number;
+  prev_total_users?: number;
+  prev_waitlist_pending?: number;
+  prev_active_users_7d?: number;
+  prev_calls_today?: number;
+  prev_monthly_cost?: number;
+  prev_active_subscriptions?: number;
+  prev_total_calls?: number;
 }
 
 export interface PaginatedResult<T> {
@@ -65,6 +73,7 @@ export interface BillingEntry {
   current_period_end: string | null;
   created_at: string;
   orgs: { name: string } | null;
+  monthly_amount?: number;
 }
 
 export interface LogEntry {
@@ -112,7 +121,11 @@ export interface BroadcastEntry {
 
 export const adminApi = {
   checkAccess: () => api.get<{ platform_role: string }>("/v1/admin/me"),
-  getStats: () => api.get<AdminStats>("/v1/admin/stats"),
+  getStats: (range?: string) => {
+    const params = new URLSearchParams();
+    if (range) params.set("range", range);
+    return api.get<AdminStats>(`/v1/admin/stats?${params}`);
+  },
   getRecentSignups: () => api.get<AdminUser[]>("/v1/admin/recent-signups"),
   getRecentErrors: () => api.get<LogEntry[]>("/v1/admin/recent-errors"),
   listUsers: (opts: { page?: number; limit?: number; q?: string } = {}) => {

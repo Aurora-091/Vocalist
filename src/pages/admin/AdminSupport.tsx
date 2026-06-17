@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Search, Phone, Bot, CreditCard } from "lucide-react";
+import { Search, Phone, Bot, CreditCard, Mail } from "lucide-react";
 import { adminApi, type AdminUserDetail } from "../../lib/admin-api";
+import { api } from "../../lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function AdminSupport() {
   const [q, setQ] = useState("");
@@ -11,12 +14,18 @@ export default function AdminSupport() {
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [noResult, setNoResult] = useState(false);
 
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!q.trim()) return;
     setSearching(true);
     setNoResult(false);
     setUser(null);
+    setShowEmailForm(false);
     try {
       const res = await adminApi.listUsers({ q: q.trim(), limit: 1 });
       if (res.data.length > 0) {
@@ -27,6 +36,26 @@ export default function AdminSupport() {
       }
     } finally {
       setSearching(false);
+    }
+  }
+
+  async function handleSendEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setSendingEmail(true);
+    try {
+      await api.post(`/v1/admin/users/${user.id}/send-email`, {
+        subject: emailSubject,
+        body: emailBody,
+      });
+      toast.success("Email sent successfully");
+      setEmailSubject("");
+      setEmailBody("");
+      setShowEmailForm(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send email");
+    } finally {
+      setSendingEmail(false);
     }
   }
 
@@ -56,7 +85,7 @@ export default function AdminSupport() {
       )}
 
       {user && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="bg-card border border-border rounded-lg p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -88,20 +117,60 @@ export default function AdminSupport() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link to="/admin/agents" className="bg-card border border-border rounded-lg p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <Link to={`/admin/agents?org=${user.org_id}`} className="bg-card border border-border rounded-lg p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
               <Bot className="w-5 h-5 text-muted-foreground" />
               <span className="text-sm font-medium">View Agents</span>
             </Link>
-            <Link to="/admin/billing" className="bg-card border border-border rounded-lg p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
+            <Link to={`/admin/billing?org=${user.org_id}`} className="bg-card border border-border rounded-lg p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
               <CreditCard className="w-5 h-5 text-muted-foreground" />
               <span className="text-sm font-medium">View Billing</span>
             </Link>
-            <Link to="/admin/logs" className="bg-card border border-border rounded-lg p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
+            <Link to={`/admin/logs?org=${user.org_id}`} className="bg-card border border-border rounded-lg p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
               <Phone className="w-5 h-5 text-muted-foreground" />
               <span className="text-sm font-medium">View Logs</span>
             </Link>
+            <button
+              onClick={() => setShowEmailForm(!showEmailForm)}
+              className={`bg-card border border-border rounded-lg p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors text-left w-full ${showEmailForm ? "bg-muted/30" : ""}`}
+            >
+              <Mail className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium">Send Email</span>
+            </button>
           </div>
+
+          {showEmailForm && (
+            <form onSubmit={handleSendEmail} className="bg-card border border-border rounded-lg p-5 space-y-4 max-w-xl">
+              <h3 className="text-sm font-semibold">Send Email to {user.display_name || user.email}</h3>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Subject</label>
+                <Input
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Email subject..."
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Body</label>
+                <Textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Email body..."
+                  rows={4}
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={sendingEmail}>
+                  {sendingEmail ? "Sending..." : "Send Email"}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setShowEmailForm(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
 
           <div className="bg-muted/50 border border-dashed border-border rounded-lg p-6 text-center">
             <p className="text-sm text-muted-foreground">Ticket system coming soon</p>
