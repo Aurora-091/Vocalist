@@ -2,7 +2,7 @@ const { IntegrationProvider } = require("./interface");
 const { requireAdmin } = require("../../../config/supabase");
 const logger = require("../../../config/logger");
 
-const API_VERSION = "2024-01";
+const API_VERSION = "2025-01";
 
 class ShopifyProvider extends IntegrationProvider {
   static get type() { return "shopify"; }

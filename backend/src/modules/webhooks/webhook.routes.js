@@ -1,5 +1,6 @@
 const express = require("express");
 const Stripe = require("stripe");
+const crypto = require("crypto");
 const env = require("../../config/env");
 const logger = require("../../config/logger");
 const asyncHandler = require("../../utils/asyncHandler");
@@ -314,5 +315,151 @@ function escapeXml(s) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+const shopifyRawBodyMiddleware = express.raw({ type: "application/json", limit: "2mb" });
+
+function verifyShopifyHmac(req, res, next) {
+  const hmacHeader = req.headers["x-shopify-hmac-sha256"];
+  if (!hmacHeader) {
+    logger.warn("Missing Shopify HMAC header");
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const rawBody = req.body;
+  if (!Buffer.isBuffer(rawBody)) {
+    logger.warn("Shopify raw body is not a Buffer");
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const secret = process.env.SHOPIFY_CLIENT_SECRET;
+  if (!secret) {
+    logger.error("SHOPIFY_CLIENT_SECRET not configured");
+    return res.status(503).json({ error: "Webhook secret not configured" });
+  }
+
+  const calculated = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("base64");
+
+  const a = Buffer.from(calculated, "utf8");
+  const b = Buffer.from(hmacHeader, "utf8");
+
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    logger.warn("Invalid Shopify HMAC signature");
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  next();
+}
+
+router.post(
+  "/shopify/orders",
+  shopifyRawBodyMiddleware,
+  verifyShopifyHmac,
+  asyncHandler(async (req, res) => {
+    const shop = req.headers["x-shopify-shop-domain"];
+    const topic = req.headers["x-shopify-topic"];
+    
+    let payload;
+    try {
+      payload = JSON.parse(req.body.toString("utf8"));
+    } catch {
+      return res.status(400).json({ error: "Invalid JSON" });
+    }
+
+    logger.info({ shop, topic, id: payload.id }, "Shopify orders webhook received");
+    res.status(200).json({ ok: true });
+  })
+);
+
+router.post(
+  "/shopify/checkouts",
+  shopifyRawBodyMiddleware,
+  verifyShopifyHmac,
+  asyncHandler(async (req, res) => {
+    const shop = req.headers["x-shopify-shop-domain"];
+    const topic = req.headers["x-shopify-topic"];
+    
+    let payload;
+    try {
+      payload = JSON.parse(req.body.toString("utf8"));
+    } catch {
+      return res.status(400).json({ error: "Invalid JSON" });
+    }
+
+    logger.info({ shop, topic, id: payload.id }, "Shopify checkouts webhook received");
+    res.status(200).json({ ok: true });
+  })
+);
+
+router.post(
+  "/shopify/customers",
+  shopifyRawBodyMiddleware,
+  verifyShopifyHmac,
+  asyncHandler(async (req, res) => {
+    const shop = req.headers["x-shopify-shop-domain"];
+    const topic = req.headers["x-shopify-topic"];
+    
+    let payload;
+    try {
+      payload = JSON.parse(req.body.toString("utf8"));
+    } catch {
+      return res.status(400).json({ error: "Invalid JSON" });
+    }
+
+    logger.info({ shop, topic, id: payload.id }, "Shopify customers webhook received");
+    res.status(200).json({ ok: true });
+  })
+);
+
+router.post(
+  "/shopify/lifecycle",
+  shopifyRawBodyMiddleware,
+  verifyShopifyHmac,
+  asyncHandler(async (req, res) => {
+    const shop = req.headers["x-shopify-shop-domain"];
+    const topic = req.headers["x-shopify-topic"];
+    
+    let payload;
+    try {
+      payload = JSON.parse(req.body.toString("utf8"));
+    } catch {
+      return res.status(400).json({ error: "Invalid JSON" });
+    }
+
+    logger.info({ shop, topic }, "Shopify lifecycle webhook received");
+
+    if (topic === "app/uninstalled") {
+      const { requireAdmin } = require("../../config/supabase");
+      const admin = requireAdmin();
+      const { error } = await admin
+        .from("integrations")
+        .update({ status: "inactive" })
+        .eq("type", "shopify")
+        .eq("config->>shop_domain", shop);
+
+      if (error) {
+        logger.error({ err: error, shop }, "Failed to deactivate shopify integration on app/uninstalled");
+        throw error;
+      }
+      logger.info({ shop }, "Shopify integration marked inactive due to app/uninstalled");
+    }
+
+    res.status(200).json({ ok: true });
+  })
+);
+
+router.post(
+  "/shopify/gdpr",
+  shopifyRawBodyMiddleware,
+  verifyShopifyHmac,
+  asyncHandler(async (req, res) => {
+    const shop = req.headers["x-shopify-shop-domain"];
+    const topic = req.headers["x-shopify-topic"];
+    logger.info({ shop, topic }, "Shopify GDPR webhook received");
+    res.status(200).json({ ok: true });
+  })
+);
 
 module.exports = router;
