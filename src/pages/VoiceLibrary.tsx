@@ -8,9 +8,13 @@ import {
   RefreshCw,
   Sparkles,
   ChevronRight,
+  Plus,
+  Loader2,
 } from "lucide-react";
-import { listVoices, syncVoices } from "../lib/db";
+import { listVoices, syncVoices, listAgents } from "../lib/db";
 import { getSession } from "../lib/supabase";
+import { api } from "../lib/api";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   USE_CASES,
   USE_CASE_MAP,
@@ -85,6 +89,8 @@ export default function VoiceLibrary({
   selectedVoiceId?: string;
   filterLanguages?: string[];
 }) {
+  const isSelector = !!onSelect;
+
   const [voices, setVoices] = useState<Voice[] | null>(null);
   const [search, setSearch] = useState("");
   const [gender, setGender] = useState<string>("all");
@@ -93,6 +99,17 @@ export default function VoiceLibrary({
   const [category, setCategory] = useState<UseCaseId | "all">("all");
   const [canSync, setCanSync] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [agents, setAgents] = useState<any[]>([]);
+
+  const loadAgents = () => {
+    if (!isSelector) {
+      listAgents().then(setAgents).catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    loadAgents();
+  }, [isSelector]);
 
   const [player, setPlayer] = useState<PlayerState>({
     voiceId: null,
@@ -100,8 +117,6 @@ export default function VoiceLibrary({
     loading: false,
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const isSelector = !!onSelect;
 
   async function load() {
     try {
@@ -235,7 +250,17 @@ export default function VoiceLibrary({
     })).filter((g) => g.voices.length > 0);
   }, [filtered, showGrouped]);
 
-  const playerProps = { player, onPlay: playPreview, selectedVoiceId, isSelector, onSelect, filterLanguages, isCompatible };
+  const playerProps = {
+    player,
+    onPlay: playPreview,
+    selectedVoiceId,
+    isSelector,
+    onSelect,
+    filterLanguages,
+    isCompatible,
+    agents,
+    onAssignSuccess: loadAgents,
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -334,9 +359,9 @@ export default function VoiceLibrary({
 
       {/* Content */}
       {voices === null ? (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="flex flex-col gap-1.5">
           {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-[104px] rounded-xl" />
+            <Skeleton key={i} className="h-14 rounded-lg" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -350,7 +375,7 @@ export default function VoiceLibrary({
                 <Sparkles className="size-4 text-foreground" />
                 <h2 className="text-sm font-semibold tracking-tight">Popular voices</h2>
               </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="flex flex-col gap-1.5">
                 {featured.map((v) => (
                   <VoiceCard key={v.id} voice={v} {...playerProps} />
                 ))}
@@ -386,7 +411,7 @@ export default function VoiceLibrary({
                   </button>
                 )}
               </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1.5">
                 {list.slice(0, SECTION_LIMIT).map((v) => (
                   <VoiceCard key={v.id} voice={v} {...playerProps} />
                 ))}
@@ -402,7 +427,7 @@ export default function VoiceLibrary({
               <span className="text-foreground font-medium">{USE_CASE_MAP[category].label}</span>
             </p>
           )}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="flex flex-col gap-1.5">
             {filtered.map((v) => (
               <VoiceCard key={v.id} voice={v} {...playerProps} />
             ))}
@@ -442,6 +467,117 @@ function CategoryChip({
   );
 }
 
+const LANGUAGE_FLAGS: Record<string, string> = {
+  en: "🇺🇸",
+  es: "🇪🇸",
+  fr: "🇫🇷",
+  de: "🇩🇪",
+  it: "🇮🇹",
+  pt: "🇵🇹",
+  nl: "🇳🇱",
+  pl: "🇵🇱",
+  ru: "🇷🇺",
+  ja: "🇯🇵",
+  zh: "🇨🇳",
+  ko: "🇰🇷",
+  ar: "🇸🇦",
+  hi: "🇮🇳",
+  tr: "🇹🇷",
+  sv: "🇸🇪",
+  da: "🇩🇰",
+  no: "🇳🇴",
+  fi: "🇫🇮",
+};
+
+function getVoiceGradient(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = Math.abs(hash) % 360;
+  const s = 75 + (Math.abs(hash >> 8) % 15);
+  const l = 55 + (Math.abs(hash >> 16) % 15);
+  const h2 = (h + 60) % 360;
+  return `linear-gradient(135deg, hsl(${h}, ${s}%, ${l}%), hsl(${h2}, ${s + 5}%, ${l - 10}%))`;
+}
+
+function AssignToAgentButton({
+  voice,
+  agents,
+  onAssignSuccess,
+}: {
+  voice: Voice;
+  agents: any[];
+  onAssignSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+
+  async function handleAssign(agentId: string, agentName: string) {
+    setAssigningId(agentId);
+    try {
+      await api.patch(`/v1/agents/${agentId}`, { voice_id: voice.voice_id });
+      toast.success(`Assigned voice "${voice.name}" to agent "${agentName}".`);
+      onAssignSuccess();
+      setOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to assign voice to agent.");
+    } finally {
+      setAssigningId(null);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          onClick={(e) => e.stopPropagation()}
+          className="flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted focus-ring transition-colors shrink-0 cursor-pointer"
+          aria-label={`Assign ${voice.name} to an agent`}
+        >
+          <Plus className="size-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-56 p-1.5"
+        align="end"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-b border-border mb-1 select-none">
+          Assign to Agent
+        </div>
+        {agents.length === 0 ? (
+          <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+            No agents available
+          </div>
+        ) : (
+          <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5">
+            {agents.map((agent) => {
+              const isAssigned = agent.voice_id === voice.voice_id;
+              const isPending = assigningId === agent.id;
+              return (
+                <button
+                  key={agent.id}
+                  disabled={isPending || isAssigned}
+                  onClick={() => handleAssign(agent.id, agent.name)}
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-xs text-left rounded-md hover:bg-muted/70 disabled:opacity-50 disabled:pointer-events-none transition-colors cursor-pointer"
+                >
+                  <span className="truncate max-w-[150px]">{agent.name}</span>
+                  {isPending ? (
+                    <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                  ) : isAssigned ? (
+                    <Check className="size-3 text-foreground" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function VoiceCard({
   voice,
   player,
@@ -451,6 +587,8 @@ function VoiceCard({
   onSelect,
   filterLanguages,
   isCompatible,
+  agents,
+  onAssignSuccess,
 }: {
   voice: Voice;
   player: PlayerState;
@@ -460,6 +598,8 @@ function VoiceCard({
   onSelect?: (voiceId: string, voiceName: string) => void;
   filterLanguages?: string[];
   isCompatible: (v: Voice) => boolean;
+  agents: any[];
+  onAssignSuccess: () => void;
 }) {
   const isSelected = selectedVoiceId === voice.voice_id;
   const isPlaying = player.voiceId === voice.voice_id;
@@ -468,7 +608,8 @@ function VoiceCard({
   const uc = primaryUseCase(voice);
   const hasPreview = !!voice.preview_url;
 
-  const langLabel = voice.language_codes[0] ? LANGUAGES[voice.language_codes[0]] || voice.language_codes[0] : null;
+  const langCode = voice.language_codes[0];
+  const langFlag = langCode ? LANGUAGE_FLAGS[langCode] || langCode.toUpperCase() : null;
   const extraLangs = voice.language_codes.length - 1;
 
   function handleCardClick() {
@@ -478,109 +619,104 @@ function VoiceCard({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative flex flex-col rounded-xl border bg-card p-3.5 transition-all ${
+      className={`group relative flex items-center justify-between p-2 h-14 bg-transparent transition-colors duration-150 rounded-lg ${
         isSelected
-          ? "border-foreground ring-1 ring-foreground/15"
+          ? "bg-muted/70"
           : !compatible
-            ? "border-amber-500/40"
-            : "border-border hover:border-foreground/25 hover:shadow-sm"
+            ? "bg-amber-500/5 hover:bg-amber-500/10"
+            : "hover:bg-muted/40"
       } ${isSelector ? "cursor-pointer" : ""}`}
     >
-      <div className="flex items-start gap-3">
-        {/* Avatar / play */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (hasPreview) onPlay(voice);
-          }}
-          disabled={!hasPreview}
-          aria-label={isPlaying ? `Pause ${voice.name} preview` : `Play ${voice.name} preview`}
-          className={`relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg ${uc.tint.bg} ${uc.tint.text} ${
-            hasPreview ? "cursor-pointer" : "cursor-default"
-          }`}
-        >
-          <span
-            className={`text-sm font-semibold transition-opacity ${
-              hasPreview ? "group-hover:opacity-0" : ""
-            } ${isPlaying ? "opacity-0" : ""}`}
-          >
-            {voiceInitials(voice.name)}
-          </span>
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Avatar Area with Play Overlay */}
+        <div className="relative size-8 shrink-0 rounded-full overflow-hidden">
+          {/* Gradient Orb */}
+          <div
+            className="absolute inset-0 transition-opacity duration-200"
+            style={{ background: getVoiceGradient(voice.name) }}
+          />
+          {/* Play/Pause Button overlay */}
           {hasPreview && (
-            <span
-              className={`absolute inset-0 flex items-center justify-center bg-foreground/85 text-background transition-opacity ${
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlay(voice);
+              }}
+              aria-label={isPlaying ? `Pause ${voice.name} preview` : `Play ${voice.name} preview`}
+              className={`absolute inset-0 flex items-center justify-center bg-black/40 text-white transition-opacity duration-200 cursor-pointer ${
                 isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               }`}
             >
               {isLoading ? (
-                <RefreshCw className="size-4 animate-spin" />
+                <RefreshCw className="size-3.5 animate-spin" />
               ) : isPlaying ? (
-                <Pause className="size-4 fill-current" />
+                <Pause className="size-3.5 fill-current" />
               ) : (
-                <Play className="size-4 fill-current" />
+                <Play className="size-3.5 fill-current" />
               )}
-            </span>
+            </button>
           )}
-        </button>
+        </div>
 
         {/* Info */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-sm font-medium">{voice.name}</span>
-            {isSelected && <Check className="size-3.5 shrink-0 text-foreground" />}
-          </div>
-          <div className="mt-0.5 truncate text-xs text-muted-foreground capitalize">
-            {[voice.gender, voice.accent].filter(Boolean).join(" · ") || uc.label}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span
-              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${uc.tint.bg} ${uc.tint.text}`}
-            >
-              <uc.icon className="size-3" />
-              {uc.label}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="truncate text-sm font-medium text-foreground">{voice.name}</span>
+          {isSelected && <Check className="size-3.5 shrink-0 text-foreground" />}
+          
+          {/* Pill tags */}
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium text-muted-foreground uppercase tracking-wide shrink-0">
+            <uc.icon className="size-2.5" />
+            {uc.label}
+          </span>
+
+          {/* Language Flag + Count */}
+          {langFlag && (
+            <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground shrink-0 select-none">
+              <span>{langFlag}</span>
+              {extraLangs > 0 && <span className="text-[9px] font-semibold">+{extraLangs}</span>}
             </span>
-            {langLabel && (
-              <span className="rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                {langLabel}
-                {extraLangs > 0 ? ` +${extraLangs}` : ""}
-              </span>
-            )}
-          </div>
+          )}
+          {!compatible && (
+            <span className="text-amber-500 shrink-0 select-none" title="May not support requested languages">
+              <AlertTriangle className="size-3.5" />
+            </span>
+          )}
         </div>
       </div>
 
-      {!compatible && filterLanguages && filterLanguages.length > 0 && (
-        <div className="mt-2.5 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
-          <AlertTriangle className="size-3" />
-          May not support {filterLanguages.map((l) => LANGUAGES[l] || l).join(", ")}
-        </div>
-      )}
+      {/* Right side: Waveform animation & action button */}
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Waveform animation */}
+        {isPlaying && !isLoading && (
+          <div className="flex items-center gap-[2.5px] h-3 px-2 select-none">
+            <div className="w-[2px] h-full bg-foreground/75 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0s] origin-center" />
+            <div className="w-[2px] h-full bg-foreground/75 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.2s] origin-center" />
+            <div className="w-[2px] h-full bg-foreground/75 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.4s] origin-center" />
+            <div className="w-[2px] h-full bg-foreground/75 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.1s] origin-center" />
+          </div>
+        )}
 
-      {isSelector && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect?.(voice.voice_id, voice.name);
-          }}
-          className={`mt-3 h-8 w-full rounded-md text-xs font-medium transition-colors ${
-            isSelected
-              ? "border border-foreground/30 bg-secondary text-foreground"
-              : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-          }`}
-        >
-          {isSelected ? "Selected" : "Use this voice"}
-        </button>
-      )}
-
-      {/* Progress bar */}
-      {isPlaying && (
-        <div className="absolute inset-x-3.5 bottom-0 h-0.5 overflow-hidden rounded-full bg-border">
-          <div
-            className="h-full bg-foreground transition-[width] duration-150"
-            style={{ width: `${Math.round(player.progress * 100)}%` }}
+        {/* Action Button: Selector button vs Assign button */}
+        {isSelector ? (
+          <Button
+            size="sm"
+            variant={isSelected ? "outline" : "secondary"}
+            className="h-7 px-2.5 text-[11px] shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.(voice.voice_id, voice.name);
+            }}
+          >
+            {isSelected ? "Selected" : "Use"}
+          </Button>
+        ) : (
+          <AssignToAgentButton
+            voice={voice}
+            agents={agents}
+            onAssignSuccess={onAssignSuccess}
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
