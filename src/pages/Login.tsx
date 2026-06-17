@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, ArrowRight, Phone, ShieldCheck, Zap, Loader2 } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Phone, ShieldCheck, Zap, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
 import { WeeberLogo } from "../components/WeeberLogo";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { z } from "zod";
 import { toast } from "sonner";
 
 const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL || "";
 const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || "";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address."),
+  email: z.email("Please enter a valid email address."),
   password: z.string().min(1, "Password is required."),
 });
 

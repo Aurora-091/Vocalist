@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ShieldCheck, Phone, Zap, Loader2 } from "lucide-react";
+import { ArrowRight, ShieldCheck, Phone, Zap, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { api, ApiError } from "../lib/api";
 import { WeeberLogo } from "../components/WeeberLogo";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { z } from "zod";
 import { toast } from "sonner";
 
 const signupSchema = z.object({
   orgName: z.string().min(2, "Organization name must be at least 2 characters."),
-  email: z.string().email("Please enter a valid email address."),
+  email: z.email("Please enter a valid email address."),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters.")
