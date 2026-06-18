@@ -5,6 +5,8 @@ import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
 import { toast } from "sonner";
+import { VerticalProvider, useVertical } from "../lib/VerticalContext";
+import type { VerticalKey } from "../config/verticals";
 
 type Preset = {
   id: string;
@@ -55,7 +57,16 @@ const VERTICALS = [
 ] as const;
 
 export default function Onboarding() {
+  return (
+    <VerticalProvider>
+      <OnboardingInner />
+    </VerticalProvider>
+  );
+}
+
+function OnboardingInner() {
   const navigate = useNavigate();
+  const { setVertical: persistVertical } = useVertical();
   const [step, setStep] = useState(0);
   const [vertical, setVertical] = useState<string | null>(null);
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -186,7 +197,7 @@ export default function Onboarding() {
                   {VERTICALS.map((v) => (
                     <button
                       key={v.key}
-                      onClick={() => { setVertical(v.key); next(); }}
+                      onClick={() => { setVertical(v.key); persistVertical(v.key as VerticalKey); next(); }}
                       className={`text-left p-5 rounded-md border transition-colors ${
                         vertical === v.key ? "border-text bg-surface-2" : "border-border bg-surface hover:bg-surface-2"
                       }`}

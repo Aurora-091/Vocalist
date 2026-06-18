@@ -23,8 +23,9 @@ import {
 import {
   listIntegrationCatalog,
   listBridgeConfigs,
-  getOrg,
 } from "../lib/db";
+import { useVertical } from "../lib/VerticalContext";
+import type { IntegrationRef } from "../config/verticals";
 import { Button } from "../components/legacy-ui/Button";
 import { Badge } from "../components/legacy-ui/Badge";
 import { Skeleton } from "../components/legacy-ui/States";
@@ -93,9 +94,9 @@ const TABS = [
 export default function Integrations() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { vertical: orgVertical, config } = useVertical();
   const [catalog, setCatalog] = useState<CatalogEntry[] | null>(null);
   const [connections, setConnections] = useState<BridgeConfig[]>([]);
-  const [orgVertical, setOrgVertical] = useState<string | null>(null);
   const [tab, setTab] = useState("recommended");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -109,31 +110,14 @@ export default function Integrations() {
 
   useEffect(() => {
     (async () => {
-      const [cat, conns, org] = await Promise.all([
+      const [cat, conns] = await Promise.all([
         listIntegrationCatalog(),
         listBridgeConfigs(),
-        getOrg(),
       ]);
       setCatalog(cat);
       setConnections(conns);
-      const vKey = org?.vertical_config_id ? await getVerticalKey(org.vertical_config_id) : null;
-      setOrgVertical(vKey);
     })();
   }, []);
-
-  async function getVerticalKey(verticalId: string) {
-    try {
-      const { supabase } = await import("../lib/supabase");
-      const { data } = await supabase
-        .from("vertical_configs")
-        .select("key")
-        .eq("id", verticalId)
-        .single();
-      return data?.key || null;
-    } catch {
-      return null;
-    }
-  }
 
   const connectedSet = new Map(
     connections
@@ -147,8 +131,12 @@ export default function Integrations() {
 
     if (tab === "connected") {
       items = items.filter((c) => connectedSet.has(c.provider_key));
-    } else if (tab === "recommended" && orgVertical) {
-      items = items.filter((c) => c.verticals.includes(orgVertical));
+    } else if (tab === "recommended") {
+      const registryKeys = new Set(config.integrations.map((i) => i.provider_key));
+      items = items.filter((c) =>
+        registryKeys.has(c.provider_key) ||
+        (orgVertical && c.verticals.includes(orgVertical))
+      );
     }
 
     if (categoryFilter) {

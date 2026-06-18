@@ -10,6 +10,8 @@ import {
   createWebhookEndpoint,
 } from "../lib/db";
 import { supabase, getSession } from "../lib/supabase";
+import { useVertical } from "../lib/VerticalContext";
+import { VERTICAL_REGISTRY, listVerticals, type VerticalKey } from "../config/verticals";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Button } from "../components/legacy-ui/Button";
 import { Skeleton } from "../components/legacy-ui/States";
@@ -383,6 +385,8 @@ function OrgPanel() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { vertical, setVertical } = useVertical();
+  const [verticalBusy, setVerticalBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -403,32 +407,86 @@ function OrgPanel() {
     }
   }
 
+  async function handleVerticalChange(key: string) {
+    setVerticalBusy(true);
+    try {
+      await setVertical(key as VerticalKey);
+      toast.success(`Workspace switched to ${VERTICAL_REGISTRY[key as VerticalKey].label}`);
+    } catch {
+      toast.error("Failed to update business type");
+    } finally {
+      setVerticalBusy(false);
+    }
+  }
+
   if (!org) return <Skeleton className="h-32" />;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="font-medium">Organization</div>
-      </CardHeader>
-      <CardBody>
-        <FieldGroup className="max-w-md gap-4">
-          <Field>
-            <FieldLabel htmlFor="org-name">Organization name</FieldLabel>
-            <Input
-              id="org-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </Field>
-          <div className="flex items-center gap-3">
-            <Button onClick={save} disabled={busy || !name}>
-              {busy ? "Saving..." : "Save"}
-            </Button>
-            {saved && <span className="text-sm text-success">Saved.</span>}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="font-medium">Organization</div>
+        </CardHeader>
+        <CardBody>
+          <FieldGroup className="max-w-md gap-4">
+            <Field>
+              <FieldLabel htmlFor="org-name">Organization name</FieldLabel>
+              <Input
+                id="org-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Field>
+            <div className="flex items-center gap-3">
+              <Button onClick={save} disabled={busy || !name}>
+                {busy ? "Saving..." : "Save"}
+              </Button>
+              {saved && <span className="text-sm text-success">Saved.</span>}
+            </div>
+          </FieldGroup>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="font-medium">Business type</div>
+        </CardHeader>
+        <CardBody>
+          <p className="text-sm text-text-muted mb-4">
+            This controls which agent templates, integrations, and dashboard metrics you see.
+            Changing this re-scopes your workspace.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 max-w-lg">
+            {listVerticals().map((v) => {
+              const Icon = v.icon;
+              const isActive = vertical === v.key;
+              return (
+                <button
+                  key={v.key}
+                  onClick={() => !isActive && handleVerticalChange(v.key)}
+                  disabled={verticalBusy || !v.enabled}
+                  className={`text-left p-4 rounded-md border transition-colors ${
+                    isActive
+                      ? "border-primary bg-primary/5"
+                      : !v.enabled
+                      ? "border-border opacity-50 cursor-not-allowed"
+                      : "border-border hover:border-primary/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="w-4 h-4" />
+                    <span className="font-medium text-sm">{v.label}</span>
+                  </div>
+                  {!v.enabled && (
+                    <span className="text-[10px] text-text-muted mt-1 block">Coming soon</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-        </FieldGroup>
-      </CardBody>
-    </Card>
+        </CardBody>
+      </Card>
+    </div>
   );
 }
 

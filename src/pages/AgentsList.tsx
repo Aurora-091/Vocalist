@@ -5,6 +5,7 @@ import { listAgents } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
+import { useVertical } from "../lib/VerticalContext";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 import { Badge } from "../components/legacy-ui/Badge";
@@ -26,6 +27,7 @@ type Agent = {
 type CreateMode = "idle" | "preset" | "manual";
 
 export default function AgentsList() {
+  const { vertical } = useVertical();
   const [agents, setAgents] = useState<Agent[] | null>(null);
   const [mode, setMode] = useState<CreateMode>("idle");
   const [name, setName] = useState("");
@@ -138,6 +140,7 @@ export default function AgentsList() {
       {mode === "preset" && (
         <div className="bg-surface border border-border rounded-md shadow-card p-6">
           <AgentPresetPicker
+            verticalKey={vertical || undefined}
             onSelect={createFromPreset}
             onSkip={() => setMode("manual")}
           />

@@ -3,6 +3,7 @@ import { Plus, Upload, Search, Trash2, ShieldOff } from "lucide-react";
 import { listContacts, createContact } from "../lib/db";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
+import { useVertical } from "../lib/VerticalContext";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody } from "../components/legacy-ui/Card";
 import { ConsentBadge } from "../components/legacy-ui/Badge";
@@ -37,6 +38,7 @@ type Contact = {
 };
 
 export default function Contacts() {
+  const { t } = useVertical();
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
@@ -82,7 +84,7 @@ export default function Contacts() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contacts</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("contacts")}</h1>
           <p className="text-sm text-text-muted mt-1">
             Numbers we can dial. Consent-aware by default.
           </p>
@@ -100,7 +102,7 @@ export default function Contacts() {
           </Button>
           <Button onClick={() => setCreating(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Add contact</span>
+            <span className="hidden sm:inline">Add {t("contact").toLowerCase()}</span>
             <span className="sm:hidden">Add</span>
           </Button>
         </div>

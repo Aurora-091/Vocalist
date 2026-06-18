@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Megaphone, ChevronRight } from "lucide-react";
 import { listCampaigns } from "../lib/db";
+import { useVertical } from "../lib/VerticalContext";
 import { Button } from "../components/legacy-ui/Button";
 import { EmptyState, Skeleton } from "../components/legacy-ui/States";
 import { Badge } from "../components/legacy-ui/Badge";
@@ -38,6 +39,7 @@ const FILTERS = ["all", "running", "paused", "draft", "completed"] as const;
 type Filter = (typeof FILTERS)[number];
 
 export default function Campaigns() {
+  const { t } = useVertical();
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -62,7 +64,7 @@ export default function Campaigns() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Campaigns</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("campaigns")}</h1>
           <p className="text-sm text-text-muted mt-1">
             Outbound runs against a list. Live monitor + retries built in.
           </p>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Check, Sparkles, Phone, PhoneIncoming, PhoneOutgoing, Bot, Megaphone } from "lucide-react";
+import { Plus, Check, Sparkles, Phone, Bot, Megaphone } from "lucide-react";
 import { getOverview, getUsageSummary, getOnboardingSteps } from "../lib/db";
 import { supabase } from "../lib/supabase";
+import { useVertical } from "../lib/VerticalContext";
 import { StatCard } from "../components/legacy-ui/StatCard";
 import { Card, CardHeader, CardBody } from "../components/legacy-ui/Card";
 import { Button } from "../components/legacy-ui/Button";
@@ -20,18 +21,20 @@ const STEP_LABELS: Record<string, string> = {
 const STEP_LINKS: Record<string, string> = {
   pick_vertical: "/onboarding",
   connect_tools: "/integrations",
-  add_knowledge: "/integrations",
+  add_knowledge: "/knowledge",
   create_agent: "/agents",
-  get_number: "/integrations",
+  get_number: "/numbers",
   test_and_golive: "/agents",
 };
 
 export default function Dashboard() {
+  const { config } = useVertical();
   const [overview, setOverview] = useState<any>(null);
   const [usage, setUsage] = useState<any>(null);
   const [steps, setSteps] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
   const [liveCalls, setLiveCalls] = useState<any[]>([]);
+  const [recentCalls, setRecentCalls] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -81,8 +84,34 @@ export default function Dashboard() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("calls")
+          .select("id, to_number, direction, status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(3);
+        setRecentCalls(data || []);
+      } catch {}
+    })();
+  }, []);
+
   const checklistDone = steps && Object.values(steps).every(Boolean);
   const isEmpty = !loading && (overview?.calls_total ?? 0) === 0;
+
+  function getMetricValue(key: string): number | string {
+    if (!overview) return 0;
+    const raw = overview[key];
+    if (raw !== undefined) return raw;
+    if (key === "carts_recovered" || key === "reservations") return overview.bookings ?? 0;
+    if (key === "revenue_recovered") return overview.revenue_recovered ? `$${overview.revenue_recovered}` : "$0";
+    if (key === "no_shows_prevented") return overview.no_shows_prevented ?? 0;
+    if (key === "checkins_handled") return overview.checkins_handled ?? 0;
+    return 0;
+  }
+
+  const { emptyStates, dashboard } = config;
 
   return (
     <div className="space-y-8">
@@ -109,14 +138,13 @@ export default function Dashboard() {
                 <Sparkles className="w-4 h-4" />
               </span>
               <div className="flex-1">
-                <div className="font-medium">Welcome to Weeber</div>
+                <div className="font-medium">{emptyStates.dashboard.title}</div>
                 <p className="text-sm text-text-muted mt-1">
-                  Start by creating your first agent, then add contacts and launch a campaign.
-                  Weeber handles consent, DNC enforcement, and recording disclosure automatically.
+                  {emptyStates.dashboard.description}
                 </p>
                 <div className="mt-4">
-                  <Link to="/onboarding">
-                    <Button size="sm">Start setup</Button>
+                  <Link to={emptyStates.dashboard.route}>
+                    <Button size="sm">{emptyStates.dashboard.cta}</Button>
                   </Link>
                 </div>
               </div>
@@ -164,79 +192,86 @@ export default function Dashboard() {
         </Card>
       )}
 
+      {/* Metrics driven by vertical config */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
           [...Array(4)].map((_, i) => <Skeleton key={i} className="h-28" />)
         ) : (
-          <>
-            <StatCard label="Calls (30d)" value={overview?.calls_total ?? 0} />
-            <StatCard label="Completed" value={overview?.calls_completed ?? 0} />
-            <StatCard label="Bookings" value={overview?.bookings ?? 0} />
+          dashboard.metrics.map((m) => (
             <StatCard
-              label="Opt-outs"
-              value={overview?.opt_outs ?? 0}
-              hint="Lower is better"
+              key={m.key}
+              label={m.label}
+              value={getMetricValue(m.key)}
+              hint={m.hint}
             />
-          </>
+          ))
         )}
       </div>
 
-      {/* Inbound / Outbound quick-start */}
+      {/* Dashboard cards driven by vertical config */}
       <div className="grid sm:grid-cols-2 gap-4">
-        <Card className="hover:border-primary/30 transition-colors">
-          <CardBody>
-            <div className="flex items-start gap-4">
-              <span className="w-10 h-10 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <PhoneIncoming className="w-5 h-5" />
-              </span>
-              <div className="flex-1">
-                <div className="font-medium">Inbound Handling</div>
-                <p className="text-sm text-text-muted mt-1">
-                  Answer calls, qualify intent, route to the right person or handle autonomously.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link to="/agents">
-                    <Button size="sm" variant="secondary">
-                      <Bot className="w-3.5 h-3.5 mr-1.5" />
-                      Manage agents
-                    </Button>
-                  </Link>
-                  <Link to="/calls?filter=inbound">
-                    <Button size="sm" variant="ghost">View inbound calls</Button>
-                  </Link>
+        {dashboard.cards.map((card) => {
+          const CardIcon = card.icon;
+          const bgColor = card.color === "blue"
+            ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
+            : "bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400";
+          return (
+            <Card key={card.id} className="hover:border-primary/30 transition-colors">
+              <CardBody>
+                <div className="flex items-start gap-4">
+                  <span className={`w-10 h-10 rounded-md ${bgColor} flex items-center justify-center shrink-0`}>
+                    <CardIcon className="w-5 h-5" />
+                  </span>
+                  <div className="flex-1">
+                    <div className="font-medium">{card.title}</div>
+                    <p className="text-sm text-text-muted mt-1">{card.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {card.links.map((link, i) => (
+                        <Link key={link.to} to={link.to}>
+                          <Button size="sm" variant={i === 0 ? "secondary" : "ghost"}>
+                            {i === 0 && card.id === "inbound" && <Bot className="w-3.5 h-3.5 mr-1.5" />}
+                            {i === 0 && card.id === "outbound" && <Megaphone className="w-3.5 h-3.5 mr-1.5" />}
+                            {link.label}
+                          </Button>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-        <Card className="hover:border-primary/30 transition-colors">
-          <CardBody>
-            <div className="flex items-start gap-4">
-              <span className="w-10 h-10 rounded-md bg-green-50 text-green-600 flex items-center justify-center shrink-0">
-                <PhoneOutgoing className="w-5 h-5" />
-              </span>
-              <div className="flex-1">
-                <div className="font-medium">Outbound Campaigns</div>
-                <p className="text-sm text-text-muted mt-1">
-                  Appointment reminders, cart recovery, payment follow-ups at scale with consent enforcement.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link to="/campaigns/new">
-                    <Button size="sm" variant="secondary">
-                      <Megaphone className="w-3.5 h-3.5 mr-1.5" />
-                      New campaign
-                    </Button>
-                  </Link>
-                  <Link to="/calls?filter=outbound">
-                    <Button size="sm" variant="ghost">View outbound calls</Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+              </CardBody>
+            </Card>
+          );
+        })}
       </div>
 
+      {/* Quick actions from vertical config */}
+      {config.quickActions.length > 0 && !isEmpty && (
+        <Card>
+          <CardHeader>
+            <div className="font-medium">Quick actions</div>
+          </CardHeader>
+          <CardBody>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {config.quickActions.map((action) => {
+                const ActionIcon = action.icon;
+                return (
+                  <Link
+                    key={action.key}
+                    to={action.route}
+                    className="group border border-border rounded-md p-4 hover:border-primary/30 hover:bg-surface-2/50 transition-colors"
+                  >
+                    <ActionIcon className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors mb-2" />
+                    <div className="font-medium text-sm">{action.label}</div>
+                    <p className="text-xs text-text-muted mt-1">{action.description}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Live calls + Usage */}
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -255,9 +290,28 @@ export default function Dashboard() {
           </CardHeader>
           <CardBody>
             {liveCalls.length === 0 ? (
-              <div className="text-sm text-text-muted">
-                No live calls right now. Place a test call from any agent to see it here.
-              </div>
+              recentCalls.length > 0 ? (
+                <div>
+                  <p className="text-xs text-text-muted mb-3">No live calls right now. Recent activity:</p>
+                  <ul className="space-y-2">
+                    {recentCalls.map((call) => (
+                      <li key={call.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2.5">
+                          <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="font-mono text-xs">{call.to_number || "Unknown"}</span>
+                        </div>
+                        <span className="text-xs text-text-muted capitalize">
+                          {call.status?.replace("_", " ") || call.direction}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="text-sm text-text-muted">
+                  {emptyStates.calls.description}
+                </div>
+              )
             ) : (
               <ul className="space-y-2.5">
                 {liveCalls.map((call) => (
@@ -284,7 +338,7 @@ export default function Dashboard() {
               <>
                 <div className="font-mono text-3xl font-bold">
                   {Math.round(Number(usage.used_minutes) || 0)}{" "}
-                  <span className="text-text-muted text-base">/ {usage.included_minutes || "—"} min</span>
+                  <span className="text-text-muted text-base">/ {usage.included_minutes || "\u2014"} min</span>
                 </div>
                 <div className="mt-3 h-2 rounded-full bg-surface-2 overflow-hidden">
                   <div
