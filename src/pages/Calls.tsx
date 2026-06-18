@@ -96,6 +96,31 @@ const CHANNEL_ICON: Record<string, React.ElementType> = {
 
 const PAGE_SIZES = [10, 20, 50];
 
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function weekAgoStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return d.toISOString().split("T")[0];
+}
+
+function QuickPill({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+        active
+          ? "border-foreground bg-foreground text-background"
+          : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 function defaultDateFrom() {
   const d = new Date();
   d.setDate(d.getDate() - 7);
@@ -209,6 +234,54 @@ export default function Conversations() {
             Download
           </Button>
         </div>
+      </div>
+
+      {/* Quick filter pills */}
+      <div className="flex items-center gap-2 overflow-x-auto">
+        <QuickPill
+          active={!statusFilter && !directionFilter && dateFrom === todayStr()}
+          onClick={() => {
+            setSearchParams({ from: todayStr(), to: todayStr() });
+          }}
+          label="Today"
+        />
+        <QuickPill
+          active={!statusFilter && !directionFilter && dateFrom === weekAgoStr()}
+          onClick={() => {
+            setSearchParams({ from: weekAgoStr(), to: todayStr() });
+          }}
+          label="This week"
+        />
+        <QuickPill
+          active={statusFilter === "failed"}
+          onClick={() => {
+            setSearchParams({ status: "failed" });
+          }}
+          label="Failed"
+        />
+        <QuickPill
+          active={directionFilter === "inbound"}
+          onClick={() => {
+            setSearchParams({ direction: "inbound" });
+          }}
+          label="Inbound"
+        />
+        <QuickPill
+          active={directionFilter === "outbound"}
+          onClick={() => {
+            setSearchParams({ direction: "outbound" });
+          }}
+          label="Outbound"
+        />
+        {(statusFilter || directionFilter || dateFrom !== defaultDateFrom()) && (
+          <button
+            onClick={resetFilters}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
+          >
+            <X className="size-3" />
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Filters */}

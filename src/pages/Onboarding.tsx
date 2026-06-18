@@ -164,7 +164,10 @@ export default function Onboarding() {
               ))}
             </div>
             <div className="flex items-center justify-between">
-              <div className="text-xs text-text-muted">Step {step + 1} of {STEPS.length}</div>
+              <div className="text-xs text-text-muted">
+                Step {step + 1} of {STEPS.length}
+                <span className="ml-2 font-medium text-text">{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
+              </div>
               <button onClick={() => navigate("/dashboard")} className="text-xs text-text-muted hover:text-text">
                 Skip onboarding
               </button>

@@ -1,16 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Search,
-  Play,
-  Pause,
-  Check,
-  TriangleAlert as AlertTriangle,
-  RefreshCw,
-  Sparkles,
-  ChevronRight,
-  Plus,
-  Loader2,
-} from "lucide-react";
+import { Search, Play, Pause, Check, TriangleAlert as AlertTriangle, RefreshCw, Sparkles, ChevronRight, Plus, Loader as Loader2, Globe } from "lucide-react";
 import { listVoices, syncVoices, listAgents } from "../lib/db";
 import { getSession } from "../lib/supabase";
 import { api } from "../lib/api";
@@ -20,7 +9,6 @@ import {
   USE_CASE_MAP,
   deriveUseCases,
   primaryUseCase,
-  voiceInitials,
   type UseCaseId,
 } from "../lib/voiceCategories";
 import { Skeleton } from "../components/legacy-ui/States";
@@ -72,7 +60,7 @@ const LANGUAGES: Record<string, string> = {
   fi: "Finnish",
 };
 
-const SECTION_LIMIT = 8;
+const SECTION_LIMIT = 12;
 
 type PlayerState = {
   voiceId: string | null;
@@ -96,7 +84,7 @@ export default function VoiceLibrary({
   const [gender, setGender] = useState<string>("all");
   const [language, setLanguage] = useState<string>("all");
   const [accent, setAccent] = useState<string>("all");
-  const [category, setCategory] = useState<UseCaseId | "all">("all");
+  const [category, setCategory] = useState<UseCaseId | "all" | "multilingual">("all");
   const [canSync, setCanSync] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
@@ -138,7 +126,6 @@ export default function VoiceLibrary({
   useEffect(() => {
     const timer = setTimeout(load, 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   useEffect(() => {
@@ -207,6 +194,10 @@ export default function VoiceLibrary({
     return filterLanguages.some((lang) => voice.language_codes.includes(lang));
   }
 
+  function isMultilingual(voice: Voice) {
+    return voice.language_codes.length > 1;
+  }
+
   const accents = useMemo(
     () =>
       voices
@@ -215,16 +206,20 @@ export default function VoiceLibrary({
     [voices],
   );
 
-  // Apply secondary (client-side) filters: accent + category.
   const filtered = useMemo(() => {
     return (voices || []).filter((v) => {
       if (accent !== "all" && v.accent !== accent) return false;
+      if (category === "multilingual") return isMultilingual(v);
       if (category !== "all" && !deriveUseCases(v).includes(category)) return false;
       return true;
     });
   }, [voices, accent, category]);
 
-  // Count per category (for chips), based on current search/gender/language/accent.
+  const multilingualCount = useMemo(
+    () => (voices || []).filter((v) => (accent === "all" || v.accent === accent) && isMultilingual(v)).length,
+    [voices, accent],
+  );
+
   const categoryCounts = useMemo(() => {
     const base = (voices || []).filter((v) => accent === "all" || v.accent === accent);
     const counts: Record<string, number> = { all: base.length };
@@ -238,16 +233,34 @@ export default function VoiceLibrary({
 
   const featured = useMemo(() => {
     const pool = filtered.filter((v) => v.featured);
-    const list = (pool.length > 0 ? pool : filtered).slice(0, 4);
+    const list = (pool.length > 0 ? pool : filtered).slice(0, 6);
     return list;
   }, [filtered]);
 
   const grouped = useMemo(() => {
     if (!showGrouped) return [];
-    return USE_CASES.map((uc) => ({
+    const multilingualVoices = filtered.filter(isMultilingual);
+    const groups = USE_CASES.map((uc) => ({
       def: uc,
       voices: filtered.filter((v) => deriveUseCases(v).includes(uc.id)),
     })).filter((g) => g.voices.length > 0);
+
+    if (multilingualVoices.length > 0) {
+      return [
+        {
+          def: {
+            id: "multilingual" as const,
+            label: "Multilingual",
+            blurb: "Voices that switch between languages mid-conversation.",
+            icon: Globe,
+            tint: { bg: "bg-violet-500/10", text: "text-violet-600 dark:text-violet-400", ring: "ring-violet-500/30" },
+          },
+          voices: multilingualVoices,
+        },
+        ...groups,
+      ];
+    }
+    return groups;
   }, [filtered, showGrouped]);
 
   const playerProps = {
@@ -269,8 +282,7 @@ export default function VoiceLibrary({
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-balance">Voices</h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-prose">
-              Find the right voice for the job. Browse by what your customers are calling about
-              and preview instantly.
+              Find the right voice for the job. Browse by use case, language, or accent and preview instantly.
             </p>
           </div>
           {canSync && (
@@ -282,92 +294,104 @@ export default function VoiceLibrary({
         </div>
       )}
 
-      {/* Search + filters */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search voices by name or style..."
-              className="pl-9"
-              aria-label="Search voices"
-            />
-          </div>
-          <Select value={gender} onValueChange={setGender}>
-            <SelectTrigger className="w-[140px]" aria-label="Filter by gender">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All genders</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="nonbinary">Non-binary</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="w-[150px]" aria-label="Filter by language">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All languages</SelectItem>
-              {Object.entries(LANGUAGES).map(([code, label]) => (
-                <SelectItem key={code} value={code}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {accents.length > 0 && (
-            <Select value={accent} onValueChange={setAccent}>
-              <SelectTrigger className="w-[140px]" aria-label="Filter by accent">
+      {/* Sticky filter bar */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-4 -mb-4 pt-1 border-b border-border/50">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search voices by name or style..."
+                className="pl-9"
+                aria-label="Search voices"
+              />
+            </div>
+            <Select value={gender} onValueChange={setGender}>
+              <SelectTrigger className="w-[130px]" aria-label="Filter by gender">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All accents</SelectItem>
-                {accents.map((a) => (
-                  <SelectItem key={a} value={a}>
-                    {a}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">All genders</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="nonbinary">Non-binary</SelectItem>
               </SelectContent>
             </Select>
-          )}
-        </div>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="w-[140px]" aria-label="Filter by language">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All languages</SelectItem>
+                <SelectItem value="hi">Hindi</SelectItem>
+                {Object.entries(LANGUAGES)
+                  .filter(([code]) => code !== "hi")
+                  .map(([code, label]) => (
+                    <SelectItem key={code} value={code}>
+                      {label}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            {accents.length > 0 && (
+              <Select value={accent} onValueChange={setAccent}>
+                <SelectTrigger className="w-[140px]" aria-label="Filter by accent">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All accents</SelectItem>
+                  {accents.map((a) => (
+                    <SelectItem key={a} value={a}>
+                      {a}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
 
-        {/* Use-case category chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          <CategoryChip
-            active={category === "all"}
-            onClick={() => setCategory("all")}
-            label="All voices"
-            count={categoryCounts.all}
-          />
-          {USE_CASES.map((uc) => (
+          {/* Category chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
             <CategoryChip
-              key={uc.id}
-              active={category === uc.id}
-              onClick={() => setCategory(uc.id)}
-              label={uc.label}
-              count={categoryCounts[uc.id] || 0}
-              icon={<uc.icon className="size-3.5" />}
+              active={category === "all"}
+              onClick={() => setCategory("all")}
+              label="All voices"
+              count={categoryCounts.all}
             />
-          ))}
+            <CategoryChip
+              active={category === "multilingual"}
+              onClick={() => setCategory("multilingual")}
+              label="Multilingual"
+              count={multilingualCount}
+              icon={<Globe className="size-3.5" />}
+            />
+            {USE_CASES.map((uc) => (
+              <CategoryChip
+                key={uc.id}
+                active={category === uc.id}
+                onClick={() => setCategory(uc.id)}
+                label={uc.label}
+                count={categoryCounts[uc.id] || 0}
+                icon={<uc.icon className="size-3.5" />}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Content */}
       {voices === null ? (
-        <div className="flex flex-col gap-1.5">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-14 rounded-lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[...Array(9)].map((_, i) => (
+            <Skeleton key={i} className="h-[88px] rounded-xl" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState search={search} canSync={canSync} onSync={handleSync} syncing={syncing} />
       ) : showGrouped ? (
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-10">
           {/* Featured row */}
           {!isSelector && featured.length > 0 && (
             <section className="flex flex-col gap-3">
@@ -375,7 +399,7 @@ export default function VoiceLibrary({
                 <Sparkles className="size-4 text-foreground" />
                 <h2 className="text-sm font-semibold tracking-tight">Popular voices</h2>
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {featured.map((v) => (
                   <VoiceCard key={v.id} voice={v} {...playerProps} />
                 ))}
@@ -403,7 +427,7 @@ export default function VoiceLibrary({
                 </div>
                 {list.length > SECTION_LIMIT && (
                   <button
-                    onClick={() => setCategory(def.id)}
+                    onClick={() => setCategory(def.id as any)}
                     className="inline-flex items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
                   >
                     See all {list.length}
@@ -411,7 +435,7 @@ export default function VoiceLibrary({
                   </button>
                 )}
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {list.slice(0, SECTION_LIMIT).map((v) => (
                   <VoiceCard key={v.id} voice={v} {...playerProps} />
                 ))}
@@ -424,10 +448,12 @@ export default function VoiceLibrary({
           {category !== "all" && (
             <p className="text-xs text-muted-foreground">
               {filtered.length} {filtered.length === 1 ? "voice" : "voices"} in{" "}
-              <span className="text-foreground font-medium">{USE_CASE_MAP[category].label}</span>
+              <span className="text-foreground font-medium">
+                {category === "multilingual" ? "Multilingual" : USE_CASE_MAP[category].label}
+              </span>
             </p>
           )}
-          <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {filtered.map((v) => (
               <VoiceCard key={v.id} voice={v} {...playerProps} />
             ))}
@@ -468,25 +494,25 @@ function CategoryChip({
 }
 
 const LANGUAGE_FLAGS: Record<string, string> = {
-  en: "🇺🇸",
-  es: "🇪🇸",
-  fr: "🇫🇷",
-  de: "🇩🇪",
-  it: "🇮🇹",
-  pt: "🇵🇹",
-  nl: "🇳🇱",
-  pl: "🇵🇱",
-  ru: "🇷🇺",
-  ja: "🇯🇵",
-  zh: "🇨🇳",
-  ko: "🇰🇷",
-  ar: "🇸🇦",
-  hi: "🇮🇳",
-  tr: "🇹🇷",
-  sv: "🇸🇪",
-  da: "🇩🇰",
-  no: "🇳🇴",
-  fi: "🇫🇮",
+  en: "EN",
+  es: "ES",
+  fr: "FR",
+  de: "DE",
+  it: "IT",
+  pt: "PT",
+  nl: "NL",
+  pl: "PL",
+  ru: "RU",
+  ja: "JA",
+  zh: "ZH",
+  ko: "KO",
+  ar: "AR",
+  hi: "HI",
+  tr: "TR",
+  sv: "SV",
+  da: "DA",
+  no: "NO",
+  fi: "FI",
 };
 
 function getVoiceGradient(name: string): string {
@@ -517,7 +543,7 @@ function AssignToAgentButton({
     setAssigningId(agentId);
     try {
       await api.patch(`/v1/agents/${agentId}`, { voice_id: voice.voice_id });
-      toast.success(`Assigned voice "${voice.name}" to agent "${agentName}".`);
+      toast.success(`Assigned "${voice.name}" to "${agentName}".`);
       onAssignSuccess();
       setOpen(false);
     } catch (err: any) {
@@ -532,14 +558,14 @@ function AssignToAgentButton({
       <PopoverTrigger asChild>
         <button
           onClick={(e) => e.stopPropagation()}
-          className="flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted focus-ring transition-colors shrink-0 cursor-pointer"
+          className="flex size-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 cursor-pointer"
           aria-label={`Assign ${voice.name} to an agent`}
         >
-          <Plus className="size-4" />
+          <Plus className="size-3.5" />
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-56 p-1.5"
+        className="w-52 p-1.5"
         align="end"
         onClick={(e) => e.stopPropagation()}
       >
@@ -607,10 +633,7 @@ function VoiceCard({
   const compatible = isCompatible(voice);
   const uc = primaryUseCase(voice);
   const hasPreview = !!voice.preview_url;
-
-  const langCode = voice.language_codes[0];
-  const langFlag = langCode ? LANGUAGE_FLAGS[langCode] || langCode.toUpperCase() : null;
-  const extraLangs = voice.language_codes.length - 1;
+  const multilingual = voice.language_codes.length > 1;
 
   function handleCardClick() {
     if (isSelector && onSelect) onSelect(voice.voice_id, voice.name);
@@ -619,31 +642,30 @@ function VoiceCard({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative flex items-center justify-between p-2 h-14 bg-transparent transition-colors duration-150 rounded-lg ${
+      className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-150 ${
         isSelected
-          ? "bg-muted/70"
+          ? "border-foreground/50 bg-muted/60 shadow-sm"
           : !compatible
-            ? "bg-amber-500/5 hover:bg-amber-500/10"
-            : "hover:bg-muted/40"
+            ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10"
+            : "border-border bg-card hover:border-foreground/20 hover:shadow-sm"
       } ${isSelector ? "cursor-pointer" : ""}`}
     >
-      <div className="flex items-center gap-3 min-w-0">
-        {/* Avatar Area with Play Overlay */}
-        <div className="relative size-8 shrink-0 rounded-full overflow-hidden">
-          {/* Gradient Orb */}
+      {/* Top row: avatar + name + play */}
+      <div className="flex items-center gap-2.5">
+        {/* Avatar with play overlay */}
+        <div className="relative size-9 shrink-0 rounded-full overflow-hidden">
           <div
-            className="absolute inset-0 transition-opacity duration-200"
+            className="absolute inset-0"
             style={{ background: getVoiceGradient(voice.name) }}
           />
-          {/* Play/Pause Button overlay */}
           {hasPreview && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onPlay(voice);
               }}
-              aria-label={isPlaying ? `Pause ${voice.name} preview` : `Play ${voice.name} preview`}
-              className={`absolute inset-0 flex items-center justify-center bg-black/40 text-white transition-opacity duration-200 cursor-pointer ${
+              aria-label={isPlaying ? `Pause ${voice.name}` : `Play ${voice.name}`}
+              className={`absolute inset-0 flex items-center justify-center bg-black/40 text-white transition-opacity duration-150 cursor-pointer ${
                 isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               }`}
             >
@@ -658,50 +680,68 @@ function VoiceCard({
           )}
         </div>
 
-        {/* Info */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="truncate text-sm font-medium text-foreground">{voice.name}</span>
-          {isSelected && <Check className="size-3.5 shrink-0 text-foreground" />}
-          
-          {/* Pill tags */}
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium text-muted-foreground uppercase tracking-wide shrink-0">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-sm font-medium text-foreground leading-tight">{voice.name}</span>
+            {isSelected && <Check className="size-3.5 shrink-0 text-foreground" />}
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {voice.gender && (
+              <span className="text-[10px] text-muted-foreground capitalize">{voice.gender}</span>
+            )}
+            {voice.accent && (
+              <>
+                <span className="text-muted-foreground/40 text-[10px]">/</span>
+                <span className="text-[10px] text-muted-foreground">{voice.accent}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Waveform */}
+        {isPlaying && !isLoading && (
+          <div className="flex items-center gap-[2px] h-3 px-1 select-none">
+            <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0s] origin-center" />
+            <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.2s] origin-center" />
+            <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.4s] origin-center" />
+          </div>
+        )}
+      </div>
+
+      {/* Bottom row: tags + action */}
+      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/50">
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+          {/* Use case pill */}
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide shrink-0">
             <uc.icon className="size-2.5" />
             {uc.label}
           </span>
-
-          {/* Language Flag + Count */}
-          {langFlag && (
-            <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground shrink-0 select-none">
-              <span>{langFlag}</span>
-              {extraLangs > 0 && <span className="text-[9px] font-semibold">+{extraLangs}</span>}
+          {/* Multilingual badge */}
+          {multilingual && (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 text-[10px] font-medium shrink-0">
+              <Globe className="size-2.5" />
+              {voice.language_codes.length} langs
+            </span>
+          )}
+          {/* Language codes */}
+          {!multilingual && voice.language_codes[0] && (
+            <span className="text-[10px] text-muted-foreground font-medium shrink-0">
+              {LANGUAGE_FLAGS[voice.language_codes[0]] || voice.language_codes[0].toUpperCase()}
             </span>
           )}
           {!compatible && (
-            <span className="text-amber-500 shrink-0 select-none" title="May not support requested languages">
-              <AlertTriangle className="size-3.5" />
+            <span className="text-amber-500 shrink-0" title="May not support requested languages">
+              <AlertTriangle className="size-3" />
             </span>
           )}
         </div>
-      </div>
 
-      {/* Right side: Waveform animation & action button */}
-      <div className="flex items-center gap-2 shrink-0">
-        {/* Waveform animation */}
-        {isPlaying && !isLoading && (
-          <div className="flex items-center gap-[2.5px] h-3 px-2 select-none">
-            <div className="w-[2px] h-full bg-foreground/75 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0s] origin-center" />
-            <div className="w-[2px] h-full bg-foreground/75 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.2s] origin-center" />
-            <div className="w-[2px] h-full bg-foreground/75 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.4s] origin-center" />
-            <div className="w-[2px] h-full bg-foreground/75 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.1s] origin-center" />
-          </div>
-        )}
-
-        {/* Action Button: Selector button vs Assign button */}
+        {/* Action */}
         {isSelector ? (
           <Button
             size="sm"
             variant={isSelected ? "outline" : "secondary"}
-            className="h-7 px-2.5 text-[11px] shrink-0"
+            className="h-6 px-2 text-[10px] shrink-0"
             onClick={(e) => {
               e.stopPropagation();
               onSelect?.(voice.voice_id, voice.name);

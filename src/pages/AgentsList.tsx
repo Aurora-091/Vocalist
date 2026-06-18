@@ -17,6 +17,7 @@ type Agent = {
   vertical?: string;
   inbound_number?: string;
   provider: string;
+  provider_agent_id?: string | null;
   consent_required: boolean;
   sync_status?: string | null;
   created_at: string;
@@ -234,27 +235,37 @@ export default function AgentsList() {
         />
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {agents.map((a) => (
+          {agents.map((a) => {
+            const isActive = a.sync_status === "synced" || !!a.provider_agent_id;
+            const isFailed = a.sync_status === "failed";
+            return (
             <div key={a.id} className="relative group">
               <Link
                 to={`/agents/${a.id}`}
-                className="block bg-surface border border-border rounded-md shadow-card p-5 hover:bg-surface-2 transition-colors"
+                className={`block bg-surface border border-border rounded-md shadow-card p-5 hover:bg-surface-2 transition-colors ${!isActive && !isFailed ? "opacity-75" : ""}`}
               >
                 <div className="flex items-center gap-3">
                   <span className="w-9 h-9 rounded-md bg-surface-2 border border-border text-text-muted flex items-center justify-center">
                     <Bot className="w-4 h-4" />
                   </span>
-                  <div>
-                    <div className="font-medium">{a.name}</div>
-                    <div className="text-xs text-text-muted">{a.provider}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{a.name}</span>
+                      <span
+                        className={`shrink-0 w-2 h-2 rounded-full ${
+                          isFailed ? "bg-danger" : isActive ? "bg-success" : "bg-text-muted/40"
+                        }`}
+                        title={isFailed ? "Sync failed" : isActive ? "Active" : "Not deployed"}
+                      />
+                    </div>
+                    <div className="text-xs text-text-muted">
+                      {isFailed ? "Sync failed" : isActive ? a.provider : "Not deployed"}
+                    </div>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
                   {a.consent_required && <Badge tone="success" dot>consent on</Badge>}
                   {a.inbound_number && <Badge tone="info">{a.inbound_number}</Badge>}
-                  {a.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
-                  {a.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
-                  {a.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
                 </div>
               </Link>
 
@@ -298,7 +309,7 @@ export default function AgentsList() {
                 </div>
               )}
             </div>
-          ))}
+          )})}
         </div>
       )}
     </div>
