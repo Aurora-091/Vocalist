@@ -13,6 +13,7 @@ Welcome to the Weeber platform documentation directory. This folder houses all t
 | [`DECISIONS.md`](./DECISIONS.md) | Living log tracking architectural decisions, pivots, integrations constraints, and system boundaries. |
 | [`DEPLOYMENT.md`](./DEPLOYMENT.md) | Pipeline workflows, server host requirements, Supabase Vault sync, and environment variables list. |
 | [`POC-Checklist.md`](./POC-Checklist.md) | "Definition of Done" criteria detailing the 5 core deliverables required for validation demos. |
+| [`../AUDIT.md`](../AUDIT.md) | Security and architecture audit — covers backend, edge functions, frontend data patterns, and RLS posture. |
 
 ---
 
@@ -22,7 +23,8 @@ Welcome to the Weeber platform documentation directory. This folder houses all t
 |---|---|
 | [`Weeber-Platform-Blackbook.md`](./Weeber-Platform-Blackbook.md) | Technical architecture overview — database patterns, spend boundaries, multi-tenancy schemas, and security design. |
 | [`Weeber-Agents-Reference.md`](./Weeber-Agents-Reference.md) | Complete directory of voice agent structures, prompts layout, and integration mappings. |
-| [`database-guide.md`](./database-guide.md) | Technical schema catalog detailing Supabase migrations, triggers, and column indexes. |
+| [`database-guide.md`](./database-guide.md) | Technical schema catalog detailing Supabase migrations (42 files), triggers, column indexes, partitioning, and 40+ tables. |
+| [`uiux.md`](./uiux.md) | UI/UX specification including vertical-tenant architecture, config-driven sidebar, and dashboard design. |
 
 ---
 
@@ -34,7 +36,38 @@ Welcome to the Weeber platform documentation directory. This folder houses all t
 
 ---
 
-## 4. Specification Archives
+## 4. Frontend Architecture (as of 2026-06-18)
+
+```
+src/
+├── config/
+│   ├── verticals/          ← Vertical registry (one file per vertical)
+│   │   ├── index.ts        ← Types, VERTICAL_REGISTRY, utility functions
+│   │   ├── shopify.ts      ← Ecommerce vertical definition
+│   │   ├── clinic.ts       ← Healthcare vertical definition
+│   │   └── hotel.ts        ← Hospitality vertical (preview, disabled)
+│   └── marketing.ts        ← Public site content
+├── lib/
+│   ├── VerticalContext.tsx  ← React context provider + t() glossary helper
+│   ├── db.ts               ← Supabase data access layer (30+ functions)
+│   ├── api.ts              ← Backend HTTP client with auth retry
+│   ├── admin-api.ts        ← Admin panel API client
+│   └── supabase.ts         ← Supabase client initialization
+├── components/
+│   ├── layout/             ← AppShell (config-driven sidebar), AdminShell
+│   ├── ui/                 ← shadcn/ui components
+│   └── marketing/          ← Public site components
+├── pages/                  ← Route-level page components (39 pages)
+└── apps/
+    ├── admin/              ← Admin panel sub-app
+    └── customer/           ← Customer-facing sub-app
+```
+
+**Key Principle:** Zero `if (vertical === ...)` conditionals. All vertical-specific behavior is driven by the registry config.
+
+---
+
+## 5. Specification Archives
 
 Historical Aurora-branded documents are preserved in the `archive/` folder for reference, audit tracks, and compliance verification:
 

@@ -1,7 +1,8 @@
-# Aurora — Database Design Guide
+# Weeber — Database Design Guide
 
-**Stack:** Supabase (Postgres 15) · RLS-enforced multi-tenancy · Drizzle/SQL migrations
+**Stack:** Supabase (Postgres 15) · RLS-enforced multi-tenancy · SQL migrations (42 files)
 **Scope:** Schema + ERD, RLS, consent/DNC + audit, dialer state machine, billing/metering, migrations, indexes/partitioning, backups/PITR/GDPR, webhook ledger, call-record storage.
+**Last updated:** 2026-06-18
 **Audience:** the 2 engineers. Design-doc depth with copy-ready DDL for the load-bearing pieces.
 
 > **Legal-critical reminder:** the consent/DNC tables, the dialer state machine, the metering ledger, and RLS are **Tier-1**. Human-authored. Agents may write tests and review only. Everything in this doc that touches those is written to be the *most-tested code in the system*.
@@ -72,10 +73,10 @@ Every box except `orgs` **and `vertical_configs`** carries `org_id` → `orgs.id
 
 ```sql
 create type user_role        as enum ('owner','admin','ops');
-create type integration_type as enum ('shopify','calcom','google_cal','outlook_cal','crm','zapier','twilio');
+create type integration_type as enum ('shopify','calcom','google_cal','outlook_cal','crm','zapier','twilio','whatsapp','google_sheets','zoho_crm','freshsales','pipedrive','salesforce','cliniko','jane_app','drchrono','hubspot');
 create type call_direction   as enum ('inbound','outbound');
-create type voice_provider    as enum ('vapi','retell','pipecat');
-create type contact_source    as enum ('shopify','crm','upload','inbound');
+create type voice_provider    as enum ('vapi','retell','pipecat','mock','elevenlabs');
+create type contact_source    as enum ('shopify','crm','upload','inbound','demo');
 create type consent_status    as enum ('granted','none','revoked');         -- denormalized cache on contacts
 create type consent_event_kind as enum ('grant','revoke','import_attest','expiry');
 create type consent_channel   as enum ('voice','sms','web_form','shopify_optin','manual');
@@ -83,15 +84,36 @@ create type campaign_status    as enum ('draft','scheduled','running','paused','
 create type target_state       as enum ('queued','suppressed','dialing','ringing','in_call','completed','failed','voicemail','retry_wait','do_not_call');
 create type call_status        as enum ('queued','ringing','in_progress','completed','failed','no_answer','busy','voicemail','canceled');
 create type meter_kind         as enum ('voice_minutes','sms','overage_minutes','campaign_call');
-create type webhook_source     as enum ('vapi','retell','pipecat','shopify','stripe','calcom','twilio');
+create type webhook_source     as enum ('vapi','retell','pipecat','shopify','stripe','calcom','twilio','elevenlabs');
 
 -- New (user-flow / knowledge / numbers round)
 create type onboarding_step    as enum ('pick_vertical','connect_tools','add_knowledge','create_agent','get_number','test_and_golive');
-create type knowledge_kind      as enum ('document','website','integration');   -- how a source was added
+create type knowledge_kind      as enum ('document','website','integration');
 create type knowledge_status    as enum ('processing','ready','error','syncing');
-create type number_owner        as enum ('aurora','tenant');                    -- aurora-managed subaccount vs BYO
+create type number_owner        as enum ('aurora','tenant');
 create type notification_kind   as enum ('missed_call','voicemail','campaign_done','billing','integration_broken');
 ```
+
+### Additional tables (added since initial design)
+
+| Table | Purpose | Migration |
+|-------|---------|-----------|
+| `voice_catalog` | ElevenLabs voice library cache (synced via edge function) | `20260610192624` |
+| `agent_presets` | 16 production agent templates (8 Shopify + 8 Clinic) | `20260610192802`, `20260610192951` |
+| `integration_catalog` | Global read-only provider registry (13 providers) | `20260610194719` |
+| `integration_bridge_config` | Per-org integration state (status, config, secret_ref) | `20260610194719` |
+| `oauth_tokens` | Per (org, provider) OAuth2 token storage | `20260610194719` |
+| `whatsapp_messages` | Bidirectional WhatsApp message history | `20260610195329` |
+| `user_sessions` | Active session tracking + device info | `20260611041907` |
+| `waitlist` | Public signup with referral tracking | `20260611104928` |
+| `shopify_connections` | Shopify store OAuth connections | `20260612100338` |
+| `shopify_cache` | Caching proxy for Shopify API responses | `20260618094518` |
+| `scheduled_calls` | Delayed outbound queue (cart recovery, confirmations) | `20260618094518` |
+| `agent_skills` | Composable skill modules with tool definitions | `20260616090547` |
+| `broadcasts` | Admin broadcast history | `20260616221945` |
+| `platform_settings` | Global admin configuration | `20260616050318` |
+| `spend_guards` | Daily/monthly spending limits per org/agent/campaign | `20260604090200` |
+| `spend_counters` | Rolling spent + reserved tracking | `20260604090200` |
 
 > Enums over `text + check`: they're self-documenting, index-friendly, and the agent CI lint (`sdk-import-lint`) can assert no raw string states leak into the dialer code.
 

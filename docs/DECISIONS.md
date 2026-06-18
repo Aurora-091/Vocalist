@@ -41,3 +41,31 @@ This document tracks all major product, architecture, and technology decisions m
 * **Status**: Accepted
 * **Context**: Active UI improvements and form modifications require rapid automated validation to avoid regression checks on manual UI workflows.
 * **Decision**: Adopt and configure `Vitest` and `React Testing Library` for the frontend. All verification sweeps will run `npm test` alongside standard TypeScript compiler validations.
+
+---
+
+## DEC-006: Config-Driven Vertical Registry Architecture
+* **Date**: 2026-06-18
+* **Status**: Accepted
+* **Context**: The platform serves multiple verticals (Ecommerce/Shopify, Clinic/Healthcare, Hotel/Hospitality) with different terminology, navigation, dashboard metrics, quick actions, templates, and integrations. The prior approach used scattered conditionals (`if (vertical === "shopify")`) which made adding new verticals expensive and error-prone.
+* **Decision**: Implement a registry pattern at `src/config/verticals/` where each vertical is a single TypeScript file exporting a `VerticalDefinition` object. The definition drives all UI behavior: sidebar navigation groups, dashboard cards, glossary terms, quick actions, template filtering, and integration recommendations. The constraint is absolute: **zero conditional branching on vertical key** anywhere in the codebase. Adding a new vertical requires only creating one config file and registering it in the index — no component changes needed.
+* **Key Files**:
+  - `src/config/verticals/index.ts` — Registry types, exports, and utility functions
+  - `src/config/verticals/shopify.ts` — Ecommerce vertical definition
+  - `src/config/verticals/clinic.ts` — Healthcare vertical definition
+  - `src/config/verticals/hotel.ts` — Hospitality vertical (enabled: false, preview)
+  - `src/lib/VerticalContext.tsx` — React context provider consuming the registry
+
+---
+
+## DEC-007: API Audit Cadence and Edge Function Security Model
+* **Date**: 2026-06-18
+* **Status**: Accepted
+* **Context**: A comprehensive API audit revealed 4 critical security issues in edge functions (missing webhook signature verification, OAuth CSRF, cross-org credential leakage, token refresh races). These are separate from the previously-fixed backend auth issues.
+* **Decision**: Edge functions must follow these mandatory patterns:
+  1. All inbound webhooks verify provider signatures before processing
+  2. OAuth flows must generate and validate a `state` parameter
+  3. Provider credentials must be fetched from Vault via `secret_ref` — never from global env vars
+  4. Token refresh operations must use optimistic locking to prevent race conditions
+  
+  Future edge functions require a security review checklist before deployment.
