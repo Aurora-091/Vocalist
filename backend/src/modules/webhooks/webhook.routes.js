@@ -380,7 +380,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const shop = req.headers["x-shopify-shop-domain"];
     const topic = req.headers["x-shopify-topic"];
-    
+
     let payload;
     try {
       payload = JSON.parse(req.body.toString("utf8"));
@@ -389,6 +389,25 @@ router.post(
     }
 
     logger.info({ shop, topic, id: payload.id }, "Shopify checkouts webhook received");
+
+    const { requireAdmin } = require("../../config/supabase");
+    const admin = requireAdmin();
+
+    const { data: integration } = await admin
+      .from("integrations")
+      .select("org_id, config")
+      .eq("type", "shopify")
+      .eq("config->>shop_domain", shop)
+      .maybeSingle();
+
+    if (integration) {
+      const ShopifyProvider = require("../integrations/providers/shopify.provider");
+      const provider = new ShopifyProvider(integration.org_id, integration.config);
+      await provider._handleCheckoutEvent(payload);
+    } else {
+      logger.warn({ shop }, "Shopify checkout webhook: no integration found for shop");
+    }
+
     res.status(200).json({ ok: true });
   })
 );

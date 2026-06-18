@@ -235,11 +235,79 @@ class ShopifyProvider extends IntegrationProvider {
 
   async _handleCheckoutEvent(payload) {
     const checkout = payload.body || payload;
-    logger.info(
-      { checkout_id: checkout.id, org_id: this.orgId },
-      "Shopify abandoned checkout event"
+    const checkoutId = String(checkout.id);
+    const admin = requireAdmin();
+
+    const phone = checkout.phone || checkout.billing_address?.phone;
+    const email = checkout.email;
+    const customerName = [
+      checkout.billing_address?.first_name,
+      checkout.billing_address?.last_name,
+    ].filter(Boolean).join(" ") || "Customer";
+    const cartTotal = checkout.total_price;
+    const cartItems = (checkout.line_items || []).map((i) => i.title).join(", ");
+    const abandonedUrl = checkout.abandoned_checkout_url;
+
+    if (!phone) {
+      logger.info({ checkout_id: checkoutId, org_id: this.orgId }, "Shopify checkout: no phone, skipping");
+      return { received: true, topic: "checkout", checkout_id: checkoutId, handled: false, reason: "no_phone" };
+    }
+
+    const { data: existing } = await admin
+      .from("scheduled_calls")
+      .select("id")
+      .eq("checkout_id", checkoutId)
+      .maybeSingle();
+
+    if (existing) {
+      logger.info({ checkout_id: checkoutId }, "Shopify checkout already scheduled");
+      return { received: true, topic: "checkout", checkout_id: checkoutId, handled: false, reason: "duplicate" };
+    }
+
+    const { data: integration } = await admin
+      .from("integrations")
+      .select("agent_id, call_delay_minutes")
+      .eq("org_id", this.orgId)
+      .eq("type", "shopify")
+      .maybeSingle();
+
+    const agentId = integration?.agent_id;
+    const delayMinutes = integration?.call_delay_minutes || 30;
+
+    if (!agentId) {
+      logger.warn({ org_id: this.orgId }, "Shopify checkout: no agent configured for org");
+      return { received: true, topic: "checkout", checkout_id: checkoutId, handled: false, reason: "no_agent" };
+    }
+
+    await admin.from("contacts").upsert(
+      { org_id: this.orgId, e164: phone.replace(/[^\d+]/g, ""), email, name: customerName, source: "shopify" },
+      { onConflict: "org_id,e164", ignoreDuplicates: false }
     );
-    return { received: true, topic: "checkout", checkout_id: checkout.id, handled: true };
+
+    const scheduledAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+    const { error: insertErr } = await admin.from("scheduled_calls").insert({
+      org_id: this.orgId,
+      agent_id: agentId,
+      phone: phone.replace(/[^\d+]/g, ""),
+      checkout_id: checkoutId,
+      scheduled_at: scheduledAt,
+      status: "pending",
+      metadata: {
+        customer_name: customerName,
+        cart_total: cartTotal,
+        cart_items: cartItems,
+        recovery_url: abandonedUrl,
+        email,
+      },
+    });
+
+    if (insertErr) {
+      logger.error({ err: insertErr, checkout_id: checkoutId }, "Failed to schedule cart recovery call");
+      throw insertErr;
+    }
+
+    logger.info({ checkout_id: checkoutId, phone, scheduled_at: scheduledAt }, "Scheduled cart recovery call");
+    return { received: true, topic: "checkout", checkout_id: checkoutId, handled: true, scheduled_at: scheduledAt };
   }
 }
 
