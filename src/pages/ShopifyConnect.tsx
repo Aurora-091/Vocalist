@@ -1,32 +1,41 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ShoppingBag, ExternalLink, Check, Loader as Loader2, CircleAlert as AlertCircle, ArrowRight } from "lucide-react";
-import { getShopifyConnection, createShopifyConnection, updateShopifyConnection } from "../lib/db";
-import { supabase } from "../lib/supabase";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ShoppingBag, Check, Loader as Loader2, ArrowRight, ExternalLink } from "lucide-react";
+import { getShopifyIntegration, getOrgId } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { Badge } from "../components/legacy-ui/Badge";
 
-type Step = "domain" | "instructions" | "key" | "validating" | "done";
+type Step = "domain" | "redirecting" | "done";
+
+const WEEBERSH_INSTALL_URL =
+  import.meta.env.VITE_WEEBERSH_INSTALL_URL || "https://weebersh.com/api/auth";
 
 export default function ShopifyConnect() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>("domain");
   const [domain, setDomain] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [connection, setConnection] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [shopDomain, setShopDomain] = useState("");
 
   useEffect(() => {
     (async () => {
-      const conn = await getShopifyConnection();
-      if (conn) {
-        setConnection(conn);
-        setDomain(conn.shop_domain);
-        if (conn.status === "active") setStep("done");
+      const shopifyParam = searchParams.get("shopify");
+      const integration = await getShopifyIntegration();
+
+      if (integration?.status === "active") {
+        setShopDomain(integration.config?.shop_domain || "");
+        setStep("done");
+      } else if (shopifyParam === "connected") {
+        const refreshed = await getShopifyIntegration();
+        if (refreshed?.status === "active") {
+          setShopDomain(refreshed.config?.shop_domain || "");
+          setStep("done");
+        }
       }
+      setLoading(false);
     })();
-  }, []);
+  }, [searchParams]);
 
   function normalizeDomain(input: string): string {
     let d = input.trim().toLowerCase();
@@ -38,51 +47,24 @@ export default function ShopifyConnect() {
     return d;
   }
 
-  async function handleDomainSubmit(e: React.FormEvent) {
+  async function handleConnect(e: React.FormEvent) {
     e.preventDefault();
     const normalized = normalizeDomain(domain);
     setDomain(normalized);
-    setStep("instructions");
+    setStep("redirecting");
+
+    const orgId = await getOrgId();
+    const redirectUrl = `${window.location.origin}/integrations/shopify?shopify=connected`;
+    const installUrl = `${WEEBERSH_INSTALL_URL}?shop=${encodeURIComponent(normalized)}&org_id=${orgId || ""}&redirect_url=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = installUrl;
   }
 
-  function openShopifyAdmin() {
-    const adminUrl = `https://${domain}/admin/settings/apps/development`;
-    window.open(adminUrl, "_blank", "noopener");
-  }
-
-  async function validateAndConnect(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    setStep("validating");
-
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke("shopify-connect", {
-        body: { shop_domain: domain, api_key: apiKey },
-      });
-
-      if (fnError) throw new Error(fnError.message || "Connection failed");
-      if (data?.error) throw new Error(data.error);
-
-      let conn = connection;
-      if (!conn) {
-        conn = await createShopifyConnection({ shop_domain: domain });
-      }
-
-      await updateShopifyConnection(conn.id, {
-        status: "active",
-        api_key_ref: data?.key_ref || "vault_ref",
-        last_sync_at: new Date().toISOString(),
-      });
-
-      setConnection({ ...conn, status: "active" });
-      setStep("done");
-    } catch (err: any) {
-      setError(err.message || "Failed to validate API key. Check the key and try again.");
-      setStep("key");
-    } finally {
-      setLoading(false);
-    }
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto flex items-center justify-center py-24">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -95,24 +77,24 @@ export default function ShopifyConnect() {
       </div>
 
       <div className="flex items-center gap-2 mb-8">
-        {(["domain", "instructions", "key", "done"] as const).map((s, i) => (
+        {(["domain", "done"] as const).map((s, i) => (
           <div key={s} className="flex items-center gap-2">
             <span
               className={`w-7 h-7 rounded-full text-xs font-medium inline-flex items-center justify-center ${
-                step === s || (s === "done" && step === "validating")
+                step === s || (s === "done" && step === "redirecting")
                   ? "bg-primary text-primary-foreground"
-                  : (["domain", "instructions", "key", "done"].indexOf(step === "validating" ? "key" : step) > i)
+                  : step === "done" && i === 0
                   ? "bg-success/15 text-success"
                   : "bg-surface-2 text-text-muted"
               }`}
             >
-              {(["domain", "instructions", "key", "done"].indexOf(step === "validating" ? "key" : step) > i) ? (
+              {step === "done" && i === 0 ? (
                 <Check className="w-3.5 h-3.5" />
               ) : (
                 i + 1
               )}
             </span>
-            {i < 3 && <span className="w-8 h-px bg-border" />}
+            {i < 1 && <span className="w-8 h-px bg-border" />}
           </div>
         ))}
       </div>
@@ -125,11 +107,11 @@ export default function ShopifyConnect() {
                 <ShoppingBag className="w-5 h-5" />
               </span>
               <div>
-                <div className="font-medium">Your Shopify store</div>
-                <div className="text-xs text-text-muted">Enter your store domain to get started</div>
+                <div className="font-medium">Connect your Shopify store</div>
+                <div className="text-xs text-text-muted">Enter your store domain to authorize Weeber</div>
               </div>
             </div>
-            <form onSubmit={handleDomainSubmit} className="space-y-4">
+            <form onSubmit={handleConnect} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-text-muted mb-1.5">
                   Store domain
@@ -146,93 +128,19 @@ export default function ShopifyConnect() {
                 </p>
               </div>
               <Button type="submit" disabled={!domain.trim()}>
-                Continue
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </form>
-          </div>
-        )}
-
-        {step === "instructions" && (
-          <div className="p-6 space-y-5">
-            <div className="font-medium">Get your Admin API access token</div>
-            <div className="bg-surface-2 rounded-md p-4 space-y-3">
-              <div className="text-sm space-y-2">
-                <div className="flex gap-2">
-                  <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">1</span>
-                  <span>Click the button below to open your Shopify admin</span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">2</span>
-                  <span>Go to <strong>Apps and sales channels</strong> &gt; <strong>Develop apps</strong></span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">3</span>
-                  <span>Create a new app (or select existing) and configure <strong>Admin API</strong> scopes: <code className="text-xs bg-surface px-1 py-0.5 rounded">read_orders, read_customers, read_checkouts, read_products, write_checkouts</code></span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-mono text-xs text-text-muted bg-surface border border-border w-5 h-5 rounded flex items-center justify-center shrink-0">4</span>
-                  <span>Install the app and copy the <strong>Admin API access token</strong></span>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={openShopifyAdmin}>
-                Open Shopify Admin
+                Connect with Shopify
                 <ExternalLink className="w-4 h-4 ml-2" />
               </Button>
-              <Button variant="secondary" onClick={() => setStep("key")}>
-                I have my token
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {step === "key" && (
-          <div className="p-6">
-            <div className="font-medium mb-1">Paste your Admin API access token</div>
-            <p className="text-xs text-text-muted mb-4">
-              Connecting to <span className="font-mono">{domain}</span>
-            </p>
-            <form onSubmit={validateAndConnect} className="space-y-4">
-              <div>
-                <input
-                  required
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm font-mono"
-                />
-                <p className="mt-1.5 text-xs text-text-muted">
-                  Starts with <code>shpat_</code>. Stored encrypted, never displayed again.
-                </p>
-              </div>
-              {error && (
-                <div className="flex items-start gap-2 text-sm text-danger">
-                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                  {error}
-                </div>
-              )}
-              <div className="flex gap-3">
-                <Button type="submit" disabled={!apiKey.trim() || loading}>
-                  {loading ? "Validating..." : "Connect store"}
-                </Button>
-                <Button variant="ghost" onClick={() => setStep("instructions")}>
-                  Back
-                </Button>
-              </div>
             </form>
           </div>
         )}
 
-        {step === "validating" && (
+        {step === "redirecting" && (
           <div className="p-6 flex flex-col items-center py-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <div className="mt-4 font-medium">Validating connection...</div>
+            <div className="mt-4 font-medium">Redirecting to Shopify...</div>
             <p className="mt-1 text-sm text-text-muted">
-              Checking API access to {domain}
+              You'll be asked to authorize Weeber in your Shopify admin
             </p>
           </div>
         )}
@@ -244,7 +152,8 @@ export default function ShopifyConnect() {
             </span>
             <div className="font-medium text-lg">Shopify connected</div>
             <p className="mt-2 text-sm text-text-muted">
-              <span className="font-mono">{domain}</span> is now linked to Weeber.
+              {shopDomain && <span className="font-mono">{shopDomain}</span>}
+              {shopDomain ? " is now linked to Weeber. " : ""}
               Your agents can access orders, carts, and customer data.
             </p>
             <div className="mt-4">
@@ -253,6 +162,7 @@ export default function ShopifyConnect() {
             <div className="mt-8 flex justify-center gap-3">
               <Button onClick={() => navigate("/agents")}>
                 Create an agent
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
               <Button variant="secondary" onClick={() => navigate("/integrations")}>
                 Back to integrations
@@ -262,13 +172,13 @@ export default function ShopifyConnect() {
         )}
       </div>
 
-      {step !== "done" && (
+      {step === "domain" && (
         <div className="bg-surface-2 rounded-md p-4">
           <div className="text-xs font-medium text-text-muted mb-1">What happens after connecting?</div>
           <ul className="text-xs text-text-muted space-y-1">
+            <li>You'll authorize Weeber in your Shopify admin (takes 30 seconds)</li>
             <li>Your agents can look up orders, carts, and customers during calls</li>
-            <li>Data is cached locally for sub-50ms access during conversations</li>
-            <li>API key is encrypted and stored securely (never visible after saving)</li>
+            <li>Abandoned checkout events trigger automated recovery calls</li>
             <li>You can disconnect at any time from Settings</li>
           </ul>
         </div>

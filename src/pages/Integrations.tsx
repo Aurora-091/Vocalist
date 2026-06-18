@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ShoppingBag,
   MessageCircle,
@@ -28,6 +28,7 @@ import {
 import { Button } from "../components/legacy-ui/Button";
 import { Badge } from "../components/legacy-ui/Badge";
 import { Skeleton } from "../components/legacy-ui/States";
+import { toast } from "sonner";
 
 type CatalogEntry = {
   id: string;
@@ -91,12 +92,20 @@ const TABS = [
 
 export default function Integrations() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [catalog, setCatalog] = useState<CatalogEntry[] | null>(null);
   const [connections, setConnections] = useState<BridgeConfig[]>([]);
   const [orgVertical, setOrgVertical] = useState<string | null>(null);
   const [tab, setTab] = useState("recommended");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("shopify") === "connected") {
+      toast.success("Shopify connected successfully");
+      navigate("/integrations", { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     (async () => {

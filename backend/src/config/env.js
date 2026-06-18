@@ -42,6 +42,9 @@ const schema = z.object({
 
   FRONTEND_URL: z.string().url().default("https://weeber.ai"),
   BACKEND_URL: z.string().url().default("https://api.weeber.ai"),
+
+  WEEBER_INTERNAL_SECRET: z.string().min(8).optional(),
+  WEEBERSH_INSTALL_URL: z.string().url().default("https://weebersh.com/api/auth"),
 });
 
 const raw = {
@@ -72,6 +75,9 @@ const raw = {
 
   FRONTEND_URL: process.env.FRONTEND_URL,
   BACKEND_URL: process.env.BACKEND_URL,
+
+  WEEBER_INTERNAL_SECRET: process.env.WEEBER_INTERNAL_SECRET,
+  WEEBERSH_INSTALL_URL: process.env.WEEBERSH_INSTALL_URL,
 };
 
 const parsed = schema.safeParse(raw);

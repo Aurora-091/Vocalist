@@ -646,43 +646,17 @@ export async function disconnectIntegration(providerKey: string) {
   if (error) throw error;
 }
 
-// ───── Shopify Connections ─────
+// ───── Shopify Integration ─────
 
-export async function getShopifyConnection() {
+export async function getShopifyIntegration() {
   const orgId = await getOrgId();
   if (!orgId) return null;
   const { data, error } = await supabase
-    .from("shopify_connections")
+    .from("integrations")
     .select("*")
     .eq("org_id", orgId)
+    .eq("type", "shopify")
     .maybeSingle();
   if (error) return null;
-  return data;
-}
-
-export async function createShopifyConnection(fields: { shop_domain: string }) {
-  const orgId = await getOrgId();
-  if (!orgId) throw new Error("Not authenticated");
-  const { data, error } = await supabase
-    .from("shopify_connections")
-    .insert({
-      org_id: orgId,
-      shop_domain: fields.shop_domain,
-      status: "pending",
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-export async function updateShopifyConnection(id: string, fields: Record<string, any>) {
-  const { data, error } = await supabase
-    .from("shopify_connections")
-    .update(fields)
-    .eq("id", id)
-    .select()
-    .single();
-  if (error) throw error;
   return data;
 }

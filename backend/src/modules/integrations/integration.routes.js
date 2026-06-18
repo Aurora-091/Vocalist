@@ -6,12 +6,12 @@ const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.
 const { NotFound } = require("../../utils/errors");
 const { buildProvider, listProviderNames } = require("./integration.service");
 
-const { handleInstall, handleCallback, handleDisconnect } = require("./shopify.oauth");
+const { verifyInternalSecret, handleConnected, handleUninstalled, handleDisconnect } = require("./shopify.oauth");
 
 const router = express.Router();
 
-router.get("/shopify/install", asyncHandler(handleInstall));
-router.get("/shopify/callback", asyncHandler(handleCallback));
+router.post("/shopify/connected", verifyInternalSecret, asyncHandler(handleConnected));
+router.post("/shopify/uninstalled", verifyInternalSecret, asyncHandler(handleUninstalled));
 router.delete("/shopify/disconnect", requireAuth, requireOrg, asyncHandler(handleDisconnect));
 
 router.use(requireAuth, requireOrg);
