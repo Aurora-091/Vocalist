@@ -228,7 +228,7 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   // Live Calling
-  async startCall({ toE164, fromE164, leaseToken, metadata = {} }) {
+  async startCall({ toE164, fromE164, leaseToken, metadata = {}, dynamicVars }) {
     const agentId = this.agent?.provider_ref;
     if (!agentId) throw new Error("agent.provider_ref (ElevenLabs agent_id) is required");
 
@@ -238,17 +238,23 @@ class ElevenLabsProvider extends VoiceProvider {
 
     const agentPhoneNumberId = await this._getOrImportPhoneNumberId(fromE164);
 
+    const conversationData = {
+      lease_token: leaseToken,
+      call_id: metadata.call_id || metadata.target_id,
+      org_id: this.orgId,
+      agent_id: agentId,
+      from_number: fromE164,
+    };
+
+    if (dynamicVars && Object.keys(dynamicVars).length > 0) {
+      conversationData.dynamic_variables = dynamicVars;
+    }
+
     const payload = {
       agent_id: agentId,
       agent_phone_number_id: agentPhoneNumberId,
       to_number: toE164,
-      conversation_initiation_client_data: {
-        lease_token: leaseToken,
-        call_id: metadata.call_id || metadata.target_id,
-        org_id: this.orgId,
-        agent_id: agentId,
-        from_number: fromE164,
-      },
+      conversation_initiation_client_data: conversationData,
     };
 
     const result = await this._call("POST", "/v1/convai/twilio/outbound-call", payload);

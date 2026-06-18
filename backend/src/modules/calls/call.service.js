@@ -2,7 +2,7 @@ const { buildVoiceProvider } = require("../../providers/voice/factory");
 const logger = require("../../config/logger");
 
 class CallService {
-  async startOutboundCall(supabase, orgId, callId, agentId, toE164, leaseToken, campaignId = null) {
+  async startOutboundCall(supabase, orgId, callId, agentId, toE164, leaseToken, campaignId = null, dynamicVars = null) {
     const { data: agent, error: agentErr } = await supabase
       .from("agents")
       .select("*")
@@ -28,6 +28,7 @@ class CallService {
       leaseToken,
       metadata: { call_id: callId, agent_id: agentId, campaign_id: campaignId },
       providerRef: agent.provider_ref,
+      dynamicVars,
     });
 
     const { data: updatedCall, error: updateErr } = await supabase

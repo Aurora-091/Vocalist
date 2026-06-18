@@ -21,7 +21,7 @@ async function loadIntegrationConfig(admin, orgId, providerName) {
 async function dispatchOne(admin, { campaign, agent, target }) {
   const { data: contact, error: cErr } = await admin
     .from("contacts")
-    .select("id, e164, deleted_at")
+    .select("id, e164, deleted_at, name, email, fields")
     .eq("id", target.contact_id)
     .maybeSingle();
   if (cErr) throw cErr;
@@ -91,11 +91,19 @@ async function dispatchOne(admin, { campaign, agent, target }) {
 
   let providerCall;
   try {
+    const dynamicVars = {
+      ...(contact.name && { customer_name: contact.name }),
+      ...(contact.email && { customer_email: contact.email }),
+      ...(contact.fields || {}),
+      ...(target.metadata?.dynamic_variables || {}),
+    };
+
     providerCall = await provider.startCall({
       toE164: contact.e164,
       fromE164: agent.inbound_number,
       leaseToken: target.lease_token,
       metadata: { campaign_id: campaign.id, target_id: target.target_id },
+      dynamicVars,
     });
   } catch (err) {
     logger.error({ err: err.message, agentProvider: agent.provider }, "Provider startCall failed");
