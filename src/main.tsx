@@ -22,11 +22,14 @@ function AppLoader() {
   );
 }
 
+import { AnalyticsLoader } from "@/components/AnalyticsLoader";
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider attribute="class" defaultTheme="system" storageKey="weeber-theme">
         <TooltipProvider delayDuration={150}>
+          <AnalyticsLoader />
           <Suspense fallback={<AppLoader />}>
             {isAdminApp ? <AdminApp /> : <CustomerApp />}
           </Suspense>

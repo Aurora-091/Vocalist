@@ -4,6 +4,7 @@ import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { joinWaitlist } from "../lib/api";
 import { useWaitlistCount } from "../lib/useWaitlistCount";
+import { trackSignupConversion } from "../components/AnalyticsLoader";
 import { trackFormSubmit, trackFormSuccess } from "../lib/analytics";
 import {
   STATS,
@@ -232,6 +233,7 @@ function HeroForm() {
       setReferralCode(result.referral_code || "");
       setShowSuccess(true);
       trackFormSuccess();
+      trackSignupConversion();
     } else {
       setState("error");
       setErrorMsg(result.error || "Something went wrong. Try again or email hello@weeber.ai");
