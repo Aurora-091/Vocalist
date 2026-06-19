@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { initPostHog, capturePageView } from "../lib/posthog";
 
 declare global {
   interface Window {
@@ -14,6 +15,8 @@ export function AnalyticsLoader() {
   const location = useLocation();
 
   useEffect(() => {
+    initPostHog();
+
     (async () => {
       let gtmId = import.meta.env.VITE_GTM_ID || null;
       let trackingEnabled = true;
@@ -41,16 +44,13 @@ export function AnalyticsLoader() {
         return;
       }
 
-      // Check if already injected
       if (gtmInjected || document.getElementById("gtm-script")) {
         gtmInjected = true;
         return;
       }
 
-      // Initialize dataLayer
       window.dataLayer = window.dataLayer || [];
 
-      // Google Tag Manager Script tag
       const script = document.createElement("script");
       script.id = "gtm-script";
       script.innerHTML = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -60,7 +60,6 @@ export function AnalyticsLoader() {
       })(window,document,'script','dataLayer','${gtmId}');`;
       document.head.appendChild(script);
 
-      // Google Tag Manager (noscript) iframe
       const noscript = document.createElement("noscript");
       noscript.id = "gtm-noscript";
       const iframe = document.createElement("iframe");
@@ -76,13 +75,16 @@ export function AnalyticsLoader() {
     })();
   }, []);
 
-  // Track SPA route changes
   useEffect(() => {
+    const fullPath = location.pathname + location.search;
+
+    capturePageView(fullPath);
+
     if (gtmInjected) {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
         event: "spa_pageview",
-        page_path: location.pathname + location.search,
+        page_path: fullPath,
       });
     }
   }, [location]);

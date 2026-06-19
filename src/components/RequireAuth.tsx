@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { isMarketingDomain, isAppDomain, appUrl, marketingUrl } from "../lib/hostname";
+import { identifyUser, resetUser } from "../lib/posthog";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -15,6 +16,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (!mounted) return;
+      if (session) {
+        identifyUser(session.user.id, { email: session.user.email });
+      } else {
+        resetUser();
+      }
       setStatus(session ? "in" : "out");
     });
     return () => {
