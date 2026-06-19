@@ -12,16 +12,34 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 
 | Severity | Count |
 |----------|-------|
-| Critical | 4 (2 fixed, 2 new) |
-| High | 8 (5 fixed, 3 new) |
-| Medium | 14 |
+| Critical | 4 (4 fixed) |
+| High | 8 (8 fixed) |
+| Medium | 14 (14 fixed) |
 | Low / Informational | 9 |
 
-**Overall:** The architecture is solid and notably mature — modular backend, Zod validation on most routes, RLS enabled broadly with a clean `auth_org()` claim pattern, webhook signature verification, idempotency on webhooks, and an invariant test suite. Previous critical issues (C1: unverified JWTs, C2: missing rate limits) have been fixed. New critical issues are concentrated in **Edge Functions**: missing webhook signature verification (WhatsApp), missing OAuth state validation, and cross-org credential leakage via global env vars.
+**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction.
 
 ---
 
 ## Remediation status
+
+### Fixed (from 2026-06-18 audit)
+
+| ID | Status | Change |
+|----|--------|--------|
+| C3 | Fixed | Verified Twilio signatures via SHA-256 and HMAC-SHA1 using Vault credentials. |
+| C4 | Fixed | Session-bound CSRF token validation on OAuth callbacks. |
+| C5 | Fixed | Removed global Deno.env credential fallbacks; forced Vault lookup for integrations. |
+| C6 | Fixed | Optimistic locking on oauth_tokens writes based on updated_at to prevent refresh races. |
+| H6 | Fixed | Scoped contacts export query in google-sheets-export edge function to current tenant org_id. |
+| H7 | Fixed | Fenced system prompts and added input sanitization (length capping, character escaping) for agent personas. |
+| H8 | Fixed | Throws fatal error on production boot when RESEND_API_KEY is not defined. |
+| M9 | Fixed | Added try/catch and toast error handlers to frontend database mutations. |
+| M10| Fixed | Sanitized client-facing edge function error logs to prevent detail leakage. |
+| M11| Fixed | Cross-referenced user roles authoritatively against the users database table in voice-sync. |
+| M12| Fixed | Warnings and limits checks implemented for Sheets row exports. |
+| M13| Fixed | Logged and handled database exceptions in catch blocks across components. |
+| M14| Fixed | Consolidated frontend client-side data access through centralized db.ts layer. |
 
 ### Fixed (from 2026-06-16 audit)
 

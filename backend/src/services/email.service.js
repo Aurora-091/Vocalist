@@ -5,6 +5,12 @@ const logger = require("../config/logger");
 let resend = null;
 if (env.RESEND_API_KEY) {
   resend = new Resend(env.RESEND_API_KEY);
+} else {
+  if (env.NODE_ENV === "production") {
+    throw new Error("FATAL: RESEND_API_KEY is not configured in production environment!");
+  } else {
+    logger.warn("RESEND_API_KEY is not configured. Email service will run in stub/mock mode (no-op).");
+  }
 }
 
 const SITE_URL = env.FRONTEND_URL || "https://weeber.ai";

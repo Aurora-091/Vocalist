@@ -90,7 +90,7 @@ Vocalist/
 
 ---
 
-## 4. The 12 Non-Negotiables (Never Break These)
+## 4. The 13 Non-Negotiables (Never Break These)
 
 These are hard invariants. If a change would violate any of these, **stop and flag it**.
 
@@ -106,6 +106,7 @@ These are hard invariants. If a change would violate any of these, **stop and fl
 10. **Knowledge Base = CAI-native** — no pgvector. `knowledge_sources` is a thin mirror with `cai_doc_id`. Never build self-hosted RAG.
 11. **Inbound passes our Express admission gate first** — `check_inbound_rate()` + `can_spend()` before any TwiML handoff to CAI. No native CAI number binding for inbound, ever.
 12. **Spend guards meter on `cost_usd`** (not minutes) — `usage_ledger` must have `tokens_in`, `tokens_out`, `cost_usd` on every completed call row.
+13. **Centralized Data Access (No Direct Client-side Queries)** — Never call `supabase.from()` directly inside frontend React pages/components. All queries and database mutations must be defined in `src/lib/db.ts` to ensure consistent error handling, tenant scoping, and logging.
 
 ---
 

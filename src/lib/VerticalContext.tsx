@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
-import { supabase } from "./supabase";
-import { getOrgId } from "./db";
+import {
+  getOrgId,
+  getOrgVerticalConfigId,
+  getVerticalConfigKey,
+  getVerticalConfigId,
+  updateOrgVerticalConfig,
+} from "./db";
 import {
   getVerticalDefinition,
   type VerticalKey,
@@ -35,24 +40,13 @@ export function useVertical() {
 export function VerticalProvider({ children }: { children: ReactNode }) {
   const [vertical, setVerticalState] = useState<VerticalKey | null>(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     (async () => {
       try {
-        const orgId = await getOrgId();
-        if (!orgId) { setLoading(false); return; }
-        const { data } = await supabase
-          .from("orgs")
-          .select("vertical_config_id")
-          .eq("id", orgId)
-          .single();
-        if (data?.vertical_config_id) {
-          const { data: vc } = await supabase
-            .from("vertical_configs")
-            .select("key")
-            .eq("id", data.vertical_config_id)
-            .single();
-          if (vc?.key) setVerticalState(vc.key as VerticalKey);
+        const verticalConfigId = await getOrgVerticalConfigId();
+        if (verticalConfigId) {
+          const key = await getVerticalConfigKey(verticalConfigId);
+          if (key) setVerticalState(key as VerticalKey);
         }
       } catch {}
       setLoading(false);
@@ -61,19 +55,12 @@ export function VerticalProvider({ children }: { children: ReactNode }) {
 
   async function setVertical(key: VerticalKey) {
     setVerticalState(key);
-    const orgId = await getOrgId();
-    if (!orgId) return;
-    const { data: vc } = await supabase
-      .from("vertical_configs")
-      .select("id")
-      .eq("key", key)
-      .single();
-    if (vc?.id) {
-      await supabase
-        .from("orgs")
-        .update({ vertical_config_id: vc.id })
-        .eq("id", orgId);
-    }
+    try {
+      const configId = await getVerticalConfigId(key);
+      if (configId) {
+        await updateOrgVerticalConfig(configId);
+      }
+    } catch {}
   }
 
   const config = getVerticalDefinition(vertical);

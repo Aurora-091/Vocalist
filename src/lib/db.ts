@@ -371,10 +371,11 @@ export async function getOrg() {
   return data;
 }
 
-export async function updateOrg(fields: { name?: string }) {
+export async function updateOrg(fields: { name?: string; vertical_config_id?: string | null }) {
   const orgId = await getOrgId();
   if (!orgId) return;
-  await supabase.from("orgs").update(fields).eq("id", orgId);
+  const { error } = await supabase.from("orgs").update(fields).eq("id", orgId);
+  if (error) throw error;
 }
 
 // ───── Integrations / Knowledge / Numbers ─────
@@ -513,7 +514,7 @@ export async function getAgentPreset(id: string) {
 
 // ───── Voice Catalog ─────
 
-export async function listVoices(opts?: { gender?: string; language?: string; search?: string }) {
+export async function listVoices(opts?: { gender?: string; language?: string; search?: string; limit?: number }) {
   let query = supabase
     .from("voice_catalog")
     .select("*")
@@ -526,6 +527,9 @@ export async function listVoices(opts?: { gender?: string; language?: string; se
   }
   if (opts?.search) {
     query = query.or(`name.ilike.%${opts.search}%,description.ilike.%${opts.search}%`);
+  }
+  if (opts?.limit) {
+    query = query.limit(opts.limit);
   }
   const { data, error } = await query;
   if (error) throw error;
@@ -659,4 +663,203 @@ export async function getShopifyIntegration() {
     .maybeSingle();
   if (error) return null;
   return data;
+}
+
+// ───── User Profile & Sessions ─────
+
+export async function getUserProfile(userId: string) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("display_name, timezone")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateUserProfile(userId: string, fields: { display_name?: string; timezone?: string }) {
+  const { error } = await supabase
+    .from("users")
+    .update(fields)
+    .eq("id", userId);
+  if (error) throw error;
+}
+
+export async function updateUserTheme(userId: string, theme: string) {
+  const { error } = await supabase
+    .from("users")
+    .update({ theme_preference: theme })
+    .eq("id", userId);
+  if (error) throw error;
+}
+
+export async function listUserSessions(userId: string) {
+  const { data, error } = await supabase
+    .from("user_sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .is("revoked_at", null)
+    .order("last_active_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function revokeSession(id: string) {
+  const { error } = await supabase
+    .from("user_sessions")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function revokeAllOtherSessions(userId: string, currentSessionId: string) {
+  const { error } = await supabase
+    .from("user_sessions")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .neq("id", currentSessionId)
+    .is("revoked_at", null);
+  if (error) throw error;
+}
+
+// ───── Call Outcomes ─────
+
+export async function getRecentCallStatuses(days = 30) {
+  const orgId = await getOrgId();
+  if (!orgId) return [];
+  const cutoff = new Date(Date.now() - days * 86400_000).toISOString();
+  const { data, error } = await supabase
+    .from("calls")
+    .select("status")
+    .eq("org_id", orgId)
+    .gte("created_at", cutoff);
+  if (error) throw error;
+  return data || [];
+}
+
+// ───── Phone Numbers ─────
+
+export async function unlinkPhoneNumberAgent(id: string) {
+  const { error } = await supabase
+    .from("phone_numbers")
+    .update({ agent_id: null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deletePhoneNumber(id: string) {
+  const { error } = await supabase
+    .from("phone_numbers")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ───── Recent Calls ─────
+
+export async function listRecentCalls(limit = 3) {
+  const { data, error } = await supabase
+    .from("calls")
+    .select("id, to_number, direction, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+// ───── Contacts ─────
+
+export async function deleteContact(id: string) {
+  const { error } = await supabase
+    .from("contacts")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ───── Campaigns & Targets ─────
+
+export async function listCampaignTargets(campaignId: string) {
+  const { data, error } = await supabase
+    .from("campaign_targets")
+    .select("state")
+    .eq("campaign_id", campaignId);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updateCampaign(id: string, fields: Record<string, any>) {
+  const { data, error } = await supabase
+    .from("campaigns")
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// ───── Agents ─────
+
+export async function deleteAgent(id: string) {
+  const { error } = await supabase
+    .from("agents")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ───── Agent Knowledge ─────
+
+export async function listAgentKnowledge(agentId: string) {
+  const { data, error } = await supabase
+    .from("agent_knowledge")
+    .select("*, knowledge_sources(*)")
+    .eq("agent_id", agentId);
+  if (error) throw error;
+  return data || [];
+}
+
+// ───── Workspace Verticals ─────
+
+export async function getOrgVerticalConfigId() {
+  const orgId = await getOrgId();
+  if (!orgId) return null;
+  const { data, error } = await supabase
+    .from("orgs")
+    .select("vertical_config_id")
+    .eq("id", orgId)
+    .single();
+  if (error) return null;
+  return data?.vertical_config_id || null;
+}
+
+export async function getVerticalConfigKey(configId: string) {
+  const { data, error } = await supabase
+    .from("vertical_configs")
+    .select("key")
+    .eq("id", configId)
+    .single();
+  if (error) throw error;
+  return data?.key || null;
+}
+
+export async function getVerticalConfigId(key: string) {
+  const { data, error } = await supabase
+    .from("vertical_configs")
+    .select("id")
+    .eq("key", key)
+    .single();
+  if (error) throw error;
+  return data?.id || null;
+}
+
+export async function updateOrgVerticalConfig(verticalConfigId: string | null) {
+  const orgId = await getOrgId();
+  if (!orgId) return;
+  const { error } = await supabase
+    .from("orgs")
+    .update({ vertical_config_id: verticalConfigId })
+    .eq("id", orgId);
+  if (error) throw error;
 }

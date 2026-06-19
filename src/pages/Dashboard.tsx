@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Check, Sparkles, Phone, Bot, Megaphone } from "lucide-react";
-import { getOverview, getUsageSummary, getOnboardingSteps } from "../lib/db";
+import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls } from "../lib/db";
 import { supabase } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
 import { StatCard } from "../components/legacy-ui/StatCard";
@@ -87,12 +87,8 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase
-          .from("calls")
-          .select("id, to_number, direction, status, created_at")
-          .order("created_at", { ascending: false })
-          .limit(3);
-        setRecentCalls(data || []);
+        const data = await listRecentCalls(3);
+        setRecentCalls(data);
       } catch {}
     })();
   }, []);

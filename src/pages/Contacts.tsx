@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Plus, Upload, Search, Trash2, ShieldOff } from "lucide-react";
-import { listContacts, createContact } from "../lib/db";
-import { supabase } from "../lib/supabase";
+import { listContacts, createContact, deleteContact as deleteContactDb } from "../lib/db";
 import { api } from "../lib/api";
+import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
 import { Button } from "../components/legacy-ui/Button";
 import { Card, CardBody } from "../components/legacy-ui/Card";
@@ -69,11 +69,10 @@ export default function Contacts() {
   async function deleteContact(id: string) {
     setDeletingId(id);
     try {
-      await supabase
-        .from("contacts")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id);
+      await deleteContactDb(id);
       setContacts((prev) => prev?.filter((c) => c.id !== id) ?? null);
+    } catch {
+      toast.error("Failed to delete contact");
     } finally {
       setDeletingId(null);
       setConfirmDeleteId(null);

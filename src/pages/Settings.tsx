@@ -8,6 +8,12 @@ import {
   updateNotificationPrefs,
   listWebhookEndpoints,
   createWebhookEndpoint,
+  getUserProfile,
+  updateUserProfile,
+  updateUserTheme,
+  listUserSessions,
+  revokeSession,
+  revokeAllOtherSessions,
 } from "../lib/db";
 import { supabase, getSession } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
@@ -85,15 +91,13 @@ function ProfilePanel() {
       const session = await getSession();
       if (!session) return;
       setEmail(session.email || "");
-      const { data } = await supabase
-        .from("users")
-        .select("display_name, timezone")
-        .eq("id", session.user_id)
-        .maybeSingle();
-      if (data) {
-        setDisplayName(data.display_name || "");
-        setTimezone(data.timezone || "UTC");
-      }
+      try {
+        const data = await getUserProfile(session.user_id);
+        if (data) {
+          setDisplayName(data.display_name || "");
+          setTimezone(data.timezone || "UTC");
+        }
+      } catch {}
       setLoading(false);
     })();
   }, []);
@@ -101,16 +105,17 @@ function ProfilePanel() {
   async function save() {
     setBusy(true);
     const session = await getSession();
-    if (!session) return;
-    const { error } = await supabase
-      .from("users")
-      .update({ display_name: displayName, timezone })
-      .eq("id", session.user_id);
-    setBusy(false);
-    if (error) {
-      toast.error("Failed to save profile");
-    } else {
+    if (!session) {
+      setBusy(false);
+      return;
+    }
+    try {
+      await updateUserProfile(session.user_id, { display_name: displayName, timezone });
       toast.success("Profile updated");
+    } catch {
+      toast.error("Failed to save profile");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -174,10 +179,9 @@ function AppearancePanel() {
     setTheme(newTheme);
     const session = await getSession();
     if (session) {
-      await supabase
-        .from("users")
-        .update({ theme_preference: newTheme })
-        .eq("id", session.user_id);
+      try {
+        await updateUserTheme(session.user_id, newTheme);
+      } catch {}
     }
   }
 
@@ -225,38 +229,34 @@ function SecurityPanel() {
   async function loadSessions() {
     const session = await getSession();
     if (!session) return;
-    const { data } = await supabase
-      .from("user_sessions")
-      .select("*")
-      .eq("user_id", session.user_id)
-      .is("revoked_at", null)
-      .order("last_active_at", { ascending: false });
-    setSessions(data || []);
+    try {
+      const data = await listUserSessions(session.user_id);
+      setSessions(data);
+    } catch {
+      setSessions([]);
+    }
   }
 
   async function revokeSession(id: string) {
-    await supabase
-      .from("user_sessions")
-      .update({ revoked_at: new Date().toISOString() })
-      .eq("id", id);
-    toast.success("Session revoked");
-    loadSessions();
+    try {
+      await revokeSession(id);
+      toast.success("Session revoked");
+      loadSessions();
+    } catch {
+      toast.error("Failed to revoke session");
+    }
   }
 
   async function revokeAllOthers() {
     const session = await getSession();
     if (!session) return;
     const currentSessionId = sessions?.[0]?.id;
-    if (!currentSessionId) return;
-    const { error } = await supabase
-      .from("user_sessions")
-      .update({ revoked_at: new Date().toISOString() })
-      .eq("user_id", session.user_id)
-      .neq("id", currentSessionId)
-      .is("revoked_at", null);
-    if (!error) {
+    try {
+      await revokeAllOtherSessions(session.user_id, currentSessionId);
       toast.success("All other sessions revoked");
       loadSessions();
+    } catch {
+      toast.error("Failed to revoke other sessions");
     }
   }
 

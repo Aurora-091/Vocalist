@@ -122,11 +122,23 @@ export default function IntegrationConnect() {
     try {
       const config: Record<string, any> = {};
       const secretFields = ["api_key", "auth_token", "api_token"];
+      let secretValue = "";
 
       for (const [key, val] of Object.entries(values)) {
         if (!secretFields.includes(key)) {
           config[key] = val;
+        } else {
+          secretValue = val;
         }
+      }
+
+      const secretRef = `vault_${provider}_${Date.now()}`;
+      if (secretValue) {
+        const { error: vaultError } = await supabase.rpc("vault_store", {
+          name: secretRef,
+          secret: secretValue,
+        });
+        if (vaultError) throw vaultError;
       }
 
       if (provider === "whatsapp") {
@@ -146,7 +158,7 @@ export default function IntegrationConnect() {
       await upsertBridgeConfig(provider!, {
         status: "active",
         config,
-        secret_ref: `vault_${provider}_${Date.now()}`,
+        secret_ref: secretValue ? secretRef : undefined,
         scopes_granted: catalogEntry.scopes || [],
       });
 
@@ -158,7 +170,9 @@ export default function IntegrationConnect() {
 
   function handleOAuth() {
     const redirectBase = window.location.origin;
-    const state = btoa(JSON.stringify({ provider: provider!, redirect: "/integrations" }));
+    const csrf = crypto.randomUUID();
+    sessionStorage.setItem("oauth_csrf_state", csrf);
+    const state = btoa(JSON.stringify({ provider: provider!, redirect: "/integrations", csrf }));
 
     if (provider === "google_cal" || provider === "google_sheets") {
       const scopes = (catalogEntry.scopes || []).join(" ");

@@ -136,12 +136,9 @@ Deno.serve(async (req: Request) => {
       apiKey = secret?.decrypted_secret || null;
     }
     if (!apiKey) {
-      apiKey = Deno.env.get("SHOPIFY_API_KEY") || null;
-    }
-    if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "Shopify API key not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

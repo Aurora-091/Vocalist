@@ -120,11 +120,17 @@ Deno.serve(async (req: Request) => {
 
     if (!updateRes.ok) throw new Error(`Failed to write data: ${updateRes.status}`);
 
+    const limitMap: Record<string, number> = { calls: 1000, contacts: 1000, campaigns: 500 };
+    const limit = limitMap[export_type] || 1000;
+    const truncated = rows.length >= limit;
+
     return jsonResponse({
       success: true,
       spreadsheet_id: sheetId,
       spreadsheet_url: `https://docs.google.com/spreadsheets/d/${sheetId}`,
       rows_exported: rows.length,
+      truncated,
+      warning: truncated ? `Export truncated to the maximum limit of ${limit} rows.` : undefined,
     });
   } catch (err) {
     return jsonResponse({ error: err.message || "Export failed" }, 500);
@@ -187,6 +193,18 @@ async function refreshToken(tokenRow: any, adminClient: any): Promise<string> {
     throw new Error("Cannot refresh Google token");
   }
 
+  // 1. Re-read the oauth_tokens row to check if another process already refreshed it while we were waiting.
+  const { data: currentToken } = await adminClient
+    .from("oauth_tokens")
+    .select("*")
+    .eq("id", tokenRow.id)
+    .maybeSingle();
+
+  if (currentToken && currentToken.expires_at && new Date(currentToken.expires_at) > new Date()) {
+    // Already refreshed! Return the new token.
+    return currentToken.access_token;
+  }
+
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -201,14 +219,33 @@ async function refreshToken(tokenRow: any, adminClient: any): Promise<string> {
   if (!res.ok) throw new Error("Token refresh failed");
 
   const data = await res.json();
-  await adminClient
+  const newExpiry = new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString();
+  
+  const originalUpdatedAt = currentToken ? currentToken.updated_at : tokenRow.updated_at;
+
+  const { data: updatedRows, error } = await adminClient
     .from("oauth_tokens")
     .update({
       access_token: data.access_token,
-      expires_at: new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString(),
+      expires_at: newExpiry,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", tokenRow.id);
+    .eq("id", tokenRow.id)
+    .eq("updated_at", originalUpdatedAt)
+    .select();
+
+  if (error || !updatedRows || updatedRows.length === 0) {
+    // Conflict! Another request won the race. Fetch the new token.
+    const { data: winnerToken } = await adminClient
+      .from("oauth_tokens")
+      .select("access_token")
+      .eq("id", tokenRow.id)
+      .maybeSingle();
+      
+    if (winnerToken) {
+      return winnerToken.access_token;
+    }
+  }
 
   return data.access_token;
 }

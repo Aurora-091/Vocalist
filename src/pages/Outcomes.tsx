@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { getOverview } from "../lib/db";
-import { supabase } from "../lib/supabase";
-import { getOrgId } from "../lib/db";
+import { getOverview, getRecentCallStatuses } from "../lib/db";
 import { StatCard } from "../components/legacy-ui/StatCard";
 import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
 import { Skeleton } from "../components/legacy-ui/States";
@@ -15,26 +13,18 @@ export default function Outcomes() {
       const o = await getOverview();
       setOverview(o || {});
 
-      const orgId = await getOrgId();
-      if (!orgId) {
+      try {
+        const calls = await getRecentCallStatuses(30);
+        const grouped: Record<string, number> = {};
+        for (const c of calls || []) {
+          grouped[c.status] = (grouped[c.status] || 0) + 1;
+        }
+        setOutcomes(
+          Object.entries(grouped).map(([outcome, count]) => ({ outcome, count }))
+        );
+      } catch {
         setOutcomes([]);
-        return;
       }
-
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
-      const { data: calls } = await supabase
-        .from("calls")
-        .select("status")
-        .eq("org_id", orgId)
-        .gte("created_at", thirtyDaysAgo);
-
-      const grouped: Record<string, number> = {};
-      for (const c of calls || []) {
-        grouped[c.status] = (grouped[c.status] || 0) + 1;
-      }
-      setOutcomes(
-        Object.entries(grouped).map(([outcome, count]) => ({ outcome, count }))
-      );
     })();
   }, []);
 

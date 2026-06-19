@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ArrowRight, ArrowLeft, Phone, Loader as Loader2, Play } from "lucide-react";
 import { api } from "../lib/api";
-import { supabase } from "../lib/supabase";
+import { listAgentPresets, listVoices } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { toast } from "sonner";
 import { VerticalProvider, useVertical } from "../lib/VerticalContext";
@@ -86,13 +86,12 @@ function OnboardingInner() {
   useEffect(() => {
     if (vertical) {
       (async () => {
-        const { data } = await supabase
-          .from("agent_presets")
-          .select("*")
-          .eq("vertical_key", vertical)
-          .eq("enabled", true)
-          .order("sort_order");
-        setPresets(data || []);
+        try {
+          const data = await listAgentPresets(vertical);
+          setPresets(data);
+        } catch {
+          setPresets([]);
+        }
       })();
     }
   }, [vertical]);
@@ -101,12 +100,8 @@ function OnboardingInner() {
     if (step === 3) {
       (async () => {
         try {
-          const { data } = await supabase
-            .from("voice_catalog")
-            .select("voice_id, name, labels, preview_url")
-            .order("name")
-            .limit(50);
-          setVoices(data || []);
+          const data = await listVoices({ limit: 50 });
+          setVoices(data);
         } catch {}
       })();
     }

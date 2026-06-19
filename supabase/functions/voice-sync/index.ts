@@ -67,9 +67,19 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return json({ error: "Unauthorized" }, 401);
 
-    const role = (user.app_metadata as any)?.role;
-    if (role !== "admin" && role !== "owner") {
-      return json({ error: "Only an admin can sync the voice library." }, 403);
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: dbUser, error: dbError } = await admin
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (dbError || !dbUser || (dbUser.role !== "admin" && dbUser.role !== "owner")) {
+      return json({ error: "Only an admin or owner can sync the voice library." }, 403);
     }
 
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY");

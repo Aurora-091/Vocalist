@@ -12,7 +12,7 @@ import {
   Clock,
   Check,
 } from "lucide-react";
-import { getCampaign, listContacts } from "../lib/db";
+import { getCampaign, listContacts, listCampaignTargets, updateCampaign } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
@@ -63,10 +63,7 @@ export default function CampaignDetail() {
       const c = await getCampaign(id!);
       setCampaign(c);
 
-      const { data: targets } = await supabase
-        .from("campaign_targets")
-        .select("state")
-        .eq("campaign_id", id!);
+      const targets = await listCampaignTargets(id!);
       const grouped: Record<string, number> = {};
       for (const t of targets || []) {
         grouped[t.state] = (grouped[t.state] || 0) + 1;
@@ -118,10 +115,7 @@ export default function CampaignDetail() {
     if (status === "running" && review && !review.ready_to_launch) return;
     setActing(true);
     try {
-      await supabase
-        .from("campaigns")
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq("id", id!);
+      await updateCampaign(id!, { status });
       await load();
     } finally {
       setActing(false);
@@ -536,15 +530,11 @@ function SchedulePanel({
     setErr(null);
     setBusy(true);
     try {
-      await supabase
-        .from("campaigns")
-        .update({
-          calling_tz: tz,
-          window_start: windowStart ? new Date(windowStart).toISOString() : null,
-          window_end: windowEnd ? new Date(windowEnd).toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", campaign.id);
+      await updateCampaign(campaign.id, {
+        calling_tz: tz,
+        window_start: windowStart ? new Date(windowStart).toISOString() : null,
+        window_end: windowEnd ? new Date(windowEnd).toISOString() : null,
+      });
       onSaved();
     } catch (e: any) {
       setErr(e.message || "Save failed");

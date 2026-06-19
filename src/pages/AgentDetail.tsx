@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { getAgent, listVoices } from "../lib/db";
+import { getAgent, listVoices, listAgentKnowledge, getCall } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
@@ -169,11 +169,8 @@ export default function AgentDetail() {
         setLangVoiceWarning([]);
       }
 
-      const { data: kb } = await supabase
-        .from("agent_knowledge")
-        .select("*, knowledge_sources(*)")
-        .eq("agent_id", id!);
-      setKnowledge(kb || []);
+      const kb = await listAgentKnowledge(id!);
+      setKnowledge(kb);
 
       // Load skills catalog and active skills for this agent
       const [skillsRes, activeRes] = await Promise.all([
@@ -800,14 +797,11 @@ function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => vo
       )
       .subscribe();
 
-    supabase
-      .from("calls")
-      .select("status")
-      .eq("id", callId)
-      .single()
-      .then(({ data }) => {
+    getCall(callId)
+      .then((data) => {
         if (data?.status) setCallStatus(data.status);
-      });
+      })
+      .catch(() => {});
 
     return () => { supabase.removeChannel(channel); };
   }, [callId]);

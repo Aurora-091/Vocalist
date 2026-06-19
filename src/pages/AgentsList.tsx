@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Bot, Trash2, Copy } from "lucide-react";
-import { listAgents } from "../lib/db";
+import { listAgents, deleteAgent as deleteAgentDb } from "../lib/db";
 import { api } from "../lib/api";
-import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
 import { Button } from "../components/legacy-ui/Button";
@@ -98,11 +97,10 @@ export default function AgentsList() {
   async function deleteAgent(id: string) {
     setDeletingId(id);
     try {
-      await supabase
-        .from("agents")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id);
+      await deleteAgentDb(id);
       setAgents((prev) => prev?.filter((a) => a.id !== id) ?? null);
+    } catch {
+      toast.error("Failed to delete agent");
     } finally {
       setDeletingId(null);
       setConfirmId(null);

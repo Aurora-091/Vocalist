@@ -14,7 +14,7 @@ interface BridgeRequest {
   params?: Record<string, any>;
 }
 
-const PROVIDER_HANDLERS: Record<string, (action: string, params: Record<string, any>, config: any, env: Record<string, string>) => Promise<any>> = {
+const PROVIDER_HANDLERS: Record<string, (action: string, params: Record<string, any>, config: any, secret: any) => Promise<any>> = {
   shopify: handleShopify,
   hubspot: handleHubspot,
   pipedrive: handlePipedrive,
@@ -82,17 +82,36 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: `No active ${provider} connection found` }, 404);
     }
 
-    const env: Record<string, string> = {};
-    for (const key of ["SHOPIFY_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "HUBSPOT_API_KEY", "PIPEDRIVE_API_TOKEN", "FRESHSALES_API_KEY", "CLINIKO_API_KEY", "JANE_API_KEY", "CALCOM_API_KEY"]) {
-      const val = Deno.env.get(key);
-      if (val) env[key] = val;
+    let decryptedSecret: string | null = null;
+    if (bridgeConfig.secret_ref) {
+      const { data: secret } = await adminClient
+        .from("vault.decrypted_secrets")
+        .select("decrypted_secret")
+        .eq("name", bridgeConfig.secret_ref)
+        .maybeSingle();
+      decryptedSecret = secret?.decrypted_secret || null;
     }
 
-    const result = await handler(action, params, bridgeConfig, env);
+    const providersRequiringSecret = [
+      "shopify",
+      "hubspot",
+      "pipedrive",
+      "freshsales",
+      "cliniko",
+      "jane_app",
+      "calcom",
+      "whatsapp",
+    ];
+    if (providersRequiringSecret.includes(provider) && !decryptedSecret) {
+      return jsonResponse({ error: `Credentials secret not configured for ${provider}` }, 422);
+    }
+
+    const result = await handler(action, params, bridgeConfig, decryptedSecret);
 
     return jsonResponse({ data: result, provider, action });
   } catch (err) {
-    return jsonResponse({ error: err.message || "Internal bridge error" }, 500);
+    console.error("Agent bridge execution failed:", err);
+    return jsonResponse({ error: "Internal bridge error" }, 500);
   }
 });
 
@@ -105,9 +124,8 @@ function jsonResponse(body: any, status = 200) {
 
 // ─── Provider Handlers ───
 
-async function handleShopify(action: string, params: Record<string, any>, config: any, env: Record<string, string>) {
+async function handleShopify(action: string, params: Record<string, any>, config: any, apiKey: string) {
   const domain = config.config?.shop_domain;
-  const apiKey = env.SHOPIFY_API_KEY || config.secret_ref;
 
   if (!domain || !apiKey) throw new Error("Shopify not configured properly");
 
@@ -131,8 +149,7 @@ async function handleShopify(action: string, params: Record<string, any>, config
   return await res.json();
 }
 
-async function handleHubspot(action: string, params: Record<string, any>, config: any, env: Record<string, string>) {
-  const token = env.HUBSPOT_API_KEY || config.secret_ref;
+async function handleHubspot(action: string, params: Record<string, any>, config: any, token: string) {
   if (!token) throw new Error("HubSpot not configured");
 
   const baseUrl = "https://api.hubapi.com";
@@ -169,8 +186,7 @@ async function handleHubspot(action: string, params: Record<string, any>, config
   return await handler();
 }
 
-async function handlePipedrive(action: string, params: Record<string, any>, config: any, env: Record<string, string>) {
-  const token = env.PIPEDRIVE_API_TOKEN || config.secret_ref;
+async function handlePipedrive(action: string, params: Record<string, any>, config: any, token: string) {
   const domain = config.config?.domain || "api";
   if (!token) throw new Error("Pipedrive not configured");
 
@@ -191,8 +207,7 @@ async function handlePipedrive(action: string, params: Record<string, any>, conf
   return await res.json();
 }
 
-async function handleFreshsales(action: string, params: Record<string, any>, config: any, env: Record<string, string>) {
-  const token = env.FRESHSALES_API_KEY || config.secret_ref;
+async function handleFreshsales(action: string, params: Record<string, any>, config: any, token: string) {
   const domain = config.config?.domain;
   if (!token || !domain) throw new Error("Freshsales not configured");
 
@@ -213,8 +228,7 @@ async function handleFreshsales(action: string, params: Record<string, any>, con
   return await res.json();
 }
 
-async function handleCliniko(action: string, params: Record<string, any>, config: any, env: Record<string, string>) {
-  const apiKey = env.CLINIKO_API_KEY || config.secret_ref;
+async function handleCliniko(action: string, params: Record<string, any>, config: any, apiKey: string) {
   if (!apiKey) throw new Error("Cliniko not configured");
 
   const baseUrl = "https://api.au1.cliniko.com/v1";
@@ -239,8 +253,7 @@ async function handleCliniko(action: string, params: Record<string, any>, config
   return await res.json();
 }
 
-async function handleJaneApp(action: string, params: Record<string, any>, config: any, env: Record<string, string>) {
-  const apiKey = env.JANE_API_KEY || config.secret_ref;
+async function handleJaneApp(action: string, params: Record<string, any>, config: any, apiKey: string) {
   const domain = config.config?.domain;
   if (!apiKey || !domain) throw new Error("Jane App not configured");
 
@@ -262,7 +275,7 @@ async function handleJaneApp(action: string, params: Record<string, any>, config
   return await res.json();
 }
 
-async function handleGoogleCalendar(action: string, params: Record<string, any>, config: any, _env: Record<string, string>) {
+async function handleGoogleCalendar(action: string, params: Record<string, any>, config: any, _secret: string | null) {
   const adminClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -329,8 +342,7 @@ async function handleGoogleCalendar(action: string, params: Record<string, any>,
   return await handler();
 }
 
-async function handleCalcom(action: string, params: Record<string, any>, config: any, env: Record<string, string>) {
-  const apiKey = env.CALCOM_API_KEY || config.secret_ref;
+async function handleCalcom(action: string, params: Record<string, any>, config: any, apiKey: string) {
   if (!apiKey) throw new Error("Cal.com not configured");
 
   const baseUrl = "https://api.cal.com/v1";
@@ -349,9 +361,9 @@ async function handleCalcom(action: string, params: Record<string, any>, config:
   return await res.json();
 }
 
-async function handleWhatsApp(action: string, params: Record<string, any>, config: any, env: Record<string, string>) {
-  const accountSid = env.TWILIO_ACCOUNT_SID || config.config?.account_sid;
-  const authToken = env.TWILIO_AUTH_TOKEN || config.config?.auth_token;
+async function handleWhatsApp(action: string, params: Record<string, any>, config: any, decryptedSecret: string) {
+  const accountSid = config.config?.account_sid;
+  const authToken = decryptedSecret;
   const fromNumber = config.config?.whatsapp_number;
 
   if (!accountSid || !authToken || !fromNumber) {
@@ -393,6 +405,18 @@ async function refreshGoogleToken(tokenRow: any, adminClient: any): Promise<stri
     throw new Error("Cannot refresh Google token — missing credentials");
   }
 
+  // 1. Re-read the oauth_tokens row to check if another process already refreshed it while we were waiting.
+  const { data: currentToken } = await adminClient
+    .from("oauth_tokens")
+    .select("*")
+    .eq("id", tokenRow.id)
+    .maybeSingle();
+
+  if (currentToken && currentToken.expires_at && new Date(currentToken.expires_at) > new Date()) {
+    // Already refreshed! Return the new token.
+    return currentToken.access_token;
+  }
+
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -408,15 +432,32 @@ async function refreshGoogleToken(tokenRow: any, adminClient: any): Promise<stri
 
   const data = await res.json();
   const newExpiry = new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString();
+  
+  const originalUpdatedAt = currentToken ? currentToken.updated_at : tokenRow.updated_at;
 
-  await adminClient
+  const { data: updatedRows, error } = await adminClient
     .from("oauth_tokens")
     .update({
       access_token: data.access_token,
       expires_at: newExpiry,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", tokenRow.id);
+    .eq("id", tokenRow.id)
+    .eq("updated_at", originalUpdatedAt)
+    .select();
+
+  if (error || !updatedRows || updatedRows.length === 0) {
+    // Conflict! Another request won the race. Fetch the new token.
+    const { data: winnerToken } = await adminClient
+      .from("oauth_tokens")
+      .select("access_token")
+      .eq("id", tokenRow.id)
+      .maybeSingle();
+      
+    if (winnerToken) {
+      return winnerToken.access_token;
+    }
+  }
 
   return data.access_token;
 }

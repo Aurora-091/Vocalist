@@ -77,7 +77,12 @@ Deno.serve(async (req: Request) => {
 
     const keyRef = `shopify_key_${user.app_metadata?.org_id || user.id}`;
 
-    // Store in vault (or as a simple encrypted reference)
+    // Store in vault
+    await adminClient.rpc("vault_store", {
+      name: keyRef,
+      secret: api_key,
+    });
+
     await adminClient.from("shopify_connections").upsert(
       {
         org_id: user.app_metadata?.org_id,

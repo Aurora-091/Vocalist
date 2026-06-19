@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Phone, Plus, Trash2, Unlink, ShieldCheck, Loader as Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { listPhoneNumbers, listAgents } from "../lib/db";
+import { listPhoneNumbers, listAgents, unlinkPhoneNumberAgent, deletePhoneNumber } from "../lib/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "../lib/supabase";
+
 
 type PhoneNumber = {
   id: string;
@@ -76,29 +76,23 @@ export default function Numbers() {
   }
 
   async function unlinkAgent(numberId: string) {
-    const { error } = await supabase
-      .from("phone_numbers")
-      .update({ agent_id: null })
-      .eq("id", numberId);
-    if (error) {
+    try {
+      await unlinkPhoneNumberAgent(numberId);
+      toast.success("Agent unlinked from number");
+      load();
+    } catch {
       toast.error("Failed to unlink agent");
-      return;
     }
-    toast.success("Agent unlinked from number");
-    load();
   }
 
   async function deleteNumber(numberId: string) {
-    const { error } = await supabase
-      .from("phone_numbers")
-      .delete()
-      .eq("id", numberId);
-    if (error) {
+    try {
+      await deletePhoneNumber(numberId);
+      toast.success("Number deleted");
+      load();
+    } catch {
       toast.error("Failed to delete number");
-      return;
     }
-    toast.success("Number deleted");
-    load();
   }
 
   return (

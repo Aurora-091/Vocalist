@@ -9,6 +9,7 @@ Welcome to the Weeber platform documentation directory. This folder houses all t
 | Document | Purpose |
 |---|---|
 | [`Weeber-Cursor-Rules.md`](./Weeber-Cursor-Rules.md) | Standard system parameters, environment constraints, codebase structures, and tech stack bindings for Cursor or other AI coding agents. |
+| [`agent.md`](./agent.md) | System profile, rule binding, and playbook for AI coding assistants (like Antigravity) working on the codebase. |
 | [`CHANGELOG.md`](./CHANGELOG.md) | Audit trail of all shipped features, patches, dependencies fixes, and tests configurations. |
 | [`DECISIONS.md`](./DECISIONS.md) | Living log tracking architectural decisions, pivots, integrations constraints, and system boundaries. |
 | [`DEPLOYMENT.md`](./DEPLOYMENT.md) | Pipeline workflows, server host requirements, Supabase Vault sync, and environment variables list. |

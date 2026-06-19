@@ -34,11 +34,20 @@ export default function OAuthCallback() {
         return;
       }
 
-      let state: { provider: string; redirect: string };
+      let state: { provider: string; redirect: string; csrf?: string };
       try {
         state = JSON.parse(atob(stateRaw));
       } catch {
         setError("Invalid state parameter");
+        setStatus("error");
+        return;
+      }
+
+      const storedCsrf = sessionStorage.getItem("oauth_csrf_state");
+      sessionStorage.removeItem("oauth_csrf_state");
+
+      if (!state.csrf || state.csrf !== storedCsrf) {
+        setError("OAuth state validation failed (CSRF check). Request rejected.");
         setStatus("error");
         return;
       }
