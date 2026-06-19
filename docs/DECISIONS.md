@@ -69,3 +69,16 @@ This document tracks all major product, architecture, and technology decisions m
   4. Token refresh operations must use optimistic locking to prevent race conditions
   
   Future edge functions require a security review checklist before deployment.
+
+---
+
+## DEC-008: Dynamic Client-Side Analytics and Tracking Profiles Management
+* **Date**: 2026-06-19
+* **Status**: Accepted
+* **Context**: Marketing requirements dictate frequent rotation of Google Analytics and Google Ads conversion targets without redeploying the frontend. Additionally, Meta Pixel is deployed globally.
+* **Decision**: Store tracking settings and GA4/Google Ads profiles in Supabase (`site_settings` and `tracking_profiles` tables). Exactly one profile is active at a time. The client application mounts a `<AnalyticsLoader>` that dynamically queries the database on initial mount to inject `gtag.js` and Meta Pixel scripts. To prevent duplicate scripts injection, load status is tracked in global module-level variables. Pageviews are tracked manually on React Router path changes.
+* **Key Files**:
+  - `src/lib/tracking.ts` — Centralized database access helper functions.
+  - `src/components/AnalyticsLoader.tsx` — Dynamic injection script module and route navigation tracker.
+  - `src/pages/admin/AdminSettings.tsx` — Settings view featuring Dukaan-style configurations.
+

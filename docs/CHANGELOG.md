@@ -7,6 +7,9 @@ All notable changes to the Weeber platform will be documented in this file. This
 ## [1.4.0] - 2026-06-19
 
 ### Added
+- **Tracking & Analytics Management System** (`AnalyticsLoader.tsx`, `tracking.ts`, `AdminSettings.tsx`): Built a dynamic tracking system modeled after Dukaan's integrations UI. Allows rotation of Google Analytics (GA4) / Google Ads profiles dynamically, managed securely from the admin panel with a global toggle and Meta Pixel configuration.
+- **Conversion Tracking Hooks** (`Waitlist.tsx`, `Signup.tsx`): Integrated Google Ads conversion fires (`trackSignupConversion()`) upon successful waitlist form submissions and user registrations.
+- **Supabase Tracking Schema & Migration** (`20260619110000_tracking_management_system.sql`): Created database tables `tracking_profiles` and `site_settings` with Row-Level Security policies and a custom `activate_tracking_profile` RPC function.
 - **Secure Webhook Verification** (`whatsapp-webhook/index.ts`): Implemented timing-safe Twilio request signature validation checking the request body SHA-256 and URL HMAC-SHA1 using securely decypted Twilio tokens.
 - **CSRF Protection on OAuth Callback** (`IntegrationConnect.tsx` and `OAuthCallback.tsx`): Generated cryptographically secure random states stored in sessionStorage and verified on OAuth redirect responses.
 - **Secure Vault Key Persistence** (`shopify-connect/index.ts` and `IntegrationConnect.tsx`): Directly call Vault storage RPC (`vault_store`) to securely store and decrypt credentials.
@@ -19,6 +22,7 @@ All notable changes to the Weeber platform will be documented in this file. This
 - **Email Service Configuration** (`email.service.js`): Added an assertive boot check to throw a fatal exception if `RESEND_API_KEY` is not defined in production mode.
 - **Refactored Frontend Modules**: Ported `Settings.tsx`, `Outcomes.tsx`, `Onboarding.tsx`, `Numbers.tsx`, `Dashboard.tsx`, `Contacts.tsx`, `CampaignDetail.tsx`, `AgentsList.tsx`, `AgentDetail.tsx`, and `VerticalContext.tsx` to the centralized database helper layer.
 - **Improved Error Management**: Expose sanitized user-facing messages in edge functions and frontend pages via toast indicators.
+- **Aligned Content Security Policy** (`index.html`): White-listed tracking domains for Google Analytics, Google Ads, and Facebook Pixel.
 
 ---
 

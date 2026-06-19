@@ -53,11 +53,13 @@ src/
 │   ├── db.ts               ← Supabase data access layer (30+ functions)
 │   ├── api.ts              ← Backend HTTP client with auth retry
 │   ├── admin-api.ts        ← Admin panel API client
+│   ├── tracking.ts         ← Supabase tracking profiles & settings data access layer
 │   └── supabase.ts         ← Supabase client initialization
 ├── components/
 │   ├── layout/             ← AppShell (config-driven sidebar), AdminShell
 │   ├── ui/                 ← shadcn/ui components
-│   └── marketing/          ← Public site components
+│   ├── marketing/          ← Public site components
+│   └── AnalyticsLoader.tsx ← Dynamic Google & Facebook analytics script loader
 ├── pages/                  ← Route-level page components (39 pages)
 └── apps/
     ├── admin/              ← Admin panel sub-app
