@@ -5,8 +5,8 @@ const POSTHOG_HOST = (import.meta.env.VITE_POSTHOG_HOST as string) || "https://u
 
 let initialized = false;
 
-export function initPostHog() {
-  if (initialized || !POSTHOG_KEY) return;
+export function initPostHog(): boolean {
+  if (initialized || !POSTHOG_KEY) return false;
 
   posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
@@ -16,6 +16,7 @@ export function initPostHog() {
   });
 
   initialized = true;
+  return true;
 }
 
 export function identifyUser(userId: string, properties?: Record<string, unknown>) {
