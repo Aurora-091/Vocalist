@@ -4,6 +4,12 @@ import { RequireAuth, PublicOnly } from "@/components/RequireAuth";
 import { AppShell } from "@/components/layout/AppShell";
 import { isAppDomain, appUrl, marketingUrl } from "@/lib/hostname";
 
+// Marketing pages — direct imports, no lazy chunk waterfall on the critical path
+import Waitlist from "@/pages/Waitlist";
+import About from "@/pages/About";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import Terms from "@/pages/Terms";
+
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
@@ -28,10 +34,6 @@ const OAuthCallback = lazy(() => import("@/pages/auth/OAuthCallback"));
 const AuthBridge = lazy(() => import("@/pages/auth/AuthBridge"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const Knowledge = lazy(() => import("@/pages/Knowledge"));
-const About = lazy(() => import("@/pages/About"));
-const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
-const Terms = lazy(() => import("@/pages/Terms"));
-const Waitlist = lazy(() => import("@/pages/Waitlist"));
 
 function PageLoader() {
   return (

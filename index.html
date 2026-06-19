@@ -34,8 +34,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" href="/weeber_favicon_transparent.png" as="image" type="image/png" />
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <link rel="preload" as="style" fetchpriority="high" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+    <!-- Critical CSS: inlined to eliminate CSS bundle dependency on first paint -->
+    <style>
+      html,body,#root{height:100%;margin:0}
+      body{background:#FCFCFB;color:#0B0B0C;font-family:"Bricolage Grotesque","Inter",ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+      .marketing{--m-bg:#FCFCFB;--m-bg-alt:#F3F2EF;--m-surface:#FFFFFF;--m-border:#E6E5E2;--m-text:#0B0B0C;--m-text-secondary:#45454C;--m-text-muted:#7A7A82;--m-accent-bg:#0B0B0C;--m-accent-fg:#FCFCFB;background-color:var(--m-bg);color:var(--m-text)}
+      @media(prefers-color-scheme:dark){body{background:#000000;color:#FAFAFA}.marketing{--m-bg:#000000;--m-bg-alt:#0A0A0A;--m-surface:#141414;--m-border:rgba(255,255,255,0.08);--m-text:#FAFAFA;--m-text-secondary:#C7C7CC;--m-text-muted:#8A8A90;--m-accent-bg:#FAFAFA;--m-accent-fg:#000000}}
+    </style>
     <link rel="icon" type="image/png" href="/weeber_favicon_transparent.png" />
     <title>Weeber — AI Voice Agents for Missed Calls | Join the Waitlist</title>
     <script type="application/ld+json">

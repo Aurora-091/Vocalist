@@ -32,6 +32,36 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: true,
     target: "es2020",
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // App-only pages — never loaded on the marketing domain, split out
+          if (
+            id.includes("src/pages/Dashboard") ||
+            id.includes("src/pages/Agents") ||
+            id.includes("src/pages/Campaign") ||
+            id.includes("src/pages/Calls") ||
+            id.includes("src/pages/Contacts") ||
+            id.includes("src/pages/Analytics") ||
+            id.includes("src/pages/Knowledge") ||
+            id.includes("src/pages/Numbers") ||
+            id.includes("src/pages/Billing") ||
+            id.includes("src/pages/Settings") ||
+            id.includes("src/pages/Voice") ||
+            id.includes("src/pages/Outcomes") ||
+            id.includes("src/pages/Integrations") ||
+            id.includes("src/pages/Onboarding") ||
+            id.includes("src/components/layout/AppShell") ||
+            id.includes("src/apps/admin")
+          ) {
+            return "app";
+          }
+          if (id.includes("node_modules/react-dom")) return "react-dom";
+          if (id.includes("node_modules/@supabase")) return "supabase";
+          if (id.includes("node_modules/posthog-js")) return "posthog";
+        },
+      },
+    },
   },
   test: {
     environment: "jsdom",

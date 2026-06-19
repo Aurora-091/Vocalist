@@ -80,6 +80,22 @@ function injectGTM(containerId: string) {
   }, 3000);
 }
 
+function injectTag(tagId: string) {
+  if (tagInjected) return;
+  window.dataLayer = window.dataLayer || [];
+  if (tagId.startsWith("GTM-")) {
+    setAnalyticsStatus({ tagId, tagType: "gtm" });
+    injectGTM(tagId);
+  } else if (tagId.startsWith("G-")) {
+    setAnalyticsStatus({ tagId, tagType: "ga4" });
+    injectGtag(tagId);
+  } else {
+    setAnalyticsStatus({ status: "error", tagId, error: "Unrecognized tag format. Expected G-XXXXX or GTM-XXXXX" });
+    return;
+  }
+  tagInjected = true;
+}
+
 export function AnalyticsLoader() {
   const location = useLocation();
 
@@ -89,10 +105,16 @@ export function AnalyticsLoader() {
     const posthogReady = initPostHog();
     setAnalyticsStatus({ posthog: !!posthogReady });
 
-    (async () => {
-      let tagId = import.meta.env.VITE_GTM_ID || import.meta.env.VITE_GA4_ID || null;
-      let trackingEnabled = true;
+    const envTagId = import.meta.env.VITE_GTM_ID || import.meta.env.VITE_GA4_ID || null;
 
+    // Fast path: env var is set — inject immediately, no DB round-trip needed.
+    if (envTagId) {
+      injectTag(envTagId);
+      return;
+    }
+
+    // Slow path: no env var — check DB for admin-configured tag ID.
+    (async () => {
       try {
         const { data, error } = await supabase
           .from("site_settings")
@@ -102,42 +124,21 @@ export function AnalyticsLoader() {
 
         if (error) throw error;
 
-        if (data) {
-          tagId = data.gtm_container_id || tagId;
-          trackingEnabled = data.tracking_enabled;
+        if (!data || !data.tracking_enabled) {
+          setAnalyticsStatus({ status: "disabled", tagId: data?.gtm_container_id ?? null });
+          return;
         }
+
+        if (!data.gtm_container_id) {
+          setAnalyticsStatus({ status: "disabled", error: "No tag ID configured" });
+          return;
+        }
+
+        injectTag(data.gtm_container_id);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         setAnalyticsStatus({ status: "error", error: `DB fetch failed: ${msg}` });
-        return;
       }
-
-      if (!trackingEnabled) {
-        setAnalyticsStatus({ status: "disabled", tagId });
-        return;
-      }
-
-      if (!tagId) {
-        setAnalyticsStatus({ status: "disabled", error: "No tag ID configured" });
-        return;
-      }
-
-      if (tagInjected) return;
-
-      window.dataLayer = window.dataLayer || [];
-
-      if (tagId.startsWith("GTM-")) {
-        setAnalyticsStatus({ tagId, tagType: "gtm" });
-        injectGTM(tagId);
-      } else if (tagId.startsWith("G-")) {
-        setAnalyticsStatus({ tagId, tagType: "ga4" });
-        injectGtag(tagId);
-      } else {
-        setAnalyticsStatus({ status: "error", tagId, error: `Unrecognized tag format. Expected G-XXXXX or GTM-XXXXX` });
-        return;
-      }
-
-      tagInjected = true;
     })();
   }, []);
 
