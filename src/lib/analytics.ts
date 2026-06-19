@@ -1,12 +1,21 @@
+import { captureEvent } from "./posthog";
+
 declare global {
   interface Window {
     dataLayer?: Record<string, unknown>[];
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
 function trackEvent(name: string, params?: Record<string, unknown>) {
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ event: name, ...params });
+
+  if (window.gtag) {
+    window.gtag("event", name, params);
+  }
+
+  captureEvent(name, params);
 }
 
 export function trackTryDemo() {
@@ -26,6 +35,5 @@ export function trackFormSuccess() {
 }
 
 export function trackSignupConversion() {
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({ event: "signup_success" });
+  trackEvent("signup_success");
 }
