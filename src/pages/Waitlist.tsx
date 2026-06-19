@@ -4,8 +4,7 @@ import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { joinWaitlist } from "../lib/api";
 import { useWaitlistCount } from "../lib/useWaitlistCount";
-import { trackSignupConversion } from "../components/AnalyticsLoader";
-import { trackFormSubmit, trackFormSuccess } from "../lib/analytics";
+import { trackFormSubmit, trackFormSuccess, trackSignupConversion } from "../lib/analytics";
 import {
   STATS,
   HOW_IT_WORKS,

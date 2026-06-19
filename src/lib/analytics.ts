@@ -1,13 +1,12 @@
 declare global {
   interface Window {
-    gtag?: (...args: unknown[]) => void;
+    dataLayer?: Record<string, unknown>[];
   }
 }
 
-function trackEvent(name: string, params?: Record<string, string>) {
-  if (typeof window.gtag === "function") {
-    window.gtag("event", name, params);
-  }
+function trackEvent(name: string, params?: Record<string, unknown>) {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event: name, ...params });
 }
 
 export function trackTryDemo() {
@@ -24,4 +23,9 @@ export function trackFormSubmit() {
 
 export function trackFormSuccess() {
   trackEvent("form_success");
+}
+
+export function trackSignupConversion() {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event: "signup_success" });
 }

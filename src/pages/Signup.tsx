@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 
-import { trackSignupConversion } from "../components/AnalyticsLoader";
+import { trackSignupConversion } from "../lib/analytics";
 
 const signupSchema = z.object({
   orgName: z.string().min(2, "Organization name must be at least 2 characters."),
