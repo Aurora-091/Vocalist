@@ -47,10 +47,22 @@ export function PublicOnly({ children }: { children: ReactNode }) {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
+      if (data.session && isMarketingDomain) {
+        const at = data.session.access_token;
+        const rt = data.session.refresh_token;
+        window.location.href = `${appUrl("/auth/bridge?redirect=/dashboard")}#access_token=${at}&refresh_token=${rt}`;
+        return;
+      }
       setStatus(data.session ? "in" : "out");
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (!mounted) return;
+      if (session && isMarketingDomain) {
+        const at = session.access_token;
+        const rt = session.refresh_token;
+        window.location.href = `${appUrl("/auth/bridge?redirect=/dashboard")}#access_token=${at}&refresh_token=${rt}`;
+        return;
+      }
       setStatus(session ? "in" : "out");
     });
     return () => {
@@ -67,10 +79,6 @@ export function PublicOnly({ children }: { children: ReactNode }) {
     );
   }
   if (status === "in") {
-    if (isMarketingDomain) {
-      window.location.href = appUrl("/dashboard");
-      return null;
-    }
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
