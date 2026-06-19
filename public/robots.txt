@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /agents
+Disallow: /campaigns
+Disallow: /calls
+Disallow: /contacts
+Disallow: /integrations
+Disallow: /numbers
+Disallow: /voices
+Disallow: /outcomes
+Disallow: /analytics
+Disallow: /knowledge
+Disallow: /billing
+Disallow: /settings
+Disallow: /onboarding
+Disallow: /auth/
+
+Sitemap: https://www.weeber.ai/sitemap.xml
