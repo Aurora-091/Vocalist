@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { adminApi, type PlatformSettings } from "../../lib/admin-api";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader as Loader2, CircleCheck as CheckCircle2, Circle as XCircle, TriangleAlert as AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../lib/supabase";
 
@@ -16,6 +16,113 @@ const TOGGLE_SETTINGS = [
   { key: "beta_features", label: "Beta Features", description: "Enable beta feature flags globally" },
   { key: "experimental_features", label: "Experimental Features", description: "Enable experimental/unstable features" },
 ];
+
+type TagStatus = {
+  status: "pending" | "loaded" | "disabled" | "error";
+  tagId: string | null;
+  tagType: "ga4" | "gtm" | null;
+  posthog: boolean;
+  loadedAt: string | null;
+  error: string | null;
+};
+
+function TagValidationStatus() {
+  const [tagStatus, setTagStatus] = useState<TagStatus | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const checkStatus = useCallback(() => {
+    setChecking(true);
+    setTimeout(() => {
+      const status = window.__weeber_analytics || null;
+      setTagStatus(status);
+      setChecking(false);
+    }, 500);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(checkStatus, 1500);
+    return () => clearTimeout(timer);
+  }, [checkStatus]);
+
+  if (!tagStatus && !checking) {
+    return (
+      <div className="rounded-md border border-border bg-muted/30 p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          Tag status not available yet
+        </div>
+        <Button variant="ghost" size="sm" onClick={checkStatus}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          Check
+        </Button>
+      </div>
+    );
+  }
+
+  if (checking) {
+    return (
+      <div className="rounded-md border border-border bg-muted/30 p-4 flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Verifying tag installation...
+      </div>
+    );
+  }
+
+  const statusConfig = {
+    loaded: { icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Active" },
+    disabled: { icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-500/10 border-amber-500/20", label: "Disabled" },
+    error: { icon: XCircle, color: "text-red-500", bg: "bg-red-500/10 border-red-500/20", label: "Error" },
+    pending: { icon: Loader2, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20", label: "Loading" },
+  };
+
+  const config = statusConfig[tagStatus!.status];
+  const Icon = config.icon;
+
+  return (
+    <div className={`rounded-md border p-4 space-y-3 ${config.bg}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${config.color} ${tagStatus!.status === "pending" ? "animate-spin" : ""}`} />
+          <span className="text-sm font-medium">Tag Status: {config.label}</span>
+        </div>
+        <Button variant="ghost" size="sm" onClick={checkStatus} className="h-7 px-2">
+          <RefreshCw className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Tag ID</span>
+          <span className="font-mono font-medium">{tagStatus!.tagId || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Type</span>
+          <span className="font-medium uppercase">{tagStatus!.tagType || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">PostHog</span>
+          <span className={`font-medium ${tagStatus!.posthog ? "text-emerald-600" : "text-muted-foreground"}`}>
+            {tagStatus!.posthog ? "Connected" : "Not configured"}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Loaded at</span>
+          <span className="font-mono font-medium">
+            {tagStatus!.loadedAt
+              ? new Date(tagStatus!.loadedAt).toLocaleTimeString()
+              : "—"}
+          </span>
+        </div>
+      </div>
+
+      {tagStatus!.error && (
+        <div className="text-xs text-red-600 bg-red-500/5 rounded px-2 py-1.5 border border-red-500/10">
+          {tagStatus!.error}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<PlatformSettings | null>(null);
@@ -210,6 +317,11 @@ export default function AdminSettings() {
             Manage all GA4, Google Ads, and Meta tags inside the Google Tag Manager dashboard.
             Changing this ID takes effect on the next page load — no redeploy.
           </p>
+
+          <div className="pt-2">
+            <Label className="text-xs font-medium text-muted-foreground mb-2 block">Installation Validation</Label>
+            <TagValidationStatus />
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -43,16 +43,10 @@ function injectGtag(measurementId: string) {
 
   gtagScript.onload = () => {
     setAnalyticsStatus({ status: "loaded", loadedAt: new Date().toISOString() });
-    console.info(
-      `%c[Weeber Analytics] GA4 tag loaded successfully %c${measurementId}`,
-      "color: #16a34a; font-weight: bold;",
-      "color: #6b7280;"
-    );
   };
 
   gtagScript.onerror = () => {
     setAnalyticsStatus({ status: "error", error: "GA4 script failed to load (blocked by ad-blocker or network error)" });
-    console.warn("[Weeber Analytics] GA4 script failed to load — likely blocked by an ad-blocker.");
   };
 
   document.head.insertBefore(gtagScript, document.head.firstChild);
@@ -80,14 +74,8 @@ function injectGTM(containerId: string) {
     const gtmLoaded = document.querySelector(`script[src*="googletagmanager.com/gtm.js?id=${containerId}"]`);
     if (gtmLoaded) {
       setAnalyticsStatus({ status: "loaded", loadedAt: new Date().toISOString() });
-      console.info(
-        `%c[Weeber Analytics] GTM container loaded successfully %c${containerId}`,
-        "color: #16a34a; font-weight: bold;",
-        "color: #6b7280;"
-      );
     } else {
-      setAnalyticsStatus({ status: "error", error: "GTM script may be blocked" });
-      console.warn("[Weeber Analytics] GTM container may not have loaded — check for ad-blockers.");
+      setAnalyticsStatus({ status: "error", error: "GTM script may be blocked by ad-blocker" });
     }
   }, 3000);
 }
@@ -121,19 +109,16 @@ export function AnalyticsLoader() {
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         setAnalyticsStatus({ status: "error", error: `DB fetch failed: ${msg}` });
-        console.error("[Weeber Analytics] Failed to fetch tracking config:", err);
         return;
       }
 
       if (!trackingEnabled) {
         setAnalyticsStatus({ status: "disabled", tagId });
-        console.info("%c[Weeber Analytics] Tracking is disabled via site_settings", "color: #d97706;");
         return;
       }
 
       if (!tagId) {
         setAnalyticsStatus({ status: "disabled", error: "No tag ID configured" });
-        console.info("%c[Weeber Analytics] No tag ID configured — skipping Google tag injection", "color: #d97706;");
         return;
       }
 
@@ -148,8 +133,7 @@ export function AnalyticsLoader() {
         setAnalyticsStatus({ tagId, tagType: "ga4" });
         injectGtag(tagId);
       } else {
-        setAnalyticsStatus({ status: "error", tagId, error: `Unrecognized tag format: ${tagId}. Expected G-XXXXX or GTM-XXXXX` });
-        console.error(`[Weeber Analytics] Unrecognized tag ID format: "${tagId}". Must start with "G-" (GA4) or "GTM-" (Tag Manager).`);
+        setAnalyticsStatus({ status: "error", tagId, error: `Unrecognized tag format. Expected G-XXXXX or GTM-XXXXX` });
         return;
       }
 
