@@ -28,7 +28,11 @@ export default defineConfig({
       },
     },
   },
-  build: { outDir: "dist", sourcemap: false },
+  build: {
+    outDir: "dist",
+    sourcemap: true,
+    target: "es2020",
+  },
   test: {
     environment: "jsdom",
     setupFiles: "./src/setupTests.ts",

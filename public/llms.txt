@@ -1,0 +1,35 @@
+# Weeber
+
+> AI voice agents that answer and make customer calls — booking appointments, recovering abandoned carts, and following up on orders. Human-sounding, 24/7, no code required.
+
+## What is Weeber?
+
+Weeber is a no-code voice AI platform for small and medium businesses. It handles inbound and outbound phone calls using natural-sounding AI agents powered by ElevenLabs. Businesses use Weeber to recover abandoned carts, confirm COD orders, book appointments, and follow up with customers — without hiring a call center.
+
+## Who is it for?
+
+- Shopify merchants who lose revenue to abandoned carts and unconfirmed COD orders
+- Healthcare clinics that miss appointment calls after hours
+- Local service businesses that can't afford a receptionist for every call
+
+## Key Features
+
+- Natural voice conversations (callers often don't realize it's AI)
+- Shopify, WhatsApp, and Google Calendar integrations
+- TCPA and consent compliance built-in
+- Full call transcripts and analytics dashboard
+- No code required — configure agents with simple rules
+
+## Company
+
+- Founded: 2026
+- Location: India
+- Founders: Ashutosh Tiwari, Rushikesh Pawar
+- Website: https://www.weeber.ai
+
+## Pages
+
+- [Homepage](https://www.weeber.ai/)
+- [About](https://www.weeber.ai/about)
+- [Privacy Policy](https://www.weeber.ai/privacy)
+- [Terms of Service](https://www.weeber.ai/terms)

@@ -39,6 +39,8 @@ function PageLoader() {
       <img
         src="/weeber_favicon_transparent.png"
         alt="Loading"
+        width={32}
+        height={32}
         className="h-8 w-8 object-contain dark:invert animate-pulse"
       />
     </div>

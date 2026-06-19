@@ -41,6 +41,8 @@ export function WeeberLogo({
     <img
       src={src}
       alt="Weeber"
+      width={variant === "icon" ? h : Math.round(h * 3.5)}
+      height={h}
       style={style}
       className={`${inverted ? "" : "dark:invert"} ${className}`}
     />

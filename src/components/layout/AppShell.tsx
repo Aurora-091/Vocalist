@@ -136,6 +136,8 @@ function AppSidebar() {
           <img
             src="/weeber_favicon_transparent.png"
             alt="Weeber"
+            width={28}
+            height={28}
             className="h-7 w-7 object-contain dark:invert flex-shrink-0"
           />
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 group-data-[collapsible=icon]:hidden">

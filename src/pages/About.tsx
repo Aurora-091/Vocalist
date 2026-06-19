@@ -98,6 +98,8 @@ export default function About() {
                   <img
                     src={member.image}
                     alt={member.name}
+                    width={144}
+                    height={144}
                     className="w-full h-full object-cover"
                   />
                 </div>
