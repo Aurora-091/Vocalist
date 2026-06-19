@@ -355,7 +355,7 @@ export default function Waitlist() {
           <div className="relative z-10 max-w-[900px] mx-auto">
             <HeroBadge />
             <h1 className="font-display text-[clamp(2.8rem,6vw,5.5rem)] font-extrabold leading-[0.93] tracking-[-0.03em] text-[var(--m-text)]" data-reveal>
-              Every call you miss<br />is a sale you just lost.
+              Every call you miss<br />{" "}is a sale you just lost.
             </h1>
             <p className="mt-6 text-[1.1rem] font-medium text-[var(--m-text-secondary)] max-w-[480px] mx-auto leading-[1.6]" data-reveal>
               Voice AI that books, recovers carts, and follows up. 24/7. No code.
@@ -412,8 +412,11 @@ export default function Waitlist() {
                 Use cases
               </span>
               <h2 className="mt-4 font-display text-[clamp(28px,3.8vw,46px)] font-extrabold tracking-[-0.03em] leading-[1.04] text-[var(--m-text)] max-w-xl">
-                Who is Weeber for?
+                The AI voice agent built for your business.
               </h2>
+              <p className="mt-3 text-[17px] text-[var(--m-text-secondary)] max-w-lg leading-relaxed">
+                Shopify stores, clinics, and local service businesses use Weeber to handle inbound calls, recover abandoned carts, and book appointments without hiring staff.
+              </p>
             </div>
             <div className="grid md:grid-cols-3 gap-4" data-reveal>
               {VERTICALS.map((v, i) => (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, Phone, ShieldCheck, Zap, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -24,6 +24,13 @@ export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="robots"]');
+    const prev = meta?.getAttribute("content") || "";
+    meta?.setAttribute("content", "noindex, nofollow");
+    return () => { meta?.setAttribute("content", prev); };
+  }, []);
 
   const {
     register,

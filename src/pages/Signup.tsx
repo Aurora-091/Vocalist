@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ShieldCheck, Phone, Zap, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -26,6 +26,13 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function Signup() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="robots"]');
+    const prev = meta?.getAttribute("content") || "";
+    meta?.setAttribute("content", "noindex, nofollow");
+    return () => { meta?.setAttribute("content", prev); };
+  }, []);
 
   const {
     register,
