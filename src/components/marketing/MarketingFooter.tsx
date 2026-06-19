@@ -4,7 +4,7 @@ import { WeeberLogo } from "../WeeberLogo";
 
 export function MarketingFooter() {
   return (
-    <footer className="bg-[#000000] text-white">
+    <footer role="contentinfo" aria-label="Site footer" className="bg-[#000000] text-white">
       <div className="max-w-[1200px] mx-auto px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
           <div className="col-span-2 md:col-span-2">
@@ -14,7 +14,7 @@ export function MarketingFooter() {
             </p>
           </div>
           {FOOTER_COLUMNS.map((col) => (
-            <div key={col.title}>
+            <nav key={col.title} aria-label={col.title}>
               <div className="text-xs font-medium tracking-widest uppercase text-white mb-4">
                 {col.title}
               </div>
@@ -41,7 +41,7 @@ export function MarketingFooter() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
         <div className="mt-16 pt-8 border-t border-white/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

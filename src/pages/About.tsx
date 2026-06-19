@@ -8,6 +8,7 @@ export default function About() {
     <div className="marketing min-h-full bg-[#FAFAFA] dark:bg-[#0A0A0A]">
       <MarketingNav />
 
+      <main id="main-content">
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] dark:text-[#94A3B8] mb-4">
@@ -126,6 +127,7 @@ export default function About() {
           </a>
         </div>
       </section>
+      </main>
 
       <MarketingFooter />
     </div>

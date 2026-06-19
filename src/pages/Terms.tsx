@@ -50,6 +50,7 @@ export default function Terms() {
     <div className="marketing min-h-full bg-[#F8F9FB]">
       <MarketingNav />
 
+      <main id="main-content">
       <div className="pt-32 pb-20 px-6">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-xs font-medium tracking-widest uppercase text-[#888] mb-4">
@@ -65,7 +66,7 @@ export default function Terms() {
       <div className="border-t border-[#D9D5CE]">
         <div className="max-w-[1200px] mx-auto px-6 py-16">
           <div className="grid md:grid-cols-[220px_1fr] gap-12">
-            <nav className="hidden md:block sticky top-24 self-start">
+            <nav aria-label="Table of contents" className="hidden md:block sticky top-24 self-start">
               <ul className="space-y-2">
                 {SECTIONS.map((section) => (
                   <li key={section.id}>
@@ -295,6 +296,7 @@ export default function Terms() {
           margin-bottom: 0.25rem;
         }
       `}</style>
+      </main>
 
       <MarketingFooter />
     </div>

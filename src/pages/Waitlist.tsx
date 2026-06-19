@@ -347,7 +347,7 @@ export default function Waitlist() {
       <GrainOverlay />
       <MarketingNav />
 
-      <div className="marketing-content">
+      <main id="main-content" className="marketing-content">
         {/* Hero */}
         <section id="waitlist" className="relative pt-28 pb-20 md:pb-24 px-6 text-center overflow-hidden" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <HeroBgWaveform />
@@ -745,7 +745,7 @@ export default function Waitlist() {
           </div>
         </section>
 
-      </div>
+      </main>
 
       <MarketingFooter />
     </div>

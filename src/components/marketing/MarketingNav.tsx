@@ -23,6 +23,7 @@ export function MarketingNav() {
 
   return (
     <header
+      role="banner"
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
         scrolled
           ? "bg-[var(--m-bg)]/86 backdrop-blur-[10px] border-b border-[var(--m-border)]"
@@ -34,7 +35,7 @@ export function MarketingNav() {
           <WeeberLogo size="md" />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8">
+        <nav aria-label="Main navigation" className="hidden md:flex items-center gap-8">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -65,15 +66,17 @@ export function MarketingNav() {
           type="button"
           onClick={() => setMobileOpen(!mobileOpen)}
           className="md:hidden p-2 text-[var(--m-text)]"
-          aria-label="Toggle menu"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-nav"
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden bg-[var(--m-bg)] border-b border-[var(--m-border)] px-6 pb-6">
-          <nav className="flex flex-col gap-4 mb-6">
+        <div id="mobile-nav" className="md:hidden bg-[var(--m-bg)] border-b border-[var(--m-border)] px-6 pb-6">
+          <nav aria-label="Mobile navigation" className="flex flex-col gap-4 mb-6">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}

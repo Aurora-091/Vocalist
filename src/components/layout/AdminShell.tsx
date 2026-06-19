@@ -82,7 +82,7 @@ function AdminSidebar() {
   }
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" aria-label="Admin navigation">
       <SidebarHeader className="h-14 justify-center px-3">
         <NavLink to="/admin" className="flex items-center gap-2">
           <img
@@ -130,18 +130,18 @@ export function AdminShell() {
       <SidebarProvider>
         <AdminSidebar />
         <SidebarInset>
-          <header className="h-14 bg-background flex items-center justify-between px-4 md:px-6">
+          <header role="banner" className="h-14 bg-background flex items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-3">
-              <SidebarTrigger className="-ml-1" />
+              <SidebarTrigger className="-ml-1" aria-label="Toggle sidebar" />
               <span className="text-sm font-medium text-foreground">Platform Admin</span>
             </div>
-            <div className="flex items-center gap-3">
+            <nav aria-label="Admin quick actions" className="flex items-center gap-3">
               <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Exit Admin
               </Link>
-            </div>
+            </nav>
           </header>
-          <main className="flex-1 overflow-auto bg-background">
+          <main id="main-content" aria-label="Admin content" className="flex-1 overflow-auto bg-background">
             <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-6 md:py-8">
               <Suspense fallback={<PageSkeleton />}>
                 <Outlet />
