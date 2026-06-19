@@ -25,6 +25,7 @@ function AppLoader() {
 }
 
 import { AnalyticsLoader } from "@/components/AnalyticsLoader";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -36,6 +37,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             {isAdminApp ? <AdminApp /> : <CustomerApp />}
           </Suspense>
           <Toaster richColors closeButton position="top-right" />
+          <SpeedInsights />
         </TooltipProvider>
       </ThemeProvider>
     </BrowserRouter>
