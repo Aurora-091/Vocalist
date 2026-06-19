@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ShieldCheck, Phone, Zap, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { api, ApiError } from "../lib/api";
+import { appUrl, isAppDomain } from "../lib/hostname";
 import { WeeberLogo } from "../components/WeeberLogo";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,7 +51,11 @@ export default function Signup() {
         });
         trackSignupConversion();
         toast.success("Account created successfully!");
-        navigate("/onboarding");
+        if (isAppDomain) {
+          navigate("/onboarding");
+        } else {
+          window.location.href = `${appUrl("/auth/bridge?redirect=/onboarding")}#access_token=${result.session.access_token}&refresh_token=${result.session.refresh_token}`;
+        }
       } else {
         trackSignupConversion();
         toast.success("Account created! Please log in.");
@@ -69,7 +74,7 @@ export default function Signup() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/onboarding`,
+        redirectTo: appUrl("/auth/bridge?redirect=/onboarding"),
         queryParams: { prompt: "select_account" },
       },
     });

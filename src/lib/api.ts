@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { marketingUrl } from "./hostname";
 
 // In dev, an empty base URL means requests are relative and handled by the Vite
 // proxy (see vite.config.ts). In production the var must be set explicitly so we
@@ -55,7 +56,7 @@ async function request<T>(
       const { error } = await supabase.auth.refreshSession();
       if (error) {
         await supabase.auth.signOut();
-        window.location.href = "/login";
+        window.location.href = marketingUrl("/login");
         throw new ApiError(401, "unauthorized", "Session expired");
       }
       const retryHeaders = await getAuthHeaders();

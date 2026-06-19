@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { isMarketingDomain, isAppDomain, appUrl, marketingUrl } from "../lib/hostname";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -30,6 +31,10 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
   if (status === "out") {
+    if (isAppDomain) {
+      window.location.href = marketingUrl("/login");
+      return null;
+    }
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
   return <>{children}</>;
@@ -62,6 +67,10 @@ export function PublicOnly({ children }: { children: ReactNode }) {
     );
   }
   if (status === "in") {
+    if (isMarketingDomain) {
+      window.location.href = appUrl("/dashboard");
+      return null;
+    }
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;

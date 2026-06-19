@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, Phone, ShieldCheck, Zap, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
+import { appUrl, isAppDomain } from "../lib/hostname";
 import { WeeberLogo } from "../components/WeeberLogo";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,8 +45,12 @@ export default function Login() {
           access_token: result.session.access_token,
           refresh_token: result.session.refresh_token,
         });
+        if (isAppDomain) {
+          navigate("/dashboard");
+        } else {
+          window.location.href = `${appUrl("/auth/bridge?redirect=/dashboard")}#access_token=${result.session.access_token}&refresh_token=${result.session.refresh_token}`;
+        }
       }
-      navigate("/dashboard");
     } catch {
       toast.error("That email and password didn't match. Try again.");
     }
@@ -55,7 +60,7 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: appUrl("/auth/bridge?redirect=/dashboard"),
         queryParams: { prompt: "select_account" },
       },
     });
@@ -76,9 +81,13 @@ export default function Login() {
           access_token: result.session.access_token,
           refresh_token: result.session.refresh_token,
         });
+        if (isAppDomain) {
+          navigate("/dashboard");
+        } else {
+          window.location.href = `${appUrl("/auth/bridge?redirect=/dashboard")}#access_token=${result.session.access_token}&refresh_token=${result.session.refresh_token}`;
+        }
       }
       setDemoLoading(false);
-      navigate("/dashboard");
     }).catch(() => {
       setDemoLoading(false);
       toast.error("Demo account not available. Please sign up.");
