@@ -61,3 +61,7 @@ Before ending any turn, you **must** verify compilation and tests:
 - **Frontend Type Checking**: Run `npx tsc --noEmit` in the workspace root. Confirm 0 errors.
 - **Backend Tests**: Run `npm test` inside the `backend/` directory. Confirm all 60 tests pass.
 - **Backend Lint**: Ensure CommonJS conventions match and code formatting is correct.
+
+### 3. Documentation Synchronicity
+- **Always update documentation after changes**: After completing any code changes or refactoring, you must immediately update relevant documentation files: `CHANGELOG.md` with features/fixes/changes, `DECISIONS.md` if architectural patterns changed, and `README.md` if file structures or directories were altered.
+
