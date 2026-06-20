@@ -35,6 +35,7 @@ const twilioRoutes = require("./modules/twilio/twilio.routes");
 const waitlistRoutes = require("./modules/waitlist/waitlist.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
 const skillRoutes = require("./modules/skills/skills.routes");
+const enterpriseRoutes = require("./modules/enterprise/enterprise.routes");
 
 function buildCorsOptions() {
   const allowed = (process.env.CORS_ALLOWED_ORIGINS || "")
@@ -147,6 +148,7 @@ function createApp() {
 
   app.use("/v1/auth", authRoutes);
   app.use("/v1/waitlist", waitlistRoutes);
+  app.use("/v1/enterprise", enterpriseRoutes);
 
   app.use("/v1", apiLimiter);
 

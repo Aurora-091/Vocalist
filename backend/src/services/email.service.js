@@ -407,4 +407,123 @@ async function resolveRecipients(recipientType) {
   return [];
 }
 
-module.exports = { sendWaitlistWelcome, sendBroadcastEmail, resolveRecipients, buildBroadcastHtml };
+module.exports = { sendWaitlistWelcome, sendBroadcastEmail, resolveRecipients, buildBroadcastHtml, sendEnterpriseConfirmation };
+
+// ─── Enterprise Inquiry Confirmation ─────────────────────────────────────────
+
+function buildEnterpriseConfirmationHtml(name) {
+  const firstName = name ? name.trim().split(/\s+/)[0] : null;
+  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>We received your inquiry — Weeber</title>
+</head>
+<body style="margin:0;padding:0;background:#F5F4F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#F5F4F0;padding:48px 20px 32px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:540px;">
+
+        <!-- Logo -->
+        <tr><td style="padding:0 0 28px;">
+          <img src="https://weeber.ai/weeber_logo_transparent.png" alt="Weeber" width="108" style="display:block;border:0;filter:brightness(0);" />
+        </td></tr>
+
+        <!-- Main card -->
+        <tr><td style="background:#FEFEFE;border:1px solid #E8E6E1;border-radius:3px;overflow:hidden;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+
+            <!-- Top accent line -->
+            <tr><td style="background:#0B0B0C;height:3px;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+            <!-- Content -->
+            <tr><td style="padding:40px 40px 36px;">
+
+              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#9A9AA0;text-transform:uppercase;letter-spacing:0.9px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                Enterprise
+              </p>
+              <h1 style="margin:0 0 24px;font-size:26px;font-weight:800;color:#0B0B0C;line-height:1.15;letter-spacing:-0.4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                ${greeting} We've got your inquiry.
+              </h1>
+
+              <p style="margin:0 0 20px;font-size:15px;color:#4A4A4F;line-height:1.75;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                Thanks for reaching out. Our enterprise team reviews every inquiry personally and typically responds within one business day.
+              </p>
+
+              <p style="margin:0 0 20px;font-size:15px;color:#4A4A4F;line-height:1.75;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                We'll be in touch shortly to understand your setup in more detail and walk you through what Weeber can do for high-volume or regulated environments.
+              </p>
+
+              <p style="margin:0 0 8px;font-size:15px;color:#4A4A4F;line-height:1.75;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                In the meantime, if you have an urgent question you can reach us directly at <a href="mailto:enterprise@weeber.ai" style="color:#0B0B0C;font-weight:600;text-decoration:none;">enterprise@weeber.ai</a>.
+              </p>
+
+            </td></tr>
+
+            <!-- Sign-off -->
+            <tr><td style="padding:0 40px 40px;border-top:1px solid #ECEAE5;">
+              <p style="margin:20px 0 0;font-size:14px;color:#67676C;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                Looking forward to speaking soon.
+              </p>
+              <p style="margin:8px 0 0;font-size:14px;color:#0B0B0C;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                — The Weeber team
+              </p>
+            </td></tr>
+
+          </table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="padding:24px 0 0;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#9A9AA0;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+            You received this because you submitted an enterprise inquiry at weeber.ai
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function sendEnterpriseConfirmation(email, name) {
+  if (!resend) {
+    logger.warn("RESEND_API_KEY not configured — skipping enterprise confirmation email");
+    return;
+  }
+
+  const { data, error } = await resend.emails.send({
+    from: env.RESEND_FROM_EMAIL,
+    to: [email],
+    subject: "We've received your enterprise inquiry — Weeber",
+    html: buildEnterpriseConfirmationHtml(name),
+    text: buildEnterpriseConfirmationText(name),
+    replyTo: "enterprise@weeber.ai",
+    tags: [{ name: "category", value: "enterprise" }],
+  });
+
+  if (error) {
+    logger.error({ err: error, to: email }, "Enterprise confirmation email failed");
+  } else {
+    logger.info({ emailId: data?.id, to: email }, "Enterprise confirmation email sent");
+  }
+}
+
+function buildEnterpriseConfirmationText(name) {
+  const firstName = name ? name.trim().split(/\s+/)[0] : null;
+  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+
+  return `${greeting}
+
+We've received your enterprise inquiry and our team will be in touch within one business day.
+
+In the meantime you can reach us directly at enterprise@weeber.ai.
+
+Looking forward to speaking soon.
+
+— The Weeber team`;
+}
