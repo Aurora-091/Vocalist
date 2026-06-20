@@ -16,6 +16,7 @@ import {
   VERTICALS,
 } from "../config/marketing";
 import { AgentDemoWidget } from "../components/marketing/AgentDemoWidget";
+import { EnterpriseDialog } from "../components/marketing/EnterpriseDialog";
 import {
   Dialog,
   DialogContent,
@@ -340,6 +341,7 @@ function HeroForm() {
 
 export default function Waitlist() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const revealRef = useReveal();
 
   return (
@@ -434,7 +436,13 @@ export default function Waitlist() {
                       <div className="text-[11px] text-[var(--m-text-muted)]">{v.demoAccent} &middot; {v.demoDuration}</div>
                     </div>
                     {i === 2 ? (
-                      <span className="text-[11px] font-medium text-[var(--m-text-muted)] italic">Demo coming soon</span>
+                      <button
+                        type="button"
+                        onClick={() => setEnterpriseOpen(true)}
+                        className="text-xs font-semibold text-[var(--m-text)] hover:opacity-70 transition-opacity"
+                      >
+                        Talk to us →
+                      </button>
                     ) : (
                       <a
                         href={v.cta.href}
@@ -751,6 +759,8 @@ export default function Waitlist() {
       </main>
 
       <MarketingFooter />
+
+      <EnterpriseDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
     </div>
   );
 }
