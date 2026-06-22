@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { initPostHog, capturePageView } from "../lib/posthog";
+
 
 declare global {
   interface Window {
@@ -11,7 +11,7 @@ declare global {
       status: "pending" | "loaded" | "disabled" | "error";
       tagId: string | null;
       tagType: "ga4" | "gtm" | null;
-      posthog: boolean;
+
       loadedAt: string | null;
       error: string | null;
     };
@@ -25,7 +25,7 @@ function setAnalyticsStatus(update: Partial<NonNullable<typeof window.__weeber_a
     status: "pending",
     tagId: null,
     tagType: null,
-    posthog: false,
+
     loadedAt: null,
     error: null,
     ...window.__weeber_analytics,
@@ -102,9 +102,6 @@ export function AnalyticsLoader() {
   useEffect(() => {
     setAnalyticsStatus({ status: "pending" });
 
-    const posthogReady = initPostHog();
-    setAnalyticsStatus({ posthog: !!posthogReady });
-
     const envTagId = import.meta.env.VITE_GTM_ID || import.meta.env.VITE_GA4_ID || null;
 
     // Fast path: env var is set — inject immediately, no DB round-trip needed.
@@ -144,8 +141,6 @@ export function AnalyticsLoader() {
 
   useEffect(() => {
     const fullPath = location.pathname + location.search;
-
-    capturePageView(fullPath);
 
     if (tagInjected && window.gtag) {
       window.gtag("event", "page_view", { page_path: fullPath });

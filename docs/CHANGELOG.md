@@ -14,7 +14,7 @@ All notable changes to the Weeber platform will be documented in this file. This
   - Added a multi-step interactive sliding dialog (`EnterpriseDialog.tsx`) with field validations, submit checks, and user-facing error toast handling.
   - Set up an Express backend route with Zod validation, payload size limits, and rate-limiting (`authLimiter`).
   - Added secure, non-blocking email notifications sent via Resend (`sendEnterpriseConfirmation`) with HTML-escaping sanitization.
-- **PostHog & Vercel Speed Insights Integration**: Wired up user auth mapping (`identifyUser`, `resetUser`) and pageview tracking in PostHog, and integrated Vercel Speed Insights.
+- **Vercel Speed Insights Integration**: Integrated Vercel Speed Insights for performance monitoring.
 - **SEO & Robot crawlers configuration**: Added standard files `public/robots.txt`, `public/sitemap.xml`, and `public/llms.txt`.
 - **Enterprise Inquiries Invariant Test Suite** (`enterprise-inquiries.test.js`): Created a new backend unit test suite validating the inquiries Zod input boundaries and HTML escaping sanitization.
 

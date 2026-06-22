@@ -21,7 +21,6 @@ type TagStatus = {
   status: "pending" | "loaded" | "disabled" | "error";
   tagId: string | null;
   tagType: "ga4" | "gtm" | null;
-  posthog: boolean;
   loadedAt: string | null;
   error: string | null;
 };
@@ -98,12 +97,6 @@ function TagValidationStatus() {
         <div className="flex justify-between">
           <span className="text-muted-foreground">Type</span>
           <span className="font-medium uppercase">{tagStatus!.tagType || "—"}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">PostHog</span>
-          <span className={`font-medium ${tagStatus!.posthog ? "text-emerald-600" : "text-muted-foreground"}`}>
-            {tagStatus!.posthog ? "Connected" : "Not configured"}
-          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Loaded at</span>

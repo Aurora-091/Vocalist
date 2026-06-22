@@ -1,5 +1,3 @@
-import { captureEvent } from "./posthog";
-
 declare global {
   interface Window {
     dataLayer?: Record<string, unknown>[];
@@ -14,8 +12,6 @@ function trackEvent(name: string, params?: Record<string, unknown>) {
   if (window.gtag) {
     window.gtag("event", name, params);
   }
-
-  captureEvent(name, params);
 }
 
 export function trackTryDemo() {
