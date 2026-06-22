@@ -321,6 +321,9 @@ export default function AdminSettings() {
           <div className="pt-2">
             <Label className="text-xs font-medium text-muted-foreground mb-2 block">Installation Validation</Label>
             <TagValidationStatus />
+            <p className="text-[10px] text-muted-foreground mt-1.5 leading-normal">
+              Note: Status may report <strong>Error</strong> or script failures if you have an active ad-blocker or tracking protection enabled in your browser.
+            </p>
           </div>
         </CardContent>
       </Card>

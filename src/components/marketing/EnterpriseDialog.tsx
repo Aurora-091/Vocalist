@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 interface FormData {
   businessType: string;
@@ -202,11 +203,12 @@ export function EnterpriseDialog({ open, onOpenChange }: Props) {
         timeline: formData.timeline,
         extraInfo: formData.extraInfo,
       });
+      setSubmitted(true);
     } catch {
-      // Fail silently — endpoint may not exist yet
+      toast.error("Failed to submit inquiry. Please try again or reach out to enterprise@weeber.ai.");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
-    setSubmitted(true);
   }
 
   const isLast = step === TOTAL_STEPS - 1;

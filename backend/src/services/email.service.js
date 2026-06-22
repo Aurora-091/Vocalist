@@ -409,11 +409,20 @@ async function resolveRecipients(recipientType) {
 
 module.exports = { sendWaitlistWelcome, sendBroadcastEmail, resolveRecipients, buildBroadcastHtml, sendEnterpriseConfirmation };
 
-// ─── Enterprise Inquiry Confirmation ─────────────────────────────────────────
+function escapeHtml(unsafe) {
+  if (!unsafe) return "";
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 function buildEnterpriseConfirmationHtml(name) {
   const firstName = name ? name.trim().split(/\s+/)[0] : null;
-  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+  const safeFirstName = firstName ? escapeHtml(firstName) : null;
+  const greeting = safeFirstName ? `Hi ${safeFirstName},` : "Hi,";
 
   return `<!DOCTYPE html>
 <html lang="en">
