@@ -407,7 +407,7 @@ async function resolveRecipients(recipientType) {
   return [];
 }
 
-module.exports = { sendWaitlistWelcome, sendBroadcastEmail, resolveRecipients, buildBroadcastHtml, sendEnterpriseConfirmation };
+module.exports = { sendWaitlistWelcome, sendBroadcastEmail, resolveRecipients, buildBroadcastHtml, sendEnterpriseConfirmation, buildEnterpriseConfirmationHtml, escapeHtml };
 
 function escapeHtml(unsafe) {
   if (!unsafe) return "";

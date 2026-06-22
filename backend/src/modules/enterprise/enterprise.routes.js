@@ -9,7 +9,7 @@ const router = Router();
 
 const inquireSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  email: z.string().email(),
+  email: z.string().email().max(120),
   businessType: z.string().max(100).optional(),
   callVolume: z.string().max(50).optional(),
   painPoint: z.string().max(200).optional(),
@@ -48,4 +48,5 @@ router.post("/inquire", authLimiter, async (req, res) => {
   return res.status(201).json({ success: true });
 });
 
+router.inquireSchema = inquireSchema;
 module.exports = router;
