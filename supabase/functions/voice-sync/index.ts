@@ -208,10 +208,6 @@ Deno.serve(async (req: Request) => {
       .slice(0, 8)
       .forEach((r) => (r.featured = true));
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
 
     // Upsert in chunks (strip internal fields).
     const payload = rows.map(({ _popularity, ...rest }) => rest);

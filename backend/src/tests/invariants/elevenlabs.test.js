@@ -11,45 +11,50 @@ function makeMockDatabase() {
     calls: [],
     usage_ledger: [],
     call_events: [],
+    phone_numbers: [],
+    integrations: [],
   };
 
   return {
     store,
     from(table) {
+      if (!store[table]) store[table] = [];
       return {
-        select: (cols) => ({
-          eq: (col, val) => ({
-            is: (col2, val2) => {
-              let res = store[table].filter(row => row[col] === val && (val2 === null ? row[col2] === null : row[col2] === val2));
-              return {
-                maybeSingle: async () => res[0] || null,
-                single: async () => res[0] || null,
-              };
+        select: (cols) => {
+          const filter = {};
+          const chain = {
+            eq: (col, val) => {
+              filter[col] = val;
+              return chain;
             },
+            is: (col, val) => {
+              filter[col] = val;
+              return chain;
+            },
+            or: (expr) => chain,
+            order: () => chain,
+            limit: () => chain,
             maybeSingle: async () => {
-              let res = store[table].filter(row => row[col] === val);
+              const res = store[table].filter(row => {
+                return Object.entries(filter).every(([col, val]) => {
+                  if (val === null) return row[col] === null;
+                  return row[col] === val;
+                });
+              });
               return { data: res[0] || null, error: null };
             },
-          }),
-          or: (expr) => ({
-            maybeSingle: async () => {
-              // Stub or match
-              return { data: store[table][0] || null, error: null };
-            }
-          }),
-          eq_simple: (col, val) => {
-            let res = store[table].filter(row => row[col] === val);
-            return {
-              order: () => ({
-                limit: () => ({
-                  maybeSingle: async () => ({ data: res[0] || null, error: null }),
-                })
-              }),
-              maybeSingle: async () => ({ data: res[0] || null, error: null }),
-              single: async () => ({ data: res[0] || null, error: null }),
-            };
-          }
-        }),
+            single: async () => {
+              const res = store[table].filter(row => {
+                return Object.entries(filter).every(([col, val]) => {
+                  if (val === null) return row[col] === null;
+                  return row[col] === val;
+                });
+              });
+              return { data: res[0] || null, error: null };
+            },
+          };
+          return chain;
+        },
         insert: (row) => {
           const inserted = Array.isArray(row)
             ? row.map(r => ({ id: Math.random().toString(), created_at: new Date().toISOString(), ...r }))
@@ -67,39 +72,63 @@ function makeMockDatabase() {
             single: async () => inserted,
           };
         },
-        update: (updates) => ({
-          eq: (col, val) => {
-            store[table].forEach(row => {
-              if (row[col] === val) {
-                Object.assign(row, updates);
-              }
-            });
-            return {
-              select: () => ({
-                single: async () => store[table].find(row => row[col] === val),
-                maybeSingle: async () => store[table].find(row => row[col] === val),
+        update: (updates) => {
+          const filter = {};
+          const chain = {
+            eq: (col, val) => {
+              filter[col] = val;
+              // Apply updates to matching rows
+              store[table].forEach(row => {
+                const matches = Object.entries(filter).every(([c, v]) => {
+                  if (v === null) return row[c] === null;
+                  return row[c] === v;
+                });
+                if (matches) {
+                  Object.assign(row, updates);
+                }
+              });
+              return chain;
+            },
+            select: () => ({
+              single: async () => store[table].find(row => {
+                return Object.entries(filter).every(([c, v]) => row[c] === v);
               }),
-              maybeSingle: async () => store[table].find(row => row[col] === val),
-              single: async () => store[table].find(row => row[col] === val),
-            };
-          }
-        }),
-        delete: () => ({
-          eq: (col, val) => {
-            store[table] = store[table].filter(row => row[col] !== val);
-            return {
-              eq: (col2, val2) => {
-                store[table] = store[table].filter(row => row[col] !== val || row[col2] !== val2);
-                return { error: null };
-              },
-              error: null
-            };
-          }
-        })
+              maybeSingle: async () => store[table].find(row => {
+                return Object.entries(filter).every(([c, v]) => row[c] === v);
+              }),
+            }),
+            maybeSingle: async () => store[table].find(row => {
+              return Object.entries(filter).every(([c, v]) => row[c] === v);
+            }),
+            single: async () => store[table].find(row => {
+              return Object.entries(filter).every(([c, v]) => row[c] === v);
+            }),
+          };
+          return chain;
+        },
+        delete: () => {
+          const filter = {};
+          const chain = {
+            eq: (col, val) => {
+              filter[col] = val;
+              store[table] = store[table].filter(row => {
+                const matches = Object.entries(filter).every(([c, v]) => {
+                  if (v === null) return row[c] === null;
+                  return row[c] === v;
+                });
+                return !matches;
+              });
+              return chain;
+            },
+            error: null
+          };
+          return chain;
+        }
       };
     }
   };
 }
+
 
 // 1. Duplicate agent prevention & 9. Multi-tenant agent creation tests
 test("Duplicate agent prevention & multi-tenant agent creation checks", async () => {
@@ -273,4 +302,52 @@ test("Multi-tenant organization isolation", async () => {
 
   assert.equal(queryOrg2.length, 1);
   assert.equal(queryOrg2[0].name, "Agent 2");
+});
+
+// Test agent deletion unbinding phone numbers and registry mapping
+test("deleteAgent unbinds phone numbers and deletes organization_agents", async () => {
+  const db = makeMockDatabase();
+  const agentService = require("../../modules/agents/agent.service");
+  
+  // Seed agent
+  const agent = await db.from("agents").insert({
+    id: "agent-uuid-1",
+    org_id: "org-1",
+    name: "Agent to Delete",
+    provider: "elevenlabs",
+    provider_ref: "provider-ref-1",
+    deleted_at: null,
+  }).single();
+
+  // Seed organization_agents
+  await db.from("organization_agents").insert({
+    org_id: "org-1",
+    agent_id: agent.id,
+    provider_agent_id: "provider-ref-1",
+  });
+
+  // Seed phone number bound to agent
+  await db.from("phone_numbers").insert({
+    id: "phone-uuid-1",
+    org_id: "org-1",
+    e164: "+15555555555",
+    agent_id: agent.id,
+  });
+
+  // Verify setup
+  assert.equal(db.store.organization_agents.length, 1);
+  assert.equal(db.store.phone_numbers[0].agent_id, agent.id);
+
+  // Call deleteAgent
+  await agentService.deleteAgent(db, "org-1", agent.id);
+
+  // Verify organization_agents is deleted
+  assert.equal(db.store.organization_agents.length, 0);
+
+  // Verify phone_numbers agent_id is nullified
+  assert.equal(db.store.phone_numbers[0].agent_id, null);
+
+  // Verify agent is soft-deleted
+  const deletedAgent = db.store.agents.find(a => a.id === agent.id);
+  assert.ok(deletedAgent.deleted_at);
 });

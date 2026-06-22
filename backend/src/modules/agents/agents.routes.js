@@ -65,10 +65,8 @@ router.post(
     try {
       const agent = await agentService.createAgent(req.supabase, req.auth.orgId, req.body);
 
-      await req.supabase
-        .from("onboarding_state")
-        .update({ steps: { create_agent: true }, updated_at: new Date().toISOString() })
-        .eq("org_id", req.auth.orgId);
+      const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
+      await updateOnboardingStep(req.supabase, req.auth.orgId, "create_agent");
 
       res.status(201).json({ agent });
     } catch (err) {
@@ -132,10 +130,8 @@ router.post(
         null
       );
 
-      await req.supabase
-        .from("onboarding_state")
-        .update({ steps: { test_and_golive: true }, updated_at: new Date().toISOString() })
-        .eq("org_id", req.auth.orgId);
+      const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
+      await updateOnboardingStep(req.supabase, req.auth.orgId, "test_and_golive");
 
       res.json({ ok: true, call: updatedCall });
     } catch (err) {

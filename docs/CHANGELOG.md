@@ -18,6 +18,13 @@ All notable changes to the Weeber platform will be documented in this file. This
 - **SEO & Robot crawlers configuration**: Added standard files `public/robots.txt`, `public/sitemap.xml`, and `public/llms.txt`.
 - **Enterprise Inquiries Invariant Test Suite** (`enterprise-inquiries.test.js`): Created a new backend unit test suite validating the inquiries Zod input boundaries and HTML escaping sanitization.
 
+### Fixed
+- **Voice Sync Compiler Error** (`voice-sync/index.ts`): Removed a duplicate `const admin` redeclaration inside the Edge Function's request handler scope which caused compilation failures.
+- **Onboarding Step Overwrite Guard** (`onboarding.routes.js`): Introduced a centralized, atomic `updateOnboardingStep` helper on the backend to merge JSONB checklist keys (e.g. `pick_vertical`, `create_agent`, etc.) instead of overwriting the entire onboarding state. Refactored `agents.routes.js`, `numbers.routes.js`, `twilio.routes.js`, `verticals.routes.js`, and `knowledge.routes.js` to utilize this helper.
+- **Onboarding Helper Test Suite** (`onboarding.test.js`): Added backend unit tests validating key merging and `completed_at` timestamps inside the onboarding workflow.
+- **Agent Deletion Phone Unbinding** (`agent.service.js`): Added automatic unbinding of any associated `phone_numbers` prior to soft-deleting an agent to prevent dangling references and routing errors.
+- **Agent Deletion Test** (`elevenlabs.test.js`): Added an integration invariant test to verify correct database updates during agent deletion.
+
 ### Changed
 - **Pageview Normalization** (`AnalyticsLoader.tsx`): Standardized SPA route view updates to trigger a native GA4 event (`window.gtag("event", "page_view", ...)`) or GTM custom pageview event (`spa_pageview`).
 - **Normalized Waitlist Conversion** (`analytics.ts`): Refactored Google Ads conversion actions into a unified `signup_success` custom event pushed to `window.dataLayer`, removing legacy conversion scripts.

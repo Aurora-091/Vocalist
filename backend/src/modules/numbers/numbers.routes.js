@@ -42,10 +42,8 @@ router.post(
       .maybeSingle();
     if (error) throw error;
 
-    await req.supabase
-      .from("onboarding_state")
-      .update({ steps: { get_number: true }, updated_at: new Date().toISOString() })
-      .eq("org_id", req.auth.orgId);
+    const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
+    await updateOnboardingStep(req.supabase, req.auth.orgId, "get_number");
 
     res.status(201).json(data);
   })
@@ -73,10 +71,8 @@ router.post(
       .maybeSingle();
     if (error) throw error;
 
-    await req.supabase
-      .from("onboarding_state")
-      .update({ steps: { get_number: true }, updated_at: new Date().toISOString() })
-      .eq("org_id", req.auth.orgId);
+    const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
+    await updateOnboardingStep(req.supabase, req.auth.orgId, "get_number");
 
     res.status(201).json(data);
   })

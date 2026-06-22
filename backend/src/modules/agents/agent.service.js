@@ -214,6 +214,13 @@ class AgentService {
       .eq("agent_id", agentId)
       .eq("org_id", orgId);
 
+    // 3.5 Clear agent_id mapping from phone_numbers table
+    await supabase
+      .from("phone_numbers")
+      .update({ agent_id: null })
+      .eq("agent_id", agentId)
+      .eq("org_id", orgId);
+
     // 4. Soft Delete in Database
     const { error: updateErr } = await supabase
       .from("agents")

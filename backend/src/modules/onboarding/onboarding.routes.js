@@ -24,6 +24,30 @@ async function ensureBootstrap(orgId) {
   }
 }
 
+async function updateOnboardingStep(supabase, orgId, stepKey, value = true) {
+  const { data: row } = await supabase
+    .from("onboarding_state")
+    .select("steps")
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  const currentSteps = row?.steps || {};
+  const merged = { ...currentSteps, [stepKey]: value };
+
+  const update = {
+    steps: merged,
+    updated_at: new Date().toISOString()
+  };
+
+  const allDone = STEP_KEYS.every((k) => merged[k] === true);
+  if (allDone) update.completed_at = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("onboarding_state")
+    .upsert({ org_id: orgId, ...update });
+  if (error) throw error;
+}
+
 router.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -97,3 +121,4 @@ router.patch(
 
 module.exports = router;
 module.exports.ensureBootstrap = ensureBootstrap;
+module.exports.updateOnboardingStep = updateOnboardingStep;
