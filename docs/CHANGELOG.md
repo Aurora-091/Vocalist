@@ -16,10 +16,13 @@ All notable changes to the Weeber platform will be documented in this file. This
   - Added secure, non-blocking email notifications sent via Resend (`sendEnterpriseConfirmation`) with HTML-escaping sanitization.
 - **PostHog & Vercel Speed Insights Integration**: Wired up user auth mapping (`identifyUser`, `resetUser`) and pageview tracking in PostHog, and integrated Vercel Speed Insights.
 - **SEO & Robot crawlers configuration**: Added standard files `public/robots.txt`, `public/sitemap.xml`, and `public/llms.txt`.
+- **Enterprise Inquiries Invariant Test Suite** (`enterprise-inquiries.test.js`): Created a new backend unit test suite validating the inquiries Zod input boundaries and HTML escaping sanitization.
 
 ### Changed
 - **Pageview Normalization** (`AnalyticsLoader.tsx`): Standardized SPA route view updates to trigger a native GA4 event (`window.gtag("event", "page_view", ...)`) or GTM custom pageview event (`spa_pageview`).
 - **Normalized Waitlist Conversion** (`analytics.ts`): Refactored Google Ads conversion actions into a unified `signup_success` custom event pushed to `window.dataLayer`, removing legacy conversion scripts.
+- **CI/CD Build Pipeline Hardening** (`.github/workflows/ci.yml`): Integrated the Vitest frontend unit test step (`npm test`) to be checked automatically during GitHub push and PR validation builds.
+- **Enterprise Inquiries Form Hardening** (`enterprise.routes.js`): Enforced a `.max(120)` constraint on the email Zod parser to mitigate potential database stack flooding.
 - **Deleted Legacy Code**: Cleaned up the database helper `src/lib/tracking.ts` and the deprecated `tracking_profiles` database table schema.
 
 ---
