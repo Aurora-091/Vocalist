@@ -72,13 +72,16 @@ This document tracks all major product, architecture, and technology decisions m
 
 ---
 
-## DEC-008: Dynamic Client-Side Analytics and Tracking Profiles Management
-* **Date**: 2026-06-19
-* **Status**: Accepted
-* **Context**: Marketing requirements dictate frequent rotation of Google Analytics and Google Ads conversion targets without redeploying the frontend. Additionally, Meta Pixel is deployed globally.
-* **Decision**: Store tracking settings and GA4/Google Ads profiles in Supabase (`site_settings` and `tracking_profiles` tables). Exactly one profile is active at a time. The client application mounts a `<AnalyticsLoader>` that dynamically queries the database on initial mount to inject `gtag.js` and Meta Pixel scripts. To prevent duplicate scripts injection, load status is tracked in global module-level variables. Pageviews are tracked manually on React Router path changes.
+## DEC-008: Dynamic Hybrid GTM/GA4 Client-Side Analytics Engine
+* **Date**: 2026-06-22
+* **Status**: Superseded / Accepted
+* **Context**: Marketing required dynamic setup and rotation of analytics script configurations (GTM and GA4) without rebuilding/redeploying the client code. A legacy profile rotation design was found to be overly complex and has been refactored.
+* **Decision**: We consolidated the database storage into a single public settings table `site_settings` to hold the active `gtm_container_id` and `tracking_enabled` status. We developed a hybrid `AnalyticsLoader.tsx` component that:
+  1. Auto-detects the tag type (GTM or GA4) by parsing the prefix (`GTM-` or `G-`).
+  2. Implements a fast-path loader that immediately injects scripts if configured in environment variables (`VITE_GTM_ID` or `VITE_GA4_ID`), bypassing database checks entirely for optimal page load speed.
+  3. Integrates a reactive diagnostics object `window.__weeber_analytics` reporting status details (such as ad-blocker script blocks, loading errors, active tag type) back to the admin settings dashboard.
 * **Key Files**:
-  - `src/lib/tracking.ts` — Centralized database access helper functions.
-  - `src/components/AnalyticsLoader.tsx` — Dynamic injection script module and route navigation tracker.
-  - `src/pages/admin/AdminSettings.tsx` — Settings view featuring Dukaan-style configurations.
+  - `src/components/AnalyticsLoader.tsx` — Main analytics script loader and pageview dispatcher.
+  - `src/pages/admin/AdminSettings.tsx` — Dashboard configuration card displaying validation status.
+  - `supabase/migrations/20260619073425_20260619124100_gtm_container_settings.sql` — SQL migration creating singleton settings.
 

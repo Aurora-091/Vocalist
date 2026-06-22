@@ -4,6 +4,26 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.5.0] - 2026-06-22
+
+### Added
+- **Unified Google Tag Manager & GA4 Loader** (`AnalyticsLoader.tsx`): Rewrote the analytics injection engine to support both GTM (`GTM-XXXXX`) and GA4 (`G-XXXXX`) tags. Dynamically detects prefixes, runs a fast-path load using environment variables (`VITE_GTM_ID`/`VITE_GA4_ID`) to bypass database latency, and handles fallback database checks.
+- **Analytics Health Validation** (`AdminSettings.tsx` & `AnalyticsLoader.tsx`): Implemented a global reactive status object (`window.__weeber_analytics`) and validation card in the admin panel to monitor script loading, error catching, and blockages (e.g. uBlock/ad-blockers).
+- **Enterprise Inquiries Pipeline** (`enterprise_inquiries`, `EnterpriseDialog.tsx`, `enterprise.routes.js`, `email.service.js`):
+  - Created the database table `enterprise_inquiries` with platforms-admin-only RLS controls.
+  - Added a multi-step interactive sliding dialog (`EnterpriseDialog.tsx`) with field validations, submit checks, and user-facing error toast handling.
+  - Set up an Express backend route with Zod validation, payload size limits, and rate-limiting (`authLimiter`).
+  - Added secure, non-blocking email notifications sent via Resend (`sendEnterpriseConfirmation`) with HTML-escaping sanitization.
+- **PostHog & Vercel Speed Insights Integration**: Wired up user auth mapping (`identifyUser`, `resetUser`) and pageview tracking in PostHog, and integrated Vercel Speed Insights.
+- **SEO & Robot crawlers configuration**: Added standard files `public/robots.txt`, `public/sitemap.xml`, and `public/llms.txt`.
+
+### Changed
+- **Pageview Normalization** (`AnalyticsLoader.tsx`): Standardized SPA route view updates to trigger a native GA4 event (`window.gtag("event", "page_view", ...)`) or GTM custom pageview event (`spa_pageview`).
+- **Normalized Waitlist Conversion** (`analytics.ts`): Refactored Google Ads conversion actions into a unified `signup_success` custom event pushed to `window.dataLayer`, removing legacy conversion scripts.
+- **Deleted Legacy Code**: Cleaned up the database helper `src/lib/tracking.ts` and the deprecated `tracking_profiles` database table schema.
+
+---
+
 ## [1.4.0] - 2026-06-19
 
 ### Added
