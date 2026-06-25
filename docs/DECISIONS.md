@@ -88,7 +88,7 @@ This document tracks all major product, architecture, and technology decisions m
 ---
 
 ## DEC-009: ElevenLabs Passthrough LLM Switch to Gemini 2.5 Flash
-* **Date**: 2026-06-26
+* **Date**: Thursday, 2026-06-26 01:51 IST
 * **Status**: Accepted
 * **Context**: ElevenLabs Conversational AI agents accept an LLM identifier string in the agent payload's `prompt.llm` field, which controls the language model used for conversational reasoning during calls. The prior setting was `gpt-4o-mini` (~$0.003/min passthrough cost). Google's `gemini-2.5-flash` is now available as a supported identifier and offers comparable conversational quality at ~$0.0012/min — a ~60% reduction in per-call LLM cost.
 * **Decision**: Switch the `llm` field in `_buildAgentPayload` from `gpt-4o-mini` to `gemini-2.5-flash`. No other payload or integration changes are required — ElevenLabs accepts the string identifier directly. This change also coincides with adding an explicit `safety.interaction_budget` block (`thirty_minutes`) to the conversation config, since ElevenLabs deprecated the previous `async` enum value.

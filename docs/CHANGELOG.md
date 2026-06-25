@@ -4,7 +4,7 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
-## [1.5.1] - 2026-06-26
+## [1.5.1] - Thursday, 2026-06-26 01:51 IST
 
 ### Fixed
 - **Onboarding Voice Selection UX** (`Onboarding.tsx`): Resolved a bug where the voice step's "Next" button appeared broken because no voice card showed a selection highlight. Root cause: when `selectedVoice` was an empty string and `selectedPreset?.voice_id` was null/undefined, the highlight condition `(selectedVoice || selectedPreset?.voice_id) === v.voice_id` matched nothing. Fix applies a default voice selection (`selectedPreset.voice_id` or the first voice) when the voice list loads, and simplifies the highlight condition to `selectedVoice === v.voice_id`.

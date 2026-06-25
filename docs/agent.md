@@ -64,4 +64,5 @@ Before ending any turn, you **must** verify compilation and tests:
 
 ### 3. Documentation Synchronicity
 - **Always update documentation after changes**: After completing any code changes or refactoring, you must immediately update relevant documentation files: `CHANGELOG.md` with features/fixes/changes, `DECISIONS.md` if architectural patterns changed, and `README.md` if file structures or directories were altered.
-
+- **Timestamps on every entry**: Every entry in `CHANGELOG.md` and `DECISIONS.md` must include a precise timestamp in the format: `Day, YYYY-MM-DD HH:MM IST` (e.g. `Thursday, 2026-06-26 01:55 IST`). For `CHANGELOG.md`, include the timestamp in the version header. For `DECISIONS.md`, include it in the `Date` field of each decision entry.
+- **Auto commit & push**: After every set of changes (code + documentation), you must automatically stage all modified files, create a descriptive git commit, and push to the remote. Never leave changes uncommitted. The commit message should be concise and follow conventional commit format (e.g. `fix:`, `feat:`, `docs:`, `chore:`).
