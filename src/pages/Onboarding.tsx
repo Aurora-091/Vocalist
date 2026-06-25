@@ -101,7 +101,11 @@ function OnboardingInner() {
       (async () => {
         try {
           const data = await listVoices({ limit: 50 });
-          setVoices(data);
+          setVoices(data || []);
+          if (data && data.length > 0 && !selectedVoice) {
+            const defaultVoice = data.find((v: Voice) => v.voice_id === selectedPreset?.voice_id) || data[0];
+            setSelectedVoice(defaultVoice.voice_id);
+          }
         } catch {}
       })();
     }
@@ -278,15 +282,21 @@ function OnboardingInner() {
                     <div className="text-xs text-text-muted">Loading voices...</div>
                   ) : (
                     voices.map((v) => (
-                      <button
+                      <div
                         key={v.voice_id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelectedVoice(v.voice_id)}
-                        className={`text-left p-3 rounded-md border transition-colors ${
-                          (selectedVoice || selectedPreset?.voice_id) === v.voice_id
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedVoice(v.voice_id); }}
+                        className={`relative text-left p-3 rounded-md border transition-colors cursor-pointer ${
+                          selectedVoice === v.voice_id
                             ? "border-text bg-surface-2"
                             : "border-border bg-surface hover:bg-surface-2"
                         }`}
                       >
+                        {selectedVoice === v.voice_id && (
+                          <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-text" />
+                        )}
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">{v.name}</span>
                           {v.preview_url && (
@@ -306,7 +316,7 @@ function OnboardingInner() {
                             {[v.labels.gender, v.labels.accent, v.labels.use_case].filter(Boolean).join(" · ")}
                           </div>
                         )}
-                      </button>
+                      </div>
                     ))
                   )}
                 </div>

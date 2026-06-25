@@ -114,7 +114,7 @@ class ElevenLabsProvider extends VoiceProvider {
 
     const promptConfig = {
       prompt: systemPrompt,
-      llm: "gpt-4o-mini",
+      llm: "gemini-2.5-flash",
       temperature: 0.5,
     };
 
@@ -137,6 +137,11 @@ class ElevenLabsProvider extends VoiceProvider {
         },
         tts: {
           voice_id: voiceId,
+        },
+        safety: {
+          interaction_budget: {
+            total_budget: "thirty_minutes",
+          },
         },
       },
     };

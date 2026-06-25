@@ -4,6 +4,19 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.5.1] - 2026-06-26
+
+### Fixed
+- **Onboarding Voice Selection UX** (`Onboarding.tsx`): Resolved a bug where the voice step's "Next" button appeared broken because no voice card showed a selection highlight. Root cause: when `selectedVoice` was an empty string and `selectedPreset?.voice_id` was null/undefined, the highlight condition `(selectedVoice || selectedPreset?.voice_id) === v.voice_id` matched nothing. Fix applies a default voice selection (`selectedPreset.voice_id` or the first voice) when the voice list loads, and simplifies the highlight condition to `selectedVoice === v.voice_id`.
+- **Nested Button HTML Violation** (`Onboarding.tsx`): Changed the voice card outer element from `<button>` to `<div role="button" tabIndex={0}>` with an `onKeyDown` handler to eliminate the invalid nested `<button>` (Play button inside the card button), which caused click event misbehavior in some browsers.
+- **Voice Selection Visual Indicator** (`Onboarding.tsx`): Added a `<Check>` icon in the top-right corner of the selected voice card for clearer visual feedback.
+- **ElevenLabs Interaction Budget Safety** (`elevenlabs.provider.js`): Added `safety.interaction_budget.total_budget: "thirty_minutes"` to `conversation_config` in `_buildAgentPayload`. ElevenLabs deprecated the `async` InteractionBudget enum value; this sets a safe explicit default to prevent future API breakage.
+
+### Changed
+- **LLM Provider Switch** (`elevenlabs.provider.js`): Switched the ElevenLabs conversational agent LLM from `gpt-4o-mini` to `gemini-2.5-flash`, reducing per-call LLM passthrough cost from ~$0.003/min to ~$0.0012/min. See DEC-009 in `DECISIONS.md`.
+
+---
+
 ## [1.5.0] - 2026-06-22
 
 ### Added
