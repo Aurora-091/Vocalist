@@ -4,13 +4,24 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.5.2] - Thursday, 2026-06-26 02:07 IST
+
+### Fixed
+- **ElevenLabs Interaction Budget Enum** (`elevenlabs.provider.js`): Corrected `interaction_budget.total_budget` from `"thirty_minutes"` (not a valid ElevenLabs enum value) to `"1_hour"`. Valid values are `5_minutes`, `10_minutes`, `1_hour` only. Added inline comment documenting the valid enum to prevent future regression.
+- **CSP `frame-src` GTM Blocking** (`index.html`): Expanded the Content-Security-Policy `frame-src` directive to include `https://td.doubleclick.net` (GTM conversion tracking) and `https://www.google.com` (reCAPTCHA). The original policy allowed `googletagmanager.com` but blocked downstream iframes GTM loads for conversion measurement.
+
+### Added
+- **DPDP Consent Compliance Columns** (`20260626020000_dpdp_consent_enhancements.sql`, `consent.routes.js`): Added `purpose`, `legal_basis`, `retention_days`, and `data_principal_name` columns to `consent_events` table for Digital Personal Data Protection Act compliance. All columns nullable for backward compatibility. Added a `CHECK` constraint on `legal_basis` and an index on `(org_id, purpose)`. Updated the consent events API endpoint to accept and pass through these fields.
+
+---
+
 ## [1.5.1] - Thursday, 2026-06-26 01:51 IST
 
 ### Fixed
 - **Onboarding Voice Selection UX** (`Onboarding.tsx`): Resolved a bug where the voice step's "Next" button appeared broken because no voice card showed a selection highlight. Root cause: when `selectedVoice` was an empty string and `selectedPreset?.voice_id` was null/undefined, the highlight condition `(selectedVoice || selectedPreset?.voice_id) === v.voice_id` matched nothing. Fix applies a default voice selection (`selectedPreset.voice_id` or the first voice) when the voice list loads, and simplifies the highlight condition to `selectedVoice === v.voice_id`.
 - **Nested Button HTML Violation** (`Onboarding.tsx`): Changed the voice card outer element from `<button>` to `<div role="button" tabIndex={0}>` with an `onKeyDown` handler to eliminate the invalid nested `<button>` (Play button inside the card button), which caused click event misbehavior in some browsers.
 - **Voice Selection Visual Indicator** (`Onboarding.tsx`): Added a `<Check>` icon in the top-right corner of the selected voice card for clearer visual feedback.
-- **ElevenLabs Interaction Budget Safety** (`elevenlabs.provider.js`): Added `safety.interaction_budget.total_budget: "thirty_minutes"` to `conversation_config` in `_buildAgentPayload`. ElevenLabs deprecated the `async` InteractionBudget enum value; this sets a safe explicit default to prevent future API breakage.
+- **ElevenLabs Interaction Budget Safety** (`elevenlabs.provider.js`): Added `safety.interaction_budget` to `conversation_config` in `_buildAgentPayload`. ElevenLabs deprecated the `async` InteractionBudget enum value; this sets a safe explicit default to prevent future API breakage.
 
 ### Changed
 - **LLM Provider Switch** (`elevenlabs.provider.js`): Switched the ElevenLabs conversational agent LLM from `gpt-4o-mini` to `gemini-2.5-flash`, reducing per-call LLM passthrough cost from ~$0.003/min to ~$0.0012/min. See DEC-009 in `DECISIONS.md`.

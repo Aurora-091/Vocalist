@@ -139,8 +139,10 @@ class ElevenLabsProvider extends VoiceProvider {
           voice_id: voiceId,
         },
         safety: {
+          // Valid ElevenLabs InteractionBudget enum: '5_minutes' | '10_minutes' | '1_hour'
+          // Do NOT use 'async' (deprecated) or 'thirty_minutes' (invalid).
           interaction_budget: {
-            total_budget: "thirty_minutes",
+            total_budget: "1_hour",
           },
         },
       },

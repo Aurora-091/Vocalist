@@ -16,6 +16,11 @@ const recordSchema = z.object({
   channel: z.enum(["voice", "sms", "web_form", "shopify_optin", "manual"]),
   evidence: z.record(z.string(), z.any()).optional(),
   occurred_at: z.string().datetime().optional(),
+  // DPDP compliance fields (optional)
+  purpose: z.string().max(120).optional(),
+  legal_basis: z.enum(["consent", "legitimate_interest", "contract", "legal_obligation", "vital_interest", "public_interest"]).optional(),
+  retention_days: z.number().int().min(1).max(3650).optional(),
+  data_principal_name: z.string().max(200).optional(),
 });
 
 const checkSchema = z.object({
@@ -71,6 +76,11 @@ router.post(
       evidence: req.body.evidence || {},
     };
     if (req.body.occurred_at) insertRow.occurred_at = req.body.occurred_at;
+    // DPDP compliance fields
+    if (req.body.purpose) insertRow.purpose = req.body.purpose;
+    if (req.body.legal_basis) insertRow.legal_basis = req.body.legal_basis;
+    if (req.body.retention_days) insertRow.retention_days = req.body.retention_days;
+    if (req.body.data_principal_name) insertRow.data_principal_name = req.body.data_principal_name;
 
     const { data, error } = await req.supabase
       .from("consent_events")
