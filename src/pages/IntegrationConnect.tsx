@@ -205,7 +205,13 @@ export default function IntegrationConnect() {
     }
   }
 
-  const adminUrl = ADMIN_URLS[provider!]?.(existingConfig?.config);
+  const adminUrl =
+    provider && Object.prototype.hasOwnProperty.call(ADMIN_URLS, provider)
+      ? (() => {
+          const adminUrlBuilder = ADMIN_URLS[provider];
+          return typeof adminUrlBuilder === "function" ? adminUrlBuilder(existingConfig?.config) : undefined;
+        })()
+      : undefined;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
