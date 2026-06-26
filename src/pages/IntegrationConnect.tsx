@@ -58,14 +58,14 @@ const PROVIDER_FIELDS: Record<string, FieldConfig[]> = {
   drchrono: [],
 };
 
-const ADMIN_URLS: Record<string, (config?: Record<string, string>) => string> = {
-  pipedrive: (c) => `https://${c?.domain || "app"}.pipedrive.com/settings/api`,
-  freshsales: (c) => `https://${c?.domain || "app"}.freshsales.io/personal-settings/api-settings`,
-  cliniko: () => "https://app.cliniko.com/account/integrations",
-  jane_app: (c) => `https://${c?.domain || "app"}.janeapp.com/settings/integrations`,
-  calcom: () => "https://app.cal.com/settings/developer/api-keys",
-  whatsapp: () => "https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn",
-};
+const ADMIN_URLS = new Map<string, (config?: Record<string, string>) => string>([
+  ["pipedrive", (c) => `https://${c?.domain || "app"}.pipedrive.com/settings/api`],
+  ["freshsales", (c) => `https://${c?.domain || "app"}.freshsales.io/personal-settings/api-settings`],
+  ["cliniko", () => "https://app.cliniko.com/account/integrations"],
+  ["jane_app", (c) => `https://${c?.domain || "app"}.janeapp.com/settings/integrations`],
+  ["calcom", () => "https://app.cal.com/settings/developer/api-keys"],
+  ["whatsapp", () => "https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn"],
+]);
 
 export default function IntegrationConnect() {
   const { provider } = useParams<{ provider: string }>();
@@ -205,13 +205,12 @@ export default function IntegrationConnect() {
     }
   }
 
-  const adminUrl =
-    provider && Object.prototype.hasOwnProperty.call(ADMIN_URLS, provider)
-      ? (() => {
-          const adminUrlBuilder = ADMIN_URLS[provider];
-          return typeof adminUrlBuilder === "function" ? adminUrlBuilder(existingConfig?.config) : undefined;
-        })()
-      : undefined;
+  const adminUrl = provider
+    ? (() => {
+        const adminUrlBuilder = ADMIN_URLS.get(provider);
+        return typeof adminUrlBuilder === "function" ? adminUrlBuilder(existingConfig?.config) : undefined;
+      })()
+    : undefined;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
