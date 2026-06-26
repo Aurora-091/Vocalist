@@ -16,6 +16,8 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ### Fixed
 - **PostHog Prefix Correction** (`.env.local`): Renamed PostHog keys in the root env file to use the `VITE_` prefix (`VITE_POSTHOG_KEY`/`VITE_POSTHOG_HOST`) to match client-side requirements.
+- **CodeQL Dynamic Instantiation Hardening** (`factory.js` & `integration.service.js`): Hardened class instantiation factories against unvalidated dynamic method calls by enforcing prototype safety check (`hasOwnProperty`) and constructor type validations (`typeof Cls === "function"`), resolving CodeQL security alerts #3 and #4.
+- **Shopify Domain Input Hardening** (`ShopifyConnect.tsx`): Refactored domain normalization logic to perform strict host-only pattern verification, resolving open redirection vulnerabilities.
 
 ---
 
