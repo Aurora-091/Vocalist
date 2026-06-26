@@ -61,6 +61,11 @@ Ensure the following properties are configured in the environment profile:
 * `SHOPIFY_API_KEY`: Developer key for Shopify Partners OAuth integration.
 * `SHOPIFY_API_SECRET`: Developer secret for HMAC parameter check verification.
 
+### Analytics
+* `POSTHOG_API_KEY`: Personal API key from PostHog settings to authorize backend query requests.
+* `POSTHOG_PROJECT_ID`: The unique Project ID identifier from PostHog settings.
+* `POSTHOG_HOST`: Optional endpoint URL (defaults to `https://us.i.posthog.com`).
+
 ---
 
 ## 4. Deploy Checklist

@@ -4,6 +4,21 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.6.0] - Saturday, 2026-06-27 01:42 IST
+
+### Added
+- **PostHog Analytics Server-Side Proxy** (`posthog.service.js` & `admin.routes.js`): Added backend proxy to fetch analytics from PostHog via HogQL queries. Exposes 6 routes under `/v1/admin/posthog/*` for insights, top pages, top events, user activity, traffic referrers, and country distributions, gated by `requireSuperAdmin` middleware.
+- **Product Analytics Dashboard** (`ProductAnalytics.tsx`): Built a rich administrative dashboard with overview metric cards (unique users, pageviews, total events, sessions with trend badges), a dynamic SVG bar chart for daily active users (DAU), and lists for top pages and custom events.
+- **Marketing Analytics Dashboard** (`MarketingAnalytics.tsx`): Built a marketing attribution dashboard displaying active users over time, attribution referrers, and country geolocation metrics.
+
+### Changed
+- **Node.js Runner Upgrade** (`ci.yml`): Upgraded the GitHub Actions runner Node.js version from 20 to 22, enabling native WebSocket support to fix failing tests relying on Supabase database connectivity.
+
+### Fixed
+- **PostHog Prefix Correction** (`.env.local`): Renamed PostHog keys in the root env file to use the `VITE_` prefix (`VITE_POSTHOG_KEY`/`VITE_POSTHOG_HOST`) to match client-side requirements.
+
+---
+
 ## [1.5.2] - Thursday, 2026-06-26 02:07 IST
 
 ### Fixed
