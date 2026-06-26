@@ -20,6 +20,8 @@ All notable changes to the Weeber platform will be documented in this file. This
 - **Latent Bug in enforce_max_sessions**: Corrected a bug in the triggers count query that attempted to select from a non-existent `ended_at` column instead of the correct `revoked_at` column in `user_sessions`.
 - **Restricted RPC Execution**: Revoked public execute permissions for 8 sensitive `SECURITY DEFINER` functions (`can_spend`, `check_inbound_rate`, `cleanup_inbound_rate_counters`, `commit_spend`, `handle_new_oauth_user`, `release_spend`, `reserve_spend`, `seed_demo_data`) from public, restricting execution exclusively to `service_role`.
 - **Waitlist RLS Tightening**: Replaced the unrestricted `WITH CHECK (true)` policy on the waitlist table with a hardened regex check validating email formats and name constraints.
+- **Consent Events Query Column Fixed** (`db.ts`): Resolved a PostgREST 400 Bad Request error by correcting the `optOuts` query to query the correct database column `kind = 'revoke'` instead of the non-existent `new_status = 'revoked'`.
+- **ElevenLabs Agent Creation Payload Fixed** (`elevenlabs.provider.js`): Resolved an ElevenLabs 422 Unprocessable Content error during agent creation/saving by removing the invalid `safety.interaction_budget` block from the payload configuration.
 
 ---
 

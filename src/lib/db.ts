@@ -315,7 +315,7 @@ export async function getOverview() {
     .from("consent_events")
     .select("*", { count: "exact", head: true })
     .eq("org_id", orgId)
-    .eq("new_status", "revoked")
+    .eq("kind", "revoke")
     .gte("created_at", thirtyDaysAgo);
 
   return {
