@@ -164,4 +164,57 @@ router.post("/broadcasts", asyncHandler(async (req, res) => {
   res.json({ id: record.id, recipient_count: sent, status: "sent" });
 }));
 
+// ─── PostHog Analytics Proxy ─────────────────────────────────────────────────
+
+const posthogService = require("../../services/posthog.service");
+
+router.get("/posthog/insights", asyncHandler(async (req, res) => {
+  if (!posthogService.isConfigured()) {
+    return res.status(501).json({ error: { code: "not_configured", message: "PostHog API not configured" } });
+  }
+  const data = await posthogService.getInsights(req.query.range);
+  res.json(data);
+}));
+
+router.get("/posthog/top-pages", asyncHandler(async (req, res) => {
+  if (!posthogService.isConfigured()) {
+    return res.status(501).json({ error: { code: "not_configured", message: "PostHog API not configured" } });
+  }
+  const data = await posthogService.getTopPages(req.query.range);
+  res.json(data);
+}));
+
+router.get("/posthog/top-events", asyncHandler(async (req, res) => {
+  if (!posthogService.isConfigured()) {
+    return res.status(501).json({ error: { code: "not_configured", message: "PostHog API not configured" } });
+  }
+  const data = await posthogService.getTopEvents(req.query.range);
+  res.json(data);
+}));
+
+router.get("/posthog/user-activity", asyncHandler(async (req, res) => {
+  if (!posthogService.isConfigured()) {
+    return res.status(501).json({ error: { code: "not_configured", message: "PostHog API not configured" } });
+  }
+  const data = await posthogService.getUserActivity(req.query.range);
+  res.json(data);
+}));
+
+router.get("/posthog/referrers", asyncHandler(async (req, res) => {
+  if (!posthogService.isConfigured()) {
+    return res.status(501).json({ error: { code: "not_configured", message: "PostHog API not configured" } });
+  }
+  const data = await posthogService.getReferrers(req.query.range);
+  res.json(data);
+}));
+
+router.get("/posthog/countries", asyncHandler(async (req, res) => {
+  if (!posthogService.isConfigured()) {
+    return res.status(501).json({ error: { code: "not_configured", message: "PostHog API not configured" } });
+  }
+  const data = await posthogService.getCountries(req.query.range);
+  res.json(data);
+}));
+
 module.exports = router;
+

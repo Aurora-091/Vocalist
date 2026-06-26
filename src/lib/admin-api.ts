@@ -124,6 +124,48 @@ export interface BroadcastEntry {
   sent_by_email?: string | null;
 }
 
+// ─── PostHog Analytics Types ────────────────────────────────
+
+export interface PostHogInsights {
+  unique_users: number;
+  total_events: number;
+  pageviews: number;
+  sessions: number;
+  prev_unique_users: number;
+  prev_total_events: number;
+  prev_pageviews: number;
+  prev_sessions: number;
+}
+
+export interface PostHogTopPage {
+  url: string;
+  views: number;
+  unique_users: number;
+}
+
+export interface PostHogTopEvent {
+  event: string;
+  count: number;
+  unique_users: number;
+}
+
+export interface PostHogUserActivity {
+  date: string;
+  users: number;
+}
+
+export interface PostHogReferrer {
+  referrer: string;
+  visits: number;
+  unique_users: number;
+}
+
+export interface PostHogCountry {
+  country: string;
+  users: number;
+  events: number;
+}
+
 export const adminApi = {
   checkAccess: () => api.get<{ platform_role: string }>("/v1/admin/me"),
   getStats: (range?: string) => {
@@ -182,4 +224,19 @@ export const adminApi = {
     if (opts.limit) params.set("limit", String(opts.limit));
     return api.get<PaginatedResult<BroadcastEntry>>(`/v1/admin/broadcasts?${params}`);
   },
+
+  // ─── PostHog Analytics ──────────────────────────────────────
+  getPostHogInsights: (range = "7d") =>
+    api.get<PostHogInsights>(`/v1/admin/posthog/insights?range=${range}`),
+  getPostHogTopPages: (range = "7d") =>
+    api.get<PostHogTopPage[]>(`/v1/admin/posthog/top-pages?range=${range}`),
+  getPostHogTopEvents: (range = "7d") =>
+    api.get<PostHogTopEvent[]>(`/v1/admin/posthog/top-events?range=${range}`),
+  getPostHogUserActivity: (range = "30d") =>
+    api.get<PostHogUserActivity[]>(`/v1/admin/posthog/user-activity?range=${range}`),
+  getPostHogReferrers: (range = "7d") =>
+    api.get<PostHogReferrer[]>(`/v1/admin/posthog/referrers?range=${range}`),
+  getPostHogCountries: (range = "7d") =>
+    api.get<PostHogCountry[]>(`/v1/admin/posthog/countries?range=${range}`),
 };
+
