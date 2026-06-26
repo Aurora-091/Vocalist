@@ -4,6 +4,25 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.7.0] - Saturday, 2026-06-27 02:47 IST
+
+### Added
+- **Database Security Hardening Migration** (`20260627000000_database_security_hardening.sql`): Added a comprehensive migration script to resolve all Supabase database linter and security advisor findings.
+- **Broadcasts RLS Policy** (`broadcasts`): Added an explicit `service_role_access_only` policy on the `broadcasts` table, satisfying the linter requirement while maintaining restricted public access.
+
+### Changed
+- **RLS Enablement on Dynamic Partitions** (`ensure_monthly_partitions`): Enabled Row Level Security on the 12 existing partition tables and modified the dynamic partition rotation function to automatically enable RLS on newly generated partitions.
+- **v_rls_coverage Security Invoker View** (`v_rls_coverage`): Recreated the view using `WITH (security_invoker = true)` to inherit caller privileges instead of view owner credentials.
+- **Extension Isolation** (`vector`): Relocated the `vector` extension from the `public` schema to the `extensions` schema.
+
+### Fixed
+- **Mutable search_path Hardening**: Applied strict `SET search_path = public, pg_temp` on 19 schema functions to mitigate path mutable hijack risks.
+- **Latent Bug in enforce_max_sessions**: Corrected a bug in the triggers count query that attempted to select from a non-existent `ended_at` column instead of the correct `revoked_at` column in `user_sessions`.
+- **Restricted RPC Execution**: Revoked public execute permissions for 8 sensitive `SECURITY DEFINER` functions (`can_spend`, `check_inbound_rate`, `cleanup_inbound_rate_counters`, `commit_spend`, `handle_new_oauth_user`, `release_spend`, `reserve_spend`, `seed_demo_data`) from public, restricting execution exclusively to `service_role`.
+- **Waitlist RLS Tightening**: Replaced the unrestricted `WITH CHECK (true)` policy on the waitlist table with a hardened regex check validating email formats and name constraints.
+
+---
+
 ## [1.6.0] - Saturday, 2026-06-27 01:42 IST
 
 ### Added
