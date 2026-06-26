@@ -8,8 +8,13 @@ const REGISTRY = {
 };
 
 function buildProvider(typeOrName, orgId, config) {
+  if (!typeOrName || !Object.prototype.hasOwnProperty.call(REGISTRY, typeOrName)) {
+    throw BadRequest(`Unknown integration provider: ${typeOrName}`);
+  }
   const Cls = REGISTRY[typeOrName];
-  if (!Cls) throw BadRequest(`Unknown integration provider: ${typeOrName}`);
+  if (typeof Cls !== "function") {
+    throw BadRequest(`Integration provider Cls is not a function/class for: ${typeOrName}`);
+  }
   return new Cls(orgId, config);
 }
 
