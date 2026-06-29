@@ -7,23 +7,23 @@ const API_VERSION = "2025-01";
 class ShopifyProvider extends IntegrationProvider {
   static get type() { return "shopify"; }
 
-  get baseUrl() {
-    return `https://${this.config.shop_domain}/admin/api/${API_VERSION}`;
-  }
-
-  get headers() {
+  async getHeaders() {
+    const config = await this.getResolvedConfig();
     return {
-      "X-Shopify-Access-Token": this.config.access_token,
+      "X-Shopify-Access-Token": config.access_token,
       "Content-Type": "application/json",
     };
   }
 
   async testConnection() {
-    if (!this.config.shop_domain || !this.config.access_token) {
+    const config = await this.getResolvedConfig();
+    if (!config.shop_domain || !config.access_token) {
       return { ok: false, reason: "missing_credentials" };
     }
     try {
-      const res = await fetch(`${this.baseUrl}/shop.json`, { headers: this.headers });
+      const headers = await this.getHeaders();
+      const baseUrl = `https://${config.shop_domain}/admin/api/${API_VERSION}`;
+      const res = await fetch(`${baseUrl}/shop.json`, { headers });
       if (!res.ok) {
         return { ok: false, reason: `shopify_api_${res.status}` };
       }
@@ -35,12 +35,15 @@ class ShopifyProvider extends IntegrationProvider {
   }
 
   async syncContacts({ limit = 250, since_id } = {}) {
+    const config = await this.getResolvedConfig();
     const params = new URLSearchParams({ limit: String(limit) });
     if (since_id) params.set("since_id", since_id);
 
+    const headers = await this.getHeaders();
+    const baseUrl = `https://${config.shop_domain}/admin/api/${API_VERSION}`;
     const res = await fetch(
-      `${this.baseUrl}/customers.json?${params}`,
-      { headers: this.headers }
+      `${baseUrl}/customers.json?${params}`,
+      { headers }
     );
     if (!res.ok) {
       throw new Error(`Shopify customers fetch failed: ${res.status}`);
@@ -61,7 +64,7 @@ class ShopifyProvider extends IntegrationProvider {
         email: c.email || null,
         crm_ref: `shopify_${c.id}`,
         source: "shopify",
-        consent_status: c.marketing_consent?.state === "subscribed" ? "granted" : "none",
+        consent_status: c.email_marketing_consent?.state === "subscribed" ? "granted" : "none",
         fields: { shopify_id: c.id, tags: c.tags, orders_count: c.orders_count },
       }));
 
@@ -82,9 +85,12 @@ class ShopifyProvider extends IntegrationProvider {
   }
 
   async lookupOrder(orderId) {
+    const config = await this.getResolvedConfig();
+    const headers = await this.getHeaders();
+    const baseUrl = `https://${config.shop_domain}/admin/api/${API_VERSION}`;
     const res = await fetch(
-      `${this.baseUrl}/orders/${orderId}.json`,
-      { headers: this.headers }
+      `${baseUrl}/orders/${orderId}.json`,
+      { headers }
     );
     if (!res.ok) {
       if (res.status === 404) return { found: false };
@@ -119,38 +125,80 @@ class ShopifyProvider extends IntegrationProvider {
   }
 
   async lookupAbandonedCheckouts({ limit = 10 } = {}) {
+    const config = await this.getResolvedConfig();
+    const headers = await this.getHeaders();
+    const query = `
+      query AbandonedCheckouts($first: Int!) {
+        abandonedCheckouts(first: $first, query: "completed_at:null") {
+          edges {
+            node {
+              id
+              email
+              phone
+              totalPriceSet { shopMoney { amount currencyCode } }
+              createdAt
+              abandonedCheckoutUrl
+              lineItems(first: 20) {
+                edges {
+                  node {
+                    title
+                    quantity
+                    variant { price }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
     const res = await fetch(
-      `${this.baseUrl}/checkouts.json?limit=${limit}&status=open`,
-      { headers: this.headers }
+      `https://${config.shop_domain}/admin/api/${API_VERSION}/graphql.json`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ query, variables: { first: limit } }),
+      }
     );
     if (!res.ok) {
-      throw new Error(`Shopify checkouts fetch failed: ${res.status}`);
+      throw new Error(`Shopify GraphQL failed: ${res.status}`);
     }
-    const { checkouts } = await res.json();
-    return (checkouts || []).map((c) => ({
-      id: c.id,
-      email: c.email,
-      phone: c.phone || c.billing_address?.phone,
-      total_price: c.total_price,
-      currency: c.currency,
-      created_at: c.created_at,
-      abandoned_url: c.abandoned_checkout_url,
-      line_items: (c.line_items || []).map((li) => ({
-        title: li.title,
-        quantity: li.quantity,
-        price: li.price,
-      })),
-    }));
+    const json = await res.json();
+    if (json.errors) {
+      throw new Error(`Shopify GraphQL error: ${JSON.stringify(json.errors)}`);
+    }
+
+    return (json.data?.abandonedCheckouts?.edges || []).map(({ node: c }) => {
+      const numericId = c.id.startsWith("gid://") ? c.id.split("/").pop() : c.id;
+      return {
+        id: numericId,
+        email: c.email,
+        phone: c.phone,
+        total_price: c.totalPriceSet?.shopMoney?.amount || null,
+        currency: c.totalPriceSet?.shopMoney?.currencyCode || null,
+        created_at: c.createdAt,
+        abandoned_url: c.abandonedCheckoutUrl,
+        line_items: (c.lineItems?.edges || []).map(({ node: li }) => ({
+          title: li.title,
+          quantity: li.quantity,
+          price: li.variant?.price || null,
+        })),
+      };
+    });
   }
 
   async applyDiscountCode(priceRuleId, { code, usage_limit = 1 }) {
+    const config = await this.getResolvedConfig();
+    const headers = await this.getHeaders();
+    const baseUrl = `https://${config.shop_domain}/admin/api/${API_VERSION}`;
     const res = await fetch(
-      `${this.baseUrl}/price_rules/${priceRuleId}/discount_codes.json`,
+      `${baseUrl}/price_rules/${priceRuleId}/discount_codes.json`,
       {
         method: "POST",
-        headers: this.headers,
+        headers,
         body: JSON.stringify({
-          discount_code: { code, usage_count: 0 },
+          discount_code: { code },
         }),
       }
     );

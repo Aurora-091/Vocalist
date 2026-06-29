@@ -85,7 +85,7 @@ async function handle(payload) {
     }
 
     if (conversationId) {
-      update.recording_url = `https://api.elevenlabs.io/v1/convai/conversations/${conversationId}/audio`;
+      update.recording_url = `/v1/calls/${callRow.id}/recording`;
     }
 
     if (data?.transcript) {

@@ -39,18 +39,44 @@ router.get(
   })
 );
 
+const VAULT_FIELDS = {
+  shopify: ["access_token"],
+  twilio: ["auth_token"],
+  calcom: ["api_key"],
+  google_cal: ["access_token", "refresh_token"],
+  outlook_cal: ["access_token", "refresh_token"],
+  crm: ["access_token", "refresh_token", "api_key"],
+  hubspot: ["access_token", "refresh_token", "api_key"],
+  zapier: ["hook_secret", "api_key"],
+};
+
+async function vaultifyConfig(type, config, orgId) {
+  const { writeSecret } = require("../../utils/credential.helper");
+  const fields = VAULT_FIELDS[type] || [];
+  const safeConfig = { ...config };
+  for (const field of fields) {
+    if (safeConfig[field] && !String(safeConfig[field]).startsWith("vault:")) {
+      const vaultKey = `vault:integrations:${type}:${field}:${orgId}`;
+      await writeSecret(vaultKey, safeConfig[field]);
+      safeConfig[field] = vaultKey;
+    }
+  }
+  return safeConfig;
+}
+
 router.put(
   "/",
   requireRole("owner", "admin"),
   validate({ body: upsertSchema }),
   asyncHandler(async (req, res) => {
+    const safeConfig = await vaultifyConfig(req.body.type, req.body.config, req.auth.orgId);
     const { data, error } = await req.supabase
       .from("integrations")
       .upsert(
         {
           org_id: req.auth.orgId,
           type: req.body.type,
-          config: req.body.config,
+          config: safeConfig,
           secret_ref: req.body.secret_ref,
           status: req.body.status,
         },

@@ -3,7 +3,7 @@ const { z } = require("zod");
 const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg } = require("../../middleware/auth.middleware");
-const { NotFound } = require("../../utils/errors");
+const { NotFound, BadRequest } = require("../../utils/errors");
 
 const router = express.Router();
 router.use(requireAuth, requireOrg);
@@ -89,6 +89,45 @@ router.get(
     if (error) throw error;
     if (!data) throw NotFound("Call not found");
     res.json({ call_id: data.id, transcript: data.transcript || [] });
+  })
+);
+
+router.get(
+  "/:id/recording",
+  validate({ params: z.object({ id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    const { data: call, error } = await req.supabase
+      .from("calls")
+      .select("conversation_id, provider")
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!call || !call.conversation_id) throw NotFound("Recording not found");
+
+    if (call.provider !== "elevenlabs") {
+      throw BadRequest("Recording only supported for ElevenLabs provider calls");
+    }
+
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      throw new Error("ElevenLabs API key not configured on server");
+    }
+
+    const elUrl = `https://api.elevenlabs.io/v1/convai/conversations/${call.conversation_id}/audio`;
+    const response = await fetch(elUrl, {
+      headers: {
+        "xi-api-key": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch audio from ElevenLabs: ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(buffer);
   })
 );
 

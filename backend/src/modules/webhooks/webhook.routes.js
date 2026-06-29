@@ -16,7 +16,7 @@ const elevenlabsHandler = require("./handlers/elevenlabs.handler");
 const router = express.Router();
 router.use(webhookLimiter);
 
-const stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" }) : null;
+const stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" }) : null;
 
 router.post(
   "/vapi",
@@ -136,14 +136,41 @@ router.post(
     });
     if (logged.duplicate) return res.json({ duplicate: true });
 
-    try {
-      const result = await stripeHandler.handle(event);
-      await markProcessed(logged);
-      res.json({ received: true, ...result });
-    } catch (err) {
-      logger.error({ err: err.message }, "Stripe handler failed");
-      res.status(500).json({ error: { code: "handler_failed" } });
-    }
+    res.json({ received: true });
+
+    (async () => {
+      try {
+        const result = await stripeHandler.handle(event);
+        await markProcessed(logged);
+        logger.info({ eventId: event.id, result }, "Stripe webhook processed asynchronously");
+      } catch (err) {
+        logger.error({ err: err.message, eventId: event.id }, "Stripe webhook async handler failed");
+        const { requireAdmin } = require("../../config/supabase");
+        const admin = requireAdmin();
+
+        let orgId = event.data?.object?.metadata?.org_id || null;
+        if (!orgId && event.data?.object?.subscription) {
+          const { data: sub } = await admin
+            .from("subscriptions")
+            .select("org_id")
+            .eq("stripe_subscription_id", event.data.object.subscription)
+            .maybeSingle();
+          if (sub) orgId = sub.org_id;
+        }
+
+        await admin.from("webhook_dlq").insert({
+          org_id: orgId,
+          source: "stripe",
+          event_type: event.type,
+          payload: event,
+          error_message: err.message,
+          retry_count: 0,
+          next_retry_at: new Date(Date.now() + 60_000).toISOString(),
+        }).catch((dlqErr) => {
+          logger.error({ err: dlqErr.message }, "Failed to write Stripe webhook to DLQ");
+        });
+      }
+    })();
   })
 );
 
@@ -236,8 +263,25 @@ router.post(
 
     if (rateStatus === "blocked_rate") {
       logger.warn({ called, caller, orgId: number.org_id }, "Inbound call blocked by rate limit");
+      const callId = crypto.randomUUID();
+      await admin.from("calls").insert({
+        id: callId,
+        org_id: number.org_id,
+        agent_id: number.agent_id,
+        direction: "inbound",
+        status: "failed",
+        provider: number.agents?.provider || "mock",
+        provider_call_id: req.body.CallSid,
+        started_at: now,
+        ended_at: now,
+        outcome: { block_reason: "rate_limit" },
+        from_number: caller,
+        to_number: called,
+      });
+
       await admin.from("call_events").insert({
         org_id: number.org_id,
+        call_id: callId,
         kind: "blocked_rate",
         payload: { called, caller, now }
       });
@@ -258,8 +302,25 @@ router.post(
 
     if (!allowedToSpend) {
       logger.warn({ called, caller, orgId: number.org_id }, "Inbound call blocked by spend guard");
+      const callId = crypto.randomUUID();
+      await admin.from("calls").insert({
+        id: callId,
+        org_id: number.org_id,
+        agent_id: number.agent_id,
+        direction: "inbound",
+        status: "failed",
+        provider: number.agents?.provider || "mock",
+        provider_call_id: req.body.CallSid,
+        started_at: now,
+        ended_at: now,
+        outcome: { block_reason: "spend_guard" },
+        from_number: caller,
+        to_number: called,
+      });
+
       await admin.from("call_events").insert({
         org_id: number.org_id,
+        call_id: callId,
         kind: "blocked_spend",
         payload: { called, caller, now }
       });
