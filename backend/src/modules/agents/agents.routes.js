@@ -24,6 +24,9 @@ const createSchema = z.object({
   tools: z.array(z.any()).optional(),
   analysis_config: z.record(z.string(), z.any()).optional(),
   consent_required: z.boolean().optional(),
+  prompt: z.string().optional(),
+  model: z.string().optional(),
+  hyper_parameters: z.record(z.string(), z.any()).optional(),
 });
 
 const updateSchema = createSchema.partial();
