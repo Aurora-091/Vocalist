@@ -24,7 +24,7 @@ router.get(
     let q = req.supabase
       .from("calls")
       .select(
-        "id, agent_id, campaign_id, contact_id, direction, status, provider, provider_call_id, started_at, ended_at, duration_sec, cost_usd, recording_url, created_at"
+        "id, agent_id, campaign_id, contact_id, direction, status, provider, provider_call_id, started_at, ended_at, duration_sec, cost_usd, recording_url, created_at, from_number, to_number"
       )
       .order("created_at", { ascending: false })
       .limit(req.query.limit);

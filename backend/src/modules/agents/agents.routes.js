@@ -118,6 +118,8 @@ router.post(
         provider: agent.provider,
         status: "queued",
         outcome: { test: true, requested_by: req.auth.userId, to: toNumber },
+        from_number: agent.inbound_number,
+        to_number: toNumber,
       })
       .select("id, status")
       .maybeSingle();

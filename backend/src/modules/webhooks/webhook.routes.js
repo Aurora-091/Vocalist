@@ -278,7 +278,9 @@ router.post(
       status: "ringing",
       provider: number.agents?.provider || "mock",
       provider_call_id: req.body.CallSid,
-      started_at: now
+      started_at: now,
+      from_number: req.body.From,
+      to_number: req.body.To,
     });
     if (callErr) throw callErr;
 

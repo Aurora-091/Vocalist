@@ -351,3 +351,27 @@ test("deleteAgent unbinds phone numbers and deletes organization_agents", async 
   const deletedAgent = db.store.agents.find(a => a.id === agent.id);
   assert.ok(deletedAgent.deleted_at);
 });
+
+// 12. Placeholder replacement
+test("Placeholder replacement in ElevenLabs payload builder", () => {
+  const ElevenLabsProvider = require("../../providers/voice/elevenlabs.provider");
+  const provider = new ElevenLabsProvider({ api_key: "dummy" });
+
+  const agent = {
+    name: "Test Agent",
+    first_message: "Hello {{customer_name}}, welcome to {{business_name}}! Do you want a {{discount_percent}}% discount?",
+    variable_values: {
+      customer_name: "John Doe",
+      business_name: "Acme Corp",
+      discount_percent: 15,
+    },
+  };
+  
+  const systemPrompt = "You are selling to {{customer_name}} on behalf of {{business_name}}.";
+  
+  const payload = provider._buildAgentPayload(agent, systemPrompt);
+  
+  assert.equal(payload.conversation_config.agent.first_message, "Hello John Doe, welcome to Acme Corp! Do you want a 15% discount?");
+  assert.equal(payload.conversation_config.agent.prompt.prompt, "You are selling to John Doe on behalf of Acme Corp.");
+});
+

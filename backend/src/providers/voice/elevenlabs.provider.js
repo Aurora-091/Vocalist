@@ -3,6 +3,17 @@ const logger = require("../../config/logger");
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io";
 
+function replacePlaceholders(text, variables) {
+  if (typeof text !== "string" || !variables || typeof variables !== "object") return text;
+  let result = text;
+  for (const [key, val] of Object.entries(variables)) {
+    if (val === undefined || val === null) continue;
+    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+    result = result.replace(regex, String(val));
+  }
+  return result;
+}
+
 class ElevenLabsProvider extends VoiceProvider {
   static get name() { return "elevenlabs"; }
 
@@ -108,12 +119,19 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   _buildAgentPayload(agent, systemPrompt) {
-    const firstMessage = agent.first_message || agent.persona?.first_message || agent.persona?.opening_message || "Hello!";
+    const variables = {
+      ...(agent.persona?.variable_values || {}),
+      ...(agent.variable_values || {}),
+    };
+    const rawFirstMessage = agent.first_message || agent.persona?.first_message || agent.persona?.opening_message || "Hello!";
+    const firstMessage = replacePlaceholders(rawFirstMessage, variables);
+    const resolvedPrompt = replacePlaceholders(systemPrompt, variables);
+
     const language = agent.language || (agent.languages && agent.languages[0]) || "en";
     const voiceId = agent.voice_id || "21m00Tcm4TlvDq8ikWAM";
 
     const promptConfig = {
-      prompt: systemPrompt,
+      prompt: resolvedPrompt,
       llm: "gemini-2.5-flash",
       temperature: 0.5,
     };

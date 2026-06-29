@@ -135,6 +135,8 @@ async function dispatchOne(admin, { campaign, agent, target }) {
       status: providerCall.status === "in_progress" ? "in_progress" : "queued",
       provider: agent.provider,
       provider_call_id: providerCall.provider_call_id,
+      from_number: agent.inbound_number,
+      to_number: contact.e164,
     })
     .select("id")
     .single();

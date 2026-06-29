@@ -68,6 +68,8 @@ async function processDueCalls() {
         status: "queued",
         provider: agent.provider,
         metadata: call.metadata,
+        from_number: agent.inbound_number,
+        to_number: call.phone,
       });
 
       const providerCall = await provider.startCall({

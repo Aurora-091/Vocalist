@@ -1,6 +1,5 @@
 const express = require("express");
 const { z } = require("zod");
-const Stripe = require("stripe");
 const env = require("../../config/env");
 const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
@@ -8,7 +7,16 @@ const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.
 const { BadRequest, NotFound } = require("../../utils/errors");
 
 const router = express.Router();
-const stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY) : null;
+
+let stripeInstance = null;
+function getStripe() {
+  if (!env.STRIPE_SECRET_KEY) return null;
+  if (!stripeInstance) {
+    const Stripe = require("stripe");
+    stripeInstance = new Stripe(env.STRIPE_SECRET_KEY);
+  }
+  return stripeInstance;
+}
 
 router.use(requireAuth, requireOrg);
 
@@ -81,7 +89,7 @@ router.post(
     }),
   }),
   asyncHandler(async (req, res) => {
-    if (!stripe) throw BadRequest("Stripe not configured");
+    if (!getStripe()) throw BadRequest("Stripe not configured");
 
     const { data: tier } = await req.supabase
       .from("plan_tiers")
@@ -100,7 +108,7 @@ router.post(
 
     let customerId = existing?.stripe_customer_id;
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: req.auth.email || undefined,
         metadata: { org_id: req.auth.orgId },
       });
@@ -112,7 +120,7 @@ router.post(
       lineItems.push({ price: tier.stripe_overage_price_id });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       line_items: lineItems,
@@ -138,7 +146,7 @@ router.post(
     body: z.object({ plan_key: z.string().min(1) }),
   }),
   asyncHandler(async (req, res) => {
-    if (!stripe) throw BadRequest("Stripe not configured");
+    if (!getStripe()) throw BadRequest("Stripe not configured");
 
     const { data: sub } = await req.supabase
       .from("subscriptions")
@@ -156,7 +164,7 @@ router.post(
     if (!tier) throw NotFound("Plan not found");
     if (!tier.stripe_base_price_id) throw BadRequest("Plan has no Stripe price configured");
 
-    const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+    const stripeSub = await getStripe().subscriptions.retrieve(sub.stripe_subscription_id);
     const alreadyOnPlan = stripeSub.items.data.some((i) => i.price.id === tier.stripe_base_price_id);
 
     if (!alreadyOnPlan) {
@@ -166,7 +174,7 @@ router.post(
       if (tier.stripe_overage_price_id && existingItems[1]) {
         items.push({ id: existingItems[1].id, price: tier.stripe_overage_price_id });
       }
-      await stripe.subscriptions.update(sub.stripe_subscription_id, {
+      await getStripe().subscriptions.update(sub.stripe_subscription_id, {
         items,
         proration_behavior: "create_prorations",
         metadata: {
@@ -190,7 +198,7 @@ router.post(
   "/cancel",
   requireRole("owner", "admin"),
   asyncHandler(async (req, res) => {
-    if (!stripe) throw BadRequest("Stripe not configured");
+    if (!getStripe()) throw BadRequest("Stripe not configured");
 
     const { data: sub } = await req.supabase
       .from("subscriptions")
@@ -199,7 +207,7 @@ router.post(
       .maybeSingle();
     if (!sub?.stripe_subscription_id) throw NotFound("No active subscription");
 
-    await stripe.subscriptions.update(sub.stripe_subscription_id, {
+    await getStripe().subscriptions.update(sub.stripe_subscription_id, {
       cancel_at_period_end: true,
     });
 
@@ -216,7 +224,7 @@ router.post(
   "/reactivate",
   requireRole("owner", "admin"),
   asyncHandler(async (req, res) => {
-    if (!stripe) throw BadRequest("Stripe not configured");
+    if (!getStripe()) throw BadRequest("Stripe not configured");
 
     const { data: sub } = await req.supabase
       .from("subscriptions")
@@ -225,7 +233,7 @@ router.post(
       .maybeSingle();
     if (!sub?.stripe_subscription_id) throw NotFound("No subscription to reactivate");
 
-    await stripe.subscriptions.update(sub.stripe_subscription_id, {
+    await getStripe().subscriptions.update(sub.stripe_subscription_id, {
       cancel_at_period_end: false,
     });
 
@@ -243,14 +251,14 @@ router.post(
   requireRole("owner", "admin"),
   validate({ body: z.object({ return_url: z.string().url() }) }),
   asyncHandler(async (req, res) => {
-    if (!stripe) throw BadRequest("Stripe not configured");
+    if (!getStripe()) throw BadRequest("Stripe not configured");
     const { data: sub } = await req.supabase
       .from("subscriptions")
       .select("stripe_customer_id")
       .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (!sub?.stripe_customer_id) throw NotFound("No Stripe customer for this org");
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: req.body.return_url,
     });
