@@ -42,6 +42,7 @@ router.get(
     let q = req.supabase
       .from("consent_events")
       .select("id, e164, kind, channel, evidence, occurred_at")
+      .eq("org_id", req.auth.orgId)
       .order("occurred_at", { ascending: false })
       .limit(req.query.limit);
 
@@ -118,6 +119,7 @@ router.get(
     let q = req.supabase
       .from("dnc_list")
       .select("e164, reason, added_at")
+      .eq("org_id", req.auth.orgId)
       .order("added_at", { ascending: false })
       .limit(req.query.limit);
     if (req.query.cursor) q = q.lt("added_at", req.query.cursor);

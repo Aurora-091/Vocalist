@@ -22,6 +22,11 @@ _Scope: Express backend modules routing, controllers input validation, multi-ten
 | **B7** | 🟡 DEPENDENCY | `agents.routes.js` | Inline requires are used for `updateOnboardingStep`, presenting dependency pattern issues. | ✅ Resolved |
 | **B8** | 🟡 MULTI-TENANT | `shopify.oauth.js` | Shopify uninstall webhook falls back to domain matching, potentially updating multiple tenants. | ✅ Resolved |
 | **B9** | 🟡 AUTHORIZATION| `segments.routes.js` | POST and DELETE segment routes lack owner/admin role verification. | ✅ Resolved |
+| **B10**| 🟢 AUDIT PASS | `auth.routes.js` | Forgot Password reset routes rely on secure native Supabase Auth redirects. | ✅ Resolved |
+| **B11**| 🔴 CRITICAL IDOR| `users.routes.js` | User deletion and role changes could be executed without validating organization boundary scopes. | ✅ Resolved |
+| **B12**| 🟠 LEAK RISK | `calls.routes.js` | GET endpoints for detail, events list, transcript, and recordings fetch data without org_id scope checks. | ✅ Resolved |
+| **B13**| 🟠 LEAK RISK | `consent.routes.js` | GET /events and GET /dnc return lists without enforcing organization limits in app logic. | ✅ Resolved |
+| **B14**| 🟡 DEPENDENCY | `numbers.routes.js` | Inline requires for onboarding route updates inside phone number endpoints. | ✅ Resolved |
 
 ---
 
@@ -62,3 +67,15 @@ _Scope: Express backend modules routing, controllers input validation, multi-ten
 
 ### B9 — Missing role checks on Segments
 * **Remediation**: Added `requireRole("owner", "admin")` verification on segment creation and deletion endpoints.
+
+### B10 — Forgot Password Audit
+* **Remediation**: Verified secure redirect patterns. The backend delegates password reset and execution directly to standard secure Supabase auth APIs.
+
+### B11 — User Deletion & Invite IDOR
+* **Remediation**: Added checks fetching the user record first to verify it matches `req.auth.orgId` before invoking service-role `deleteUser(id)`. Scoped role updates and list requests to target organization.
+
+### B12 & B13 — Calls and Consent Leaks
+* **Remediation**: Enforced explicit `.eq("org_id", req.auth.orgId)` on calls GET lists, detail queries, transcript endpoints, recording stream redirects, and consent retrieval lists. Verified Call ownership before returning events.
+
+### B14 — Inline require() inside numbers routes
+* **Remediation**: Moved `updateOnboardingStep` import to the top of `numbers.routes.js`.

@@ -4,6 +4,13 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.8.3] - Wednesday, 2026-07-01 22:20 IST
+
+### Fixed
+- **User Invite & Deletion IDOR**: Hardened `DELETE /v1/users/:id` to fetch and verify the target user record belongs to the caller's organization (`org_id`) before initiating the service-role Auth deletion query. Added strict `org_id` filtering to user role updates and user retrieval lists.
+- **Tenant Isolation on Calls & Consent**: Enforced explicit `.eq("org_id", req.auth.orgId)` scopes on Calls GET list and detail endpoints, events checks, transcript downloads, recording audio files requests, and Consent events / DNC lists.
+- **Numbers Import Cleanups**: Removed inline onboarding require statements from numbers endpoints.
+
 ## [1.8.2] - Wednesday, 2026-07-01 21:40 IST
 
 ### Fixed

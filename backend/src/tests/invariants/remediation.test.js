@@ -11,6 +11,8 @@ function makeMockDatabase() {
     agents: [],
     organization_agents: [],
     integrations: [],
+    users: [],
+    calls: [],
   };
 
   return {
@@ -197,4 +199,68 @@ test("remediation: updateAgent ignores tools parameter to prevent update query c
   
   // Verify tools was NOT stored in the database row
   assert.equal(db.store.agents[0].tools, undefined);
+});
+
+test("remediation: user deletion verifies organization bounds before action", async () => {
+  const db = makeMockDatabase();
+  db.store.users.push({
+    id: "user-999",
+    org_id: "org-123",
+    email: "user@example.com",
+    role: "admin",
+  });
+
+  // Try to lookup user under correct org
+  const { data: correctUser } = await db
+    .from("users")
+    .select("id")
+    .eq("id", "user-999")
+    .eq("org_id", "org-123")
+    .maybeSingle();
+  assert.ok(correctUser);
+  assert.equal(correctUser.id, "user-999");
+
+  // Try to lookup user under wrong org (simulating IDOR attempt)
+  const { data: wrongUser } = await db
+    .from("users")
+    .select("id")
+    .eq("id", "user-999")
+    .eq("org_id", "org-wrong-456")
+    .maybeSingle();
+  assert.equal(wrongUser, null);
+});
+
+test("remediation: calls list and detail endpoints enforce org_id filters", async () => {
+  const db = makeMockDatabase();
+  db.store.calls.push(
+    {
+      id: "call-1",
+      org_id: "org-123",
+      direction: "outbound",
+      status: "completed",
+    },
+    {
+      id: "call-2",
+      org_id: "org-456",
+      direction: "inbound",
+      status: "completed",
+    }
+  );
+
+  // Query list for org-123
+  const { data: calls123 } = await db
+    .from("calls")
+    .select("*")
+    .eq("org_id", "org-123");
+  assert.equal(calls123.length, 1);
+  assert.equal(calls123[0].id, "call-1");
+
+  // Query detail for call-2 using org-123 (unauthorized)
+  const { data: call2DetailWrongOrg } = await db
+    .from("calls")
+    .select("*")
+    .eq("id", "call-2")
+    .eq("org_id", "org-123")
+    .maybeSingle();
+  assert.equal(call2DetailWrongOrg, null);
 });

@@ -25,6 +25,7 @@ router.get(
     const { data, error } = await req.supabase
       .from("users")
       .select("id, email, role, created_at")
+      .eq("org_id", req.auth.orgId)
       .order("created_at", { ascending: true });
     if (error) throw error;
     res.json({ users: data || [] });
@@ -76,6 +77,7 @@ router.patch(
       .from("users")
       .select("id, org_id")
       .eq("id", id)
+      .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (getErr) throw getErr;
     if (!existing) throw NotFound("User not found");
@@ -88,6 +90,7 @@ router.patch(
       .from("users")
       .update({ role: req.body.role })
       .eq("id", id)
+      .eq("org_id", req.auth.orgId)
       .select("id, email, role")
       .single();
     if (error) throw error;
@@ -103,6 +106,16 @@ router.delete(
     if (req.params.id === req.auth.userId) {
       throw BadRequest("Cannot remove yourself");
     }
+
+    const { data: existing, error: getErr } = await req.supabase
+      .from("users")
+      .select("id")
+      .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+    if (getErr) throw getErr;
+    if (!existing) throw NotFound("User not found in organization");
+
     const admin = requireAdmin();
     const { error } = await admin.auth.admin.deleteUser(req.params.id);
     if (error) throw new Error(error.message);

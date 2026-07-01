@@ -26,6 +26,7 @@ router.get(
       .select(
         "id, agent_id, campaign_id, contact_id, direction, status, provider, provider_call_id, started_at, ended_at, duration_sec, cost_usd, recording_url, created_at, from_number, to_number"
       )
+      .eq("org_id", req.auth.orgId)
       .order("created_at", { ascending: false })
       .limit(req.query.limit);
     if (req.query.campaign_id) q = q.eq("campaign_id", req.query.campaign_id);
@@ -47,6 +48,7 @@ router.get(
       .from("calls")
       .select("*")
       .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (error) throw error;
     if (!data) throw NotFound("Call not found");
@@ -64,6 +66,15 @@ router.get(
     }),
   }),
   asyncHandler(async (req, res) => {
+    const { data: callCheck, error: checkErr } = await req.supabase
+      .from("calls")
+      .select("id")
+      .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+    if (checkErr) throw checkErr;
+    if (!callCheck) throw NotFound("Call not found");
+
     let q = req.supabase
       .from("call_events")
       .select("id, kind, payload, occurred_at")
@@ -85,6 +96,7 @@ router.get(
       .from("calls")
       .select("id, transcript")
       .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (error) throw error;
     if (!data) throw NotFound("Call not found");
@@ -100,6 +112,7 @@ router.get(
       .from("calls")
       .select("conversation_id, provider")
       .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (error) throw error;
     if (!call || !call.conversation_id) throw NotFound("Recording not found");
