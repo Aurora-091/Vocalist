@@ -60,10 +60,12 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
   };
   await admin.from("twilio_subaccounts").upsert(row);
 
-  await admin.rpc("vault_store", {
-    name: row.auth_token_ref,
-    secret: sub.authToken,
-  }).catch(() => {});
+  try {
+    await admin.rpc("vault_store", {
+      name: row.auth_token_ref,
+      secret: sub.authToken,
+    });
+  } catch (e) {}
 
   return { ...row, _authToken: sub.authToken };
 }
@@ -79,7 +81,9 @@ async function linkByoAccount(orgId, { accountSid, authToken, friendlyName }) {
   const admin = requireAdmin();
   const secretRef = `vault:twilio:byo:${orgId}:auth_token`;
 
-  await admin.rpc("vault_store", { name: secretRef, secret: authToken }).catch(() => {});
+  try {
+    await admin.rpc("vault_store", { name: secretRef, secret: authToken });
+  } catch (e) {}
 
   const row = {
     org_id: orgId,

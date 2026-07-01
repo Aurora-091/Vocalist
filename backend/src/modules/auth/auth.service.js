@@ -29,16 +29,20 @@ async function signup({ email, password, org_name }) {
     .insert({ id: userId, org_id: orgRow.id, email, role: "owner", display_name: org_name || email.split("@")[0] });
   if (linkErr) {
     await admin.auth.admin.deleteUser(userId).catch(() => {});
-    await admin.from("orgs").delete().eq("id", orgRow.id).catch(() => {});
+    try {
+      await admin.from("orgs").delete().eq("id", orgRow.id);
+    } catch (e) {}
     if (linkErr.code === "23505") throw Conflict("User already exists");
     throw new Error(`Failed to link user: ${linkErr.message}`);
   }
 
   // Initialize onboarding state
-  await admin.from("onboarding_state").insert({
-    org_id: orgRow.id,
-    steps: { pick_vertical: false, connect_tools: false, add_knowledge: false, create_agent: false, get_number: false, test_and_golive: false },
-  }).catch(() => {});
+  try {
+    await admin.from("onboarding_state").insert({
+      org_id: orgRow.id,
+      steps: { pick_vertical: false, connect_tools: false, add_knowledge: false, create_agent: false, get_number: false, test_and_golive: false },
+    });
+  } catch (e) {}
 
   const { data: session, error: sessErr } = await anonClient.auth.signInWithPassword({
     email,

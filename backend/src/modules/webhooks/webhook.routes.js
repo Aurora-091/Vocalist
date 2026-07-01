@@ -158,17 +158,19 @@ router.post(
           if (sub) orgId = sub.org_id;
         }
 
-        await admin.from("webhook_dlq").insert({
-          org_id: orgId,
-          source: "stripe",
-          event_type: event.type,
-          payload: event,
-          error_message: err.message,
-          retry_count: 0,
-          next_retry_at: new Date(Date.now() + 60_000).toISOString(),
-        }).catch((dlqErr) => {
+        try {
+          await admin.from("webhook_dlq").insert({
+            org_id: orgId,
+            source: "stripe",
+            event_type: event.type,
+            payload: event,
+            error_message: err.message,
+            retry_count: 0,
+            next_retry_at: new Date(Date.now() + 60_000).toISOString(),
+          });
+        } catch (dlqErr) {
           logger.error({ err: dlqErr.message }, "Failed to write Stripe webhook to DLQ");
-        });
+        }
       }
     })();
   })

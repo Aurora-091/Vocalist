@@ -109,10 +109,14 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     logger.error({ err: err.message, agentProvider: agent.provider }, "Provider startCall failed");
 
     // Release the reserved spend since the call never happened
-    await admin.rpc("release_spend", {
-      p_org: campaign.org_id,
-      p_amount_usd: projectedCost,
-    }).catch((e) => logger.warn({ err: e.message, orgId: campaign.org_id }, "release_spend failed"));
+    try {
+      await admin.rpc("release_spend", {
+        p_org: campaign.org_id,
+        p_amount_usd: projectedCost,
+      });
+    } catch (e) {
+      logger.warn({ err: e.message, orgId: campaign.org_id }, "release_spend failed");
+    }
 
     await transition(admin, {
       targetId: target.target_id,
@@ -142,10 +146,12 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     .single();
   if (callErr) {
     logger.error({ err: callErr.message }, "Failed to insert call row after dispatch");
-    await admin.rpc("release_spend", {
-      p_org: campaign.org_id,
-      p_amount_usd: projectedCost,
-    }).catch(() => {});
+    try {
+      await admin.rpc("release_spend", {
+        p_org: campaign.org_id,
+        p_amount_usd: projectedCost,
+      });
+    } catch (e) {}
     return { failed: true, reason: "call_insert_failed" };
   }
 

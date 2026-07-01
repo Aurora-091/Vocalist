@@ -131,17 +131,19 @@ async function handle(payload) {
         });
       } catch (e) {
         logger.error({ err: e.message, eventType, targetId: target.id }, "Campaign state transition FAILED - writing to DLQ");
-        await admin.from("webhook_dlq").insert({
-          org_id: callRow.org_id,
-          source: "elevenlabs",
-          event_type: `campaign_transition:${eventType}`,
-          payload: { target_id: target.id, from_state: target.state, to_state: TARGET_STATE_FOR_CALL[eventType], call_id: callRow.id },
-          error_message: e.message,
-          retry_count: 0,
-          next_retry_at: new Date(Date.now() + 60_000).toISOString(),
-        }).catch((dlqErr) => {
+        try {
+          await admin.from("webhook_dlq").insert({
+            org_id: callRow.org_id,
+            source: "elevenlabs",
+            event_type: `campaign_transition:${eventType}`,
+            payload: { target_id: target.id, from_state: target.state, to_state: TARGET_STATE_FOR_CALL[eventType], call_id: callRow.id },
+            error_message: e.message,
+            retry_count: 0,
+            next_retry_at: new Date(Date.now() + 60_000).toISOString(),
+          });
+        } catch (dlqErr) {
           logger.error({ err: dlqErr.message }, "Failed to write to DLQ");
-        });
+        }
       }
     }
   }
