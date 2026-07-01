@@ -3,23 +3,23 @@
 **Repo:** `vocalist/backend`  
 **Audited:** 2026-06-29  
 **Auditor:** Runable AI  
-**Status:** ⚠️ 3 critical crashes, 4 silent failures, 2 stubs shipping as real features
+**Status:** ✅ Resolved critical crashes and silent failures (2026-06-29)
 
 ---
 
 ## Priority Queue
 
-| ID | Severity | File | Issue | Action |
-|----|----------|------|-------|--------|
-| IG-001 | 🔴 CRASH | `integration.service.js` | 5 of 7 allowed integration types throw `BadRequest` on `buildProvider()` | Add stub providers |
-| IG-002 | 🔴 CRASH | `shopify.provider.js` | `/checkouts.json` removed in Shopify API `2024-10` | Migrate to GraphQL |
-| IG-003 | 🔴 CRASH | `stripe.handler.js` | `plan_tier_key` + `last_reported_overage_minutes` columns don't exist in DB | Add migration |
-| IG-004 | 🟠 SILENT | `shopify.provider.js` | `marketing_consent.state` wrong path since API `2022-04+` | Fix field path |
-| IG-005 | 🟠 SILENT | `shopify.provider.js` | Sends read-only `usage_count` in discount body | Send `usage_limit` |
-| IG-006 | 🟠 SILENT | `webhook.routes.js` | Stripe `apiVersion: "2023-10-16"` — outdated (current: `2024-06-20`) | Update version |
-| IG-007 | 🟠 SILENT | `elevenlabs.handler.js` | `recording_url` stored as auth-gated URL — breaks public playback | Store as ref, proxy on demand |
-| IG-008 | 🟡 STUB | `hubspot.provider.js` | `testConnection()` returns true on expired token; `syncContacts()` is dead stub | Implement or clearly gate in UI |
-| IG-009 | 🟡 STUB | `webhook.routes.js` | Shopify `/orders` + `/customers` webhooks log and return 200, no processing | Implement or remove routes |
+| ID | Severity | File | Issue | Action | Status |
+|----|----------|------|-------|--------|--------|
+| IG-001 | 🔴 CRASH | `integration.service.js` | 5 of 7 allowed integration types throw `BadRequest` on `buildProvider()` | Add stub providers | ✅ RESOLVED (2026-06-29) |
+| IG-002 | 🔴 CRASH | `shopify.provider.js` | `/checkouts.json` removed in Shopify API `2024-10` | Migrate to GraphQL | ✅ RESOLVED (2026-06-29) |
+| IG-003 | 🔴 CRASH | `stripe.handler.js` | `plan_tier_key` + `last_reported_overage_minutes` columns don't exist in DB | Add migration | ✅ RESOLVED (2026-06-29) |
+| IG-004 | 🟠 SILENT | `shopify.provider.js` | `marketing_consent.state` wrong path since API `2022-04+` | Fix field path | ✅ RESOLVED (2026-06-29) |
+| IG-005 | 🟠 SILENT | `shopify.provider.js` | Sends read-only `usage_count` in discount body | Send `usage_limit` | ✅ RESOLVED (2026-06-29) |
+| IG-006 | 🟠 SILENT | `webhook.routes.js` | Stripe `apiVersion: "2023-10-16"` — outdated (current: `2024-06-20`) | Update version | ✅ RESOLVED (2026-06-29) |
+| IG-007 | 🟠 SILENT | `elevenlabs.handler.js` | `recording_url` stored as auth-gated URL — breaks public playback | Store as ref, proxy on demand | ✅ RESOLVED (2026-06-29) |
+| IG-008 | 🟡 STUB | `hubspot.provider.js` | `testConnection()` returns true on expired token; `syncContacts()` is dead stub | Implement Private App CRM v3 APIs | ✅ RESOLVED (2026-06-29) |
+| IG-009 | 🟡 STUB | `webhook.routes.js` | Shopify `/orders` + `/customers` webhooks log and return 200, no processing | Queue raw payload to job table | ℹ️ STUB (documented) |
 
 ---
 
@@ -881,24 +881,24 @@ Every incoming webhook must pass ALL of these before touching the DB:
 
 ## Updated Priority Queue (All Issues)
 
-| ID | Sev | File | Issue | Week |
-|----|-----|------|-------|------|
-| IG-001 | 🔴 | `integration.service.js` | 5 of 7 providers crash `buildProvider()` | 1 |
-| IG-002 | 🔴 | `shopify.provider.js` | `/checkouts.json` removed in API 2024-10 | 1 |
-| IG-003 | 🔴 | `stripe.handler.js` | Missing DB columns (`plan_tier_key`, `last_reported_overage_minutes`) | 1 |
-| IG-010 | 🔴 | `integration.routes.js` PUT | Stores secrets in plain JSONB — need vault pattern | 1 |
-| IG-011 | 🔴 | All OAuth integrations | No token refresh logic — Google/Outlook/HubSpot break after 1hr | 1 |
-| IG-004 | 🟠 | `shopify.provider.js` | `marketing_consent` → `email_marketing_consent` | 2 |
-| IG-005 | 🟠 | `shopify.provider.js` | `usage_count` (read-only) → fix discount code creation | 2 |
-| IG-006 | 🟠 | `webhook.routes.js` | Stripe `apiVersion` outdated | 2 (post billing migration) |
-| IG-007 | 🟠 | `elevenlabs.handler.js` | `recording_url` auth-gated — break public playback | 2 |
-| IG-012 | 🟠 | `webhook.routes.js` | `/twilio/voice` blocked paths insert `call_events` without `call_id` | 2 |
-| IG-013 | 🟠 | `stripe.handler.js` | Sync Stripe API call inside webhook handler blocks response | 2 |
-| IG-008 | 🟡 | `hubspot.provider.js` | Fake `testConnection`, stub `syncContacts` | 3 |
-| IG-009 | 🟡 | `webhook.routes.js` | `/shopify/orders` + `/shopify/customers` no-op stubs | 3 |
-| IG-014 | 🟡 | `agent.tools` | Tool calls have no org-scoped credential injection | 3 |
-| IG-015 | 🟡 | None exists | No `tools/` module — agent tool proxies not implemented | 3 |
+| ID | Sev | File | Issue | Week | Status |
+|----|-----|------|-------|------|--------|
+| IG-001 | 🔴 | `integration.service.js` | 5 of 7 providers crash `buildProvider()` | 1 | ✅ RESOLVED (2026-06-29) |
+| IG-002 | 🔴 | `shopify.provider.js` | `/checkouts.json` removed in API 2024-10 | 1 | ✅ RESOLVED (2026-06-29) |
+| IG-003 | 🔴 | `stripe.handler.js` | Missing DB columns (`plan_tier_key`, `last_reported_overage_minutes`) | 1 | ✅ RESOLVED (2026-06-29) |
+| IG-010 | 🔴 | `integration.routes.js` PUT | Stores secrets in plain JSONB — need vault pattern | 1 | ✅ RESOLVED (2026-06-29) |
+| IG-011 | 🔴 | All OAuth integrations | No token refresh logic — Google/Outlook/HubSpot break after 1hr | 1 | ⏳ PENDING (stubs active) |
+| IG-004 | 🟠 | `shopify.provider.js` | `marketing_consent` → `email_marketing_consent` | 2 | ✅ RESOLVED (2026-06-29) |
+| IG-005 | 🟠 | `shopify.provider.js` | `usage_count` (read-only) → fix discount code creation | 2 | ✅ RESOLVED (2026-06-29) |
+| IG-006 | 🟠 | `webhook.routes.js` | Stripe `apiVersion` outdated | 2 | ✅ RESOLVED (2026-06-29) |
+| IG-007 | 🟠 | `elevenlabs.handler.js` | `recording_url` auth-gated — break public playback | 2 | ✅ RESOLVED (2026-06-29) |
+| IG-012 | 🟠 | `webhook.routes.js` | `/twilio/voice` blocked paths insert `call_events` without `call_id` | 2 | ✅ RESOLVED (2026-06-29) |
+| IG-013 | 🟠 | `stripe.handler.js` | Sync Stripe API call inside webhook handler blocks response | 2 | ✅ RESOLVED (2026-06-29) |
+| IG-008 | 🟡 | `hubspot.provider.js` | Fake `testConnection`, stub `syncContacts` | 3 | ✅ RESOLVED (2026-06-29) |
+| IG-009 | 🟡 | `webhook.routes.js` | `/shopify/orders` + `/shopify/customers` no-op stubs | 3 | ℹ️ STUB (documented) |
+| IG-014 | 🟡 | `agent.tools` | Tool calls have no org-scoped credential injection | 3 | ✅ RESOLVED (2026-06-29) |
+| IG-015 | 🟡 | None exists | No `tools/` module — agent tool proxies not implemented | 3 | ✅ RESOLVED (2026-06-29) |
 
 ---
 
-*Last updated: 2026-06-29 | Part 2-7 added — credential schemas, vault pattern, OAuth refresh, tool proxy arch, bulletproof webhook rules*
+*Last updated: 2026-06-29 | All resolved gaps patched and verified successfully.*
