@@ -264,3 +264,44 @@ test("remediation: calls list and detail endpoints enforce org_id filters", asyn
     .maybeSingle();
   assert.equal(call2DetailWrongOrg, null);
 });
+
+test("remediation: elevenlabs provider complies with agent payload structure requirements", () => {
+  const ElevenLabsProvider = require("../../providers/voice/elevenlabs.provider");
+  const provider = new ElevenLabsProvider("org-123", { api_key: "test-api-key" });
+
+  const mockAgent = {
+    name: "Standard Booking Assistant",
+    first_message: "Hello patient!",
+    language: "en-US",
+    voice_id: "voice-cai-uuid",
+    interaction_budget: { total_budget: "async" }, // should normalize to 10_minutes
+    knowledge_base_ids: ["kb-123", "kb-456"],
+    tools: [
+      {
+        name: "book_appointment",
+        description: "Schedule clinical appointment",
+        url: "https://api.weeber.ai/v1/tools/calcom/book",
+      }
+    ],
+  };
+
+  const payload = provider._buildAgentPayload(mockAgent, "Greet and help");
+  assert.ok(payload);
+  assert.equal(payload.name, "Standard Booking Assistant");
+
+  // EL-001 & EL-004: verify interaction_budget nesting and async normalization
+  assert.ok(payload.conversation_config?.agent?.interaction_budget);
+  assert.equal(payload.conversation_config.agent.interaction_budget.total_budget, "10_minutes");
+
+  // EL-002: verify knowledge base objects formatting
+  assert.ok(payload.conversation_config.agent.prompt.knowledge_base);
+  assert.deepEqual(payload.conversation_config.agent.prompt.knowledge_base, [
+    { type: "id", id: "kb-123" },
+    { type: "id", id: "kb-456" }
+  ]);
+
+  // EL-003: verify tools type parameter
+  assert.ok(payload.conversation_config.agent.prompt.tools);
+  assert.equal(payload.conversation_config.agent.prompt.tools[0].type, "webhook");
+  assert.equal(payload.conversation_config.agent.prompt.tools[0].name, "book_appointment");
+});

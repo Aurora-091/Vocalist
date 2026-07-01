@@ -4,6 +4,14 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.8.4] - Wednesday, 2026-07-01 22:30 IST
+
+### Fixed
+- **ElevenLabs CAI 2.0 Compliance**: Realized and patched missing API compliance properties in the voice provider payload builder (`elevenlabs.provider.js`):
+  - Injected `interaction_budget` nested under `conversation_config.agent.interaction_budget` and normalized the deprecated `"async"` budget enum value to `"10_minutes"`.
+  - Mapped `knowledge_base` arrays to standard objects `[{ type: "id", id: "kb_xxx" }]` to prevent 422 errors on agent syncs.
+  - Hardened tool resolution to add explicit `type: "webhook"` to resolved agent tools.
+
 ## [1.8.3] - Wednesday, 2026-07-01 22:20 IST
 
 ### Fixed

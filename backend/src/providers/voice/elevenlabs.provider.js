@@ -142,8 +142,16 @@ class ElevenLabsProvider extends VoiceProvider {
     }
 
     if (agent.knowledge_base_ids && Array.isArray(agent.knowledge_base_ids)) {
-      promptConfig.knowledge_base = agent.knowledge_base_ids;
+      promptConfig.knowledge_base = agent.knowledge_base_ids.map((id) =>
+        typeof id === "string" ? { type: "id", id } : id
+      );
     }
+
+    const budget = agent.interaction_budget || agent.persona?.interaction_budget || agent.conversation_config?.agent?.interaction_budget;
+    const oldBudget = agent.safety?.interaction_budget || agent.persona?.safety?.interaction_budget;
+    const totalBudget = oldBudget?.total_budget || budget?.total_budget || "10_minutes";
+    let normalizedBudget = totalBudget;
+    if (normalizedBudget === "async") normalizedBudget = "10_minutes";
 
     const payload = {
       name: agent.name,
@@ -152,6 +160,9 @@ class ElevenLabsProvider extends VoiceProvider {
           prompt: promptConfig,
           first_message: firstMessage,
           language,
+          interaction_budget: {
+            total_budget: normalizedBudget,
+          },
         },
         tts: {
           voice_id: voiceId,
@@ -173,6 +184,7 @@ class ElevenLabsProvider extends VoiceProvider {
     for (const tool of rawTools) {
       if (!tool || !tool.name) continue;
       const resolved = {
+        type: tool.type || "webhook",
         name: tool.name,
         description: tool.description || "",
       };
