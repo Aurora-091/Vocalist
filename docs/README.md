@@ -32,6 +32,7 @@ Welcome to the Weeber platform documentation directory. This folder houses all t
 | [`architecture/platform-blackbook.md`](./architecture/platform-blackbook.md) | **Technical Architecture**: Database patterns, multi-tenancy, and security bounds. |
 | [`architecture/database-guide.md`](./architecture/database-guide.md) | **Database Guide**: Catalog of triggers, RLS policies, indexing, and tables partitioning. |
 | [`architecture/security-audit.md`](./architecture/security-audit.md) | **Security Audit**: Security posture assessment across backend, client-side, and RLS gates. |
+| [`architecture/api-audit.md`](./architecture/api-audit.md) | **API Audit**: Express backend endpoints, input validations, and multi-tenant security gates. |
 | [`DECISIONS.md`](./DECISIONS.md) | **Decisions Log**: Living log of architectural decisions records (ADR). |
 | [`INTEGRATION_GAPS.md`](./INTEGRATION_GAPS.md) | **Integration Audit Report**: Priority queue of all integration and tool proxy gap statuses. |
 | [`CHANGELOG.md`](./CHANGELOG.md) | **Changelog**: Release trails of all features, fixes, and dependencies versions. |

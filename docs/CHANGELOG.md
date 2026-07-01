@@ -6,6 +6,9 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ## [1.8.1] - Wednesday, 2026-07-01 21:05 IST
 
+### Added
+- **Express API Security and Architecture Audit** (`api-audit.md`): Performed a full security audit on Express modules routing, controllers input validation, and credential storage integration, highlighting 4 key findings.
+
 ### Fixed
 - **Supabase Query Builder `.catch` TypeError Crash**: Replaced invalid `.catch()` method invocations on Supabase database query builders (`admin.from(...)` and `admin.rpc(...)`) with standard `try-catch` blocks across the codebase (`auth.service.js`, `dialer.worker.js`, `billing-rollup.worker.js`, `webhook.routes.js`, `elevenlabs.handler.js`, and `twilio.client.js`). This prevents runtime exceptions during signup and webhook/worker operations due to PostgrestFilterBuilder not exposing a native `.catch` property.
 
