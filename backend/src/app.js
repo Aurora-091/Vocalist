@@ -119,6 +119,16 @@ function createApp() {
       const { requireAdmin } = require("./config/supabase");
       const admin = requireAdmin();
 
+      const { vaultifyConfig } = require("./utils/credential.helper");
+      let safeConfig;
+      try {
+        safeConfig = await vaultifyConfig("shopify", { access_token, shop_domain: shop, scopes }, org_id);
+        safeConfig.installed_at = new Date().toISOString();
+      } catch (err) {
+        logger.error({ err: err.message, org_id }, "Failed to vaultify Shopify connection token in app.js");
+        return res.status(500).json({ error: "Vault integration failed" });
+      }
+
       const { data, error } = await admin
         .from("integrations")
         .upsert(
@@ -126,12 +136,7 @@ function createApp() {
             org_id,
             type: "shopify",
             status: "active",
-            config: {
-              shop_domain: shop,
-              access_token,
-              scopes,
-              installed_at: new Date().toISOString(),
-            },
+            config: safeConfig,
           },
           { onConflict: "org_id,type" }
         )

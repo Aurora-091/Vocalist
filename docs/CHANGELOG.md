@@ -4,6 +4,19 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.8.2] - Wednesday, 2026-07-01 21:40 IST
+
+### Fixed
+- **Shopify Token Security**: Wired `vaultifyConfig` into both Shopify connected OAuth webhook endpoints (`shopify.oauth.js` and `app.js`), encrypting tokens inside Supabase Vault and keeping database columns clean of plaintext credentials.
+- **Tenant Isolation Enforcement**: Added explicit `.eq("org_id", req.auth.orgId)` filters to campaign list and detail operations, contacts single resource endpoints, and integrations delete/test connection routes for robust defense-in-depth.
+- **N+1 DNC Upload Optimization**: Completely restructured `POST /contacts/dnc-upload` to use single-batch fetch, batch update, and batch insert statements, reducing worst-case sequential DB round-trips from 20,000 to just 3.
+- **Campaign IDOR Prevention**: Added campaign ownership validation to `POST /v1/campaigns/:id/targets` to verify target campaigns belong to the user's organization before inserting.
+- **Error Propagation & Robustness**: Refactored raw `throw new Error()` calls inside `AgentService` to propagate typed `BadRequest` and `NotFound` factory HttpErrors. Cleared fragile string checks and generic wrapping from agent routes.
+- **Agent Tools DB Crash**: Destructured `tools` array out of creation/update request bodies in `AgentService` to prevent DB crashes due to missing `tools` column.
+- **Segments Validation & Role Gates**: Hooked up Zod validation schemas for segment filter structures and restricted create/delete routes to `owner` and `admin` roles.
+- **Name Duplicate Query Optimization**: Restricted duplicate agent verification query in `AgentService` to fetch only `id` and `name` columns.
+- **Shopify Uninstallation Hardening**: Required strict `org_id` in uninstallation payloads to avoid domain-matching multi-tenant update footguns.
+
 ## [1.8.1] - Wednesday, 2026-07-01 21:05 IST
 
 ### Added

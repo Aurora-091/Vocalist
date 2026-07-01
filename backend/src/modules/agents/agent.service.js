@@ -1,6 +1,6 @@
 const personaService = require("../../services/persona.service");
 const crypto = require("crypto");
-const { BadRequest } = require("../../utils/errors");
+const { BadRequest, NotFound } = require("../../utils/errors");
 
 class AgentService {
   async getIntegrationConfig(supabase, orgId) {
@@ -37,12 +37,12 @@ class AgentService {
 
   async createAgent(supabase, orgId, agentData) {
     const { provider = "elevenlabs", persona = {}, name } = agentData;
-    if (!name) throw new Error("Agent name is required");
+    if (!name) throw BadRequest("Agent name is required");
 
     // 0. Search for duplicate agent in the organization
     const { data: existingAgents, error: checkErr } = await supabase
       .from("agents")
-      .select("*")
+      .select("id, name")
       .eq("org_id", orgId)
       .is("deleted_at", null);
     
@@ -56,7 +56,7 @@ class AgentService {
     }
     
     // Destructure properties to only save database columns directly
-    const { prompt, model, hyper_parameters, ...dbAgentData } = agentData;
+    const { prompt, model, hyper_parameters, tools, ...dbAgentData } = agentData;
 
     // Merge prompt, model, hyper-parameters into persona
     const localPersona = {
@@ -111,9 +111,9 @@ class AgentService {
       .is("deleted_at", null)
       .single();
     
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
 
-    const { prompt, model, hyper_parameters, persona = {}, ...dbUpdateData } = updateData;
+    const { prompt, model, hyper_parameters, tools, persona = {}, ...dbUpdateData } = updateData;
 
     const mergedPersona = {
       ...(existing.persona || {}),
@@ -169,7 +169,7 @@ class AgentService {
       .is("deleted_at", null)
       .single();
     
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
 
     // 2. Delete from organization_agents registry
     await supabase
@@ -203,7 +203,7 @@ class AgentService {
       .eq("org_id", orgId)
       .is("deleted_at", null)
       .single();
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
 
     const { data: updated, error: updateErr } = await supabase
       .from("agents")
@@ -228,7 +228,7 @@ class AgentService {
       .eq("org_id", orgId)
       .is("deleted_at", null)
       .single();
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
 
     const cloneData = {
       name: `${existing.name} (Copy)`,
@@ -253,7 +253,7 @@ class AgentService {
       .eq("org_id", orgId)
       .is("deleted_at", null)
       .single();
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
     return personaService.generateSystemPrompt(existing.persona || {});
   }
 
@@ -267,7 +267,7 @@ class AgentService {
       .is("deleted_at", null)
       .single();
 
-    if (agentErr || !agent) throw new Error("Agent not found");
+    if (agentErr || !agent) throw NotFound("Agent not found");
 
     // 2. Verify phone number belongs to org
     const { data: phone, error: phoneErr } = await supabase
@@ -277,7 +277,7 @@ class AgentService {
       .eq("org_id", orgId)
       .single();
 
-    if (phoneErr || !phone) throw new Error("Phone number not found or does not belong to organization");
+    if (phoneErr || !phone) throw NotFound("Phone number not found or does not belong to organization");
 
     // 3. Save relationship (both on agent, phone_number, and organization_agents)
     await supabase.from("phone_numbers").update({ agent_id: agentId }).eq("id", phoneNumberId);

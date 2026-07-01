@@ -6,6 +6,7 @@ const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.
 const { NotFound, BadRequest, UnprocessableEntity } = require("../../utils/errors");
 const agentService = require("./agent.service");
 const callService = require("../calls/call.service");
+const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
 
 const router = express.Router();
 router.use(requireAuth, requireOrg);
@@ -37,6 +38,7 @@ router.get(
     const { data, error } = await req.supabase
       .from("agents")
       .select("*")
+      .eq("org_id", req.auth.orgId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -52,6 +54,7 @@ router.get(
       .from("agents")
       .select("*")
       .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
       .is("deleted_at", null)
       .maybeSingle();
     if (error) throw error;
@@ -68,7 +71,6 @@ router.post(
     try {
       const agent = await agentService.createAgent(req.supabase, req.auth.orgId, req.body);
 
-      const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
       await updateOnboardingStep(req.supabase, req.auth.orgId, "create_agent");
 
       res.status(201).json({ agent });
@@ -135,7 +137,6 @@ router.post(
         null
       );
 
-      const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
       await updateOnboardingStep(req.supabase, req.auth.orgId, "test_and_golive");
 
       res.json({ ok: true, call: updatedCall });
@@ -161,7 +162,6 @@ router.patch(
       const agent = await agentService.updateAgent(req.supabase, req.auth.orgId, req.params.id, req.body);
       res.json({ agent });
     } catch (err) {
-      if (err.message.includes("not found")) throw NotFound(err.message);
       if (err.status === 422) {
         throw UnprocessableEntity(
           "ElevenLabs rejected the agent configuration",
@@ -185,8 +185,7 @@ router.delete(
       await agentService.deleteAgent(req.supabase, req.auth.orgId, req.params.id);
       res.status(204).end();
     } catch (err) {
-      if (err.message.includes("not found")) throw NotFound(err.message);
-      throw new Error("Failed to delete agent: " + err.message);
+      throw err;
     }
   })
 );
@@ -200,7 +199,6 @@ router.post(
       const agent = await agentService.syncAgent(req.supabase, req.auth.orgId, req.params.id);
       res.json({ agent });
     } catch (err) {
-      if (err.message.includes("not found")) throw NotFound(err.message);
       throw err;
     }
   })
@@ -214,7 +212,6 @@ router.get(
       const systemPrompt = await agentService.getSystemPrompt(req.supabase, req.auth.orgId, req.params.id);
       res.json({ system_prompt: systemPrompt });
     } catch (err) {
-      if (err.message.includes("not found")) throw NotFound(err.message);
       throw err;
     }
   })
@@ -229,7 +226,6 @@ router.post(
       const agent = await agentService.cloneAgent(req.supabase, req.auth.orgId, req.params.id);
       res.status(201).json({ agent });
     } catch (err) {
-      if (err.message.includes("not found")) throw NotFound(err.message);
       throw err;
     }
   })
@@ -247,7 +243,7 @@ router.post(
       const agent = await agentService.assignNumber(req.supabase, req.auth.orgId, req.params.id, req.body.phone_number_id);
       res.json({ agent });
     } catch (err) {
-      throw new Error("Failed to assign number: " + err.message);
+      throw err;
     }
   })
 );

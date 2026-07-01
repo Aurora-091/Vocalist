@@ -39,30 +39,7 @@ router.get(
   })
 );
 
-const VAULT_FIELDS = {
-  shopify: ["access_token"],
-  twilio: ["auth_token"],
-  calcom: ["api_key"],
-  google_cal: ["access_token", "refresh_token"],
-  outlook_cal: ["access_token", "refresh_token"],
-  crm: ["access_token", "refresh_token", "api_key"],
-  hubspot: ["access_token", "refresh_token", "api_key"],
-  zapier: ["hook_secret", "api_key"],
-};
-
-async function vaultifyConfig(type, config, orgId) {
-  const { writeSecret } = require("../../utils/credential.helper");
-  const fields = VAULT_FIELDS[type] || [];
-  const safeConfig = { ...config };
-  for (const field of fields) {
-    if (safeConfig[field] && !String(safeConfig[field]).startsWith("vault:")) {
-      const vaultKey = `vault:integrations:${type}:${field}:${orgId}`;
-      await writeSecret(vaultKey, safeConfig[field]);
-      safeConfig[field] = vaultKey;
-    }
-  }
-  return safeConfig;
-}
+const { vaultifyConfig } = require("../../utils/credential.helper");
 
 router.put(
   "/",
@@ -98,6 +75,7 @@ router.post(
       .from("integrations")
       .select("type, config")
       .eq("type", req.params.type)
+      .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (error) throw error;
     if (!row) throw NotFound("Integration not configured");
@@ -115,7 +93,8 @@ router.delete(
     const { error } = await req.supabase
       .from("integrations")
       .delete()
-      .eq("type", req.params.type);
+      .eq("type", req.params.type)
+      .eq("org_id", req.auth.orgId);
     if (error) throw error;
     res.status(204).end();
   })
