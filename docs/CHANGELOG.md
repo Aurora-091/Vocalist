@@ -4,6 +4,11 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.8.5] - Wednesday, 2026-07-01 23:15 IST
+
+### Fixed
+- **Limbo/Orphaned Auth User Self-Healing Signup**: Resolved a deadlock where users could exist in `auth.users` (Supabase Auth) but not in `public.users` (the application database table). The signup flow now detects this condition, heals the orphaned account by updating its password and organization app metadata, links the database record, and completes the signup process cleanly without throwing a `409 User already exists` error.
+
 ## [1.8.4] - Wednesday, 2026-07-01 22:30 IST
 
 ### Fixed

@@ -13,10 +13,46 @@ function makeMockDatabase() {
     integrations: [],
     users: [],
     calls: [],
+    orgs: [],
+    onboarding_state: [],
   };
+
+  const authStore = [];
 
   return {
     store,
+    authStore,
+    auth: {
+      admin: {
+        listUsers: async () => {
+          return { data: { users: authStore }, error: null };
+        },
+        updateUserById: async (id, params) => {
+          const user = authStore.find((u) => u.id === id);
+          if (user) {
+            Object.assign(user, params);
+            return { data: { user }, error: null };
+          }
+          return { data: null, error: new Error("User not found") };
+        },
+        createUser: async (params) => {
+          const exists = authStore.some((u) => u.email?.toLowerCase() === params.email?.toLowerCase());
+          if (exists) {
+            return { data: null, error: new Error("A user with this email address has already been registered") };
+          }
+          const newUser = { id: "auth-" + Math.random(), user: { id: "auth-" + Math.random(), ...params } };
+          authStore.push(newUser.user);
+          return { data: newUser, error: null };
+        },
+        deleteUser: async (id) => {
+          const idx = authStore.findIndex((u) => u.id === id);
+          if (idx !== -1) {
+            authStore.splice(idx, 1);
+          }
+          return { error: null };
+        },
+      },
+    },
     rpc: async (fn, args) => {
       if (fn === "vault_store") {
         store.vault[args.name] = args.secret;
@@ -304,4 +340,72 @@ test("remediation: elevenlabs provider complies with agent payload structure req
   assert.ok(payload.conversation_config.agent.prompt.tools);
   assert.equal(payload.conversation_config.agent.prompt.tools[0].type, "webhook");
   assert.equal(payload.conversation_config.agent.prompt.tools[0].name, "book_appointment");
+});
+
+test("remediation: self-healing signup flow for orphaned auth users", async () => {
+  const authService = require("../../modules/auth/auth.service");
+  const db = makeMockDatabase();
+  supabaseConfig.setMockAdminClient(db);
+
+  // Mock anonClient for login-after-signup
+  const originalAnon = supabaseConfig.anonClient;
+  supabaseConfig.anonClient = {
+    auth: {
+      signInWithPassword: async ({ email, password }) => {
+        return {
+          data: {
+            user: { id: "auth-orphaned-123", email },
+            session: { access_token: "mock-session-token", refresh_token: "mock-refresh-token" }
+          },
+          error: null
+        };
+      }
+    }
+  };
+
+  const email = "orphaned@example.com";
+  const password = "secure-new-password";
+
+  // Simulate orphaned user existing in authStore but NOT in database store.users
+  db.authStore.push({
+    id: "auth-orphaned-123",
+    email,
+    app_metadata: {},
+  });
+
+  // Perform self-healing signup
+  const signupResult = await authService.signup({
+    email,
+    password,
+    org_name: "Rahul's Org",
+  });
+
+  assert.ok(signupResult);
+  assert.ok(signupResult.org);
+  assert.equal(signupResult.org.name, "Rahul's Org");
+  
+  // Verify that a row has been linked in users table
+  const dbUser = db.store.users.find(u => u.email === email);
+  assert.ok(dbUser);
+  assert.equal(dbUser.org_id, signupResult.org.id);
+
+  // Verify that the auth credentials and app_metadata have been updated
+  const authUser = db.authStore.find(u => u.email === email);
+  assert.ok(authUser);
+  assert.equal(authUser.app_metadata.org_id, signupResult.org.id);
+  assert.equal(authUser.app_metadata.role, "owner");
+  assert.equal(authUser.password, password);
+
+  // Verify that waitlist or second signup attempt with same email throws Conflict
+  await assert.rejects(
+    authService.signup({
+      email,
+      password,
+      org_name: "Another Org",
+    }),
+    /already exists/i
+  );
+
+  supabaseConfig.anonClient = originalAnon;
+  supabaseConfig.setMockAdminClient(null);
 });
