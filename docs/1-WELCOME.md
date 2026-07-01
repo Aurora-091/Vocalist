@@ -40,6 +40,6 @@ To verify your development environment is healthy:
     ```bash
     npm run test
     ```
-    *(Verify that all 71 tests pass successfully)*.
+    *(Verify that all 76 tests pass successfully)*.
 3.  **Inspect database guides**:
     Check [database-guide.md](./architecture/database-guide.md) to learn about tables, partition boundaries, and security triggers.

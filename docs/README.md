@@ -41,9 +41,9 @@ Welcome to the Weeber platform documentation directory. This folder houses all t
 
 ## 4. Specification Archives
 
-Historical Aurora-branded documents are preserved in the `archive/` folder for reference, audit tracks, and compliance verification:
-*   [`archive/Aurora-v1-Scope-and-Build-Contract.md`](./archive/Aurora-v1-Scope-and-Build-Contract.md) — Scope contracts.
-*   [`archive/Aurora-BlackBook.md`](./archive/Aurora-BlackBook.md) — Original technical blueprints.
-*   [`archive/Aurora-UIUX-Spec.md`](./archive/Aurora-UIUX-Spec.md) — Frontend layout mocks.
-*   [`archive/implementation-plan-phase-1.md`](./archive/implementation-plan-phase-1.md) — Phase 1 build contract milestones.
-*   [`archive/AURORA_CURSOR_PROMPT.md`](./archive/AURORA_CURSOR_PROMPT.md) — Outdated rules catalog.
+Historical Aurora-branded documents are preserved in the `architecture/archive/` folder for reference, audit tracks, and compliance verification:
+*   [`architecture/archive/Aurora-v1-Scope-and-Build-Contract.md`](./architecture/archive/Aurora-v1-Scope-and-Build-Contract.md) — Scope contracts.
+*   [`architecture/archive/Aurora-BlackBook.md`](./architecture/archive/Aurora-BlackBook.md) — Original technical blueprints.
+*   [`architecture/archive/Aurora-UIUX-Spec.md`](./architecture/archive/Aurora-UIUX-Spec.md) — Frontend layout mocks.
+*   [`architecture/archive/implementation-plan-phase-1.md`](./architecture/archive/implementation-plan-phase-1.md) — Phase 1 build contract milestones.
+*   [`architecture/archive/AURORA_CURSOR_PROMPT.md`](./architecture/archive/AURORA_CURSOR_PROMPT.md) — Outdated rules catalog.
