@@ -4,6 +4,26 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.8.0] - Monday, 2026-06-29 20:30 IST
+
+### Added
+- **Supabase Vault Integration & Helpers** (`credential.helper.js`): Added utility functions (`writeSecret`, `readSecret`, `resolveConfigSecrets`) to store plaintext integration credentials (API keys, Shopify access tokens, Twilio tokens) securely in Supabase Vault via `vault_store` RPCs, keeping database columns clean of plaintext secrets.
+- **Dynamic Tools Proxy Architecture** (`backend/src/modules/tools`): Created `/v1/tools/:integration/:action` proxy routes and middleware to authorize requests using `WEEBER_TOOL_SECRET` and resolve tenant context (`org_id`, `vertical`) dynamically.
+- **Mock Tool Action Handlers**: Built mock tools handlers for `shopify` (order check, product lists, discounts, cancellations, shipping), `calcom` (scheduling, booking, cancellations), `calendar` (events management), and `twilio` (calls transfer, SMS sending) to return structured ElevenLabs-compatible schemas.
+- **ElevenLabs Recording Proxy Endpoint** (`calls.routes.js`): Implemented a server-side proxy route `GET /v1/calls/:id/recording` to securely stream call audio from ElevenLabs using the backend `ELEVENLABS_API_KEY`, preventing public authentication errors.
+- **Integrations Test Suite** (`integrations.test.js`): Created unit tests checking credentials vaulting, resolution, and provider builder mapping invariants.
+
+### Changed
+- **Shopify Checkouts GraphQL Query** (`shopify.provider.js`): Rewrote abandoned checkouts query to use modern Admin GraphQL API (`2025-01`) instead of the deprecated REST `/checkouts.json` endpoint.
+- **Shopify Email Consent Path**: Standardized marketing consent checks to use the current `email_marketing_consent.state` field path.
+- **Non-blocking Stripe Webhook processing** (`webhook.routes.js`): Redesigned Stripe webhook handlers to process events asynchronously in the background and respond immediately to Stripe with `200 OK` to prevent timeouts. Failed background handlers automatically log events to `webhook_dlq`.
+- **Stripe API Version**: Updated client configuration to API version `"2024-06-20"`.
+
+### Fixed
+- **Twilio Voice Call Events FK Constraint**: Fixed database foreign key violations by creating a placeholder "failed" call record in the `calls` table before logging blocked spend and blocked rate `call_events`.
+- **Shopify Discount Creation Payload**: Excluded the read-only `usage_count` field from discount code body construction to prevent API errors.
+- **Fallback Provider Registry Crash**: Added a fallback stub provider (`stub.provider.js`) for unimplemented provider mappings to prevent `buildProvider` crashes.
+
 ## [1.7.0] - Saturday, 2026-06-27 02:47 IST
 
 ### Added
