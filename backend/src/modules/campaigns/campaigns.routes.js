@@ -161,6 +161,7 @@ router.get(
       .from("campaign_targets")
       .select("id, state, attempts, next_attempt_at, last_call_id, created_at, contact_id")
       .eq("campaign_id", req.params.id)
+      .eq("org_id", req.auth.orgId)
       .order("created_at", { ascending: false })
       .limit(req.query.limit);
     if (req.query.state) q = q.eq("state", req.query.state);
@@ -178,7 +179,8 @@ router.get(
     const { data, error } = await req.supabase
       .from("campaign_targets")
       .select("state")
-      .eq("campaign_id", req.params.id);
+      .eq("campaign_id", req.params.id)
+      .eq("org_id", req.auth.orgId);
     if (error) throw error;
     const counts = {};
     for (const r of data || []) counts[r.state] = (counts[r.state] || 0) + 1;

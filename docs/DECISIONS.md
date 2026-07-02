@@ -112,4 +112,24 @@ This document tracks all major product, architecture, and technology decisions m
   - `src/pages/admin/analytics/MarketingAnalytics.tsx` — Marketing analytics dashboard
   - `.github/workflows/ci.yml` — Updated Node version to 22
 
+## DEC-011: Auth Security Hardening (HttpOnly Cookies & Self-Healing Removal)
+* **Date**: Thursday, 2026-07-02 10:57 IST
+* **Status**: Accepted
+* **Context**: JWT bearer tokens were previously stored in `localStorage`, which exposed them to XSS attacks. Furthermore, a legacy self-healing script during signup silently reset passwords and swallowed `409` errors if a user already existed in Supabase Auth but not `public.users`. Finally, the forgot password route allowed email enumeration by throwing errors on non-existent users.
+* **Decision**: We eliminated `localStorage` usage in favor of `httpOnly`, `SameSite=Lax` cookies set natively by the Express server. The frontend API client uses `credentials: "include"`. The self-healing signup script was removed entirely; the server now correctly rejects duplicate accounts with a `409 Conflict`. The forgot-password endpoint now silently succeeds regardless of user existence.
+* **Key Files**:
+  - `backend/src/modules/auth/auth.routes.js`
+  - `backend/src/modules/auth/auth.service.js`
+  - `src/lib/api.ts`
 
+---
+
+## DEC-012: Provider Error Handling Normalization
+* **Date**: Thursday, 2026-07-02 10:57 IST
+* **Status**: Accepted
+* **Context**: Third-party providers (ElevenLabs, Twilio, Vapi) threw raw `Error` objects on configuration or downstream failures. Since these weren't standard `HttpError` objects, the global `errorHandler` interpreted them as unhandled exceptions, swallowing the context and returning generic `500 Internal Server Errors` to the client. Additionally, Zod validation errors were being stripped in production because the HTTP code (`unprocessable_entity`) did not match the required `"validation_error"` bypass in `error.middleware.js`.
+* **Decision**: Introduced a `BadGateway` (502) error class. Wrapped all `fetch` and SDK errors in our provider layers (ElevenLabs, Vapi, Twilio) inside `BadRequest` or `BadGateway` HttpErrors. Renamed `UnprocessableEntity`'s internal code to `"validation_error"`. This allows the client to receive structured, debuggable payloads (like "Invalid Twilio credentials" or Zod missing field maps) in production without masking them behind a 500.
+* **Key Files**:
+  - `backend/src/utils/errors.js`
+  - `backend/src/providers/voice/elevenlabs.provider.js`
+  - `backend/src/modules/twilio/twilio.client.js`

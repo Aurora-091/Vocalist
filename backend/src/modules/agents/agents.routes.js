@@ -109,7 +109,18 @@ router.post(
       .maybeSingle();
     if (agentErr) throw agentErr;
     if (!agent) throw NotFound("Agent not found");
-    if (!agent.provider_ref) throw BadRequest("Agent not provisioned. Save the agent first.");
+    if (!agent.provider_ref || agent.provider_ref.startsWith("local_")) {
+      throw BadRequest("Agent not provisioned. Save the agent first.");
+    }
+
+    if (agent.provider === "elevenlabs") {
+      const twilioClient = require("../twilio/twilio.client");
+      try {
+        await twilioClient.getTenantClient(req.auth.orgId);
+      } catch (err) {
+        throw BadRequest("Complete Twilio setup before testing calls");
+      }
+    }
 
     const { data: call, error: callErr } = await req.supabase
       .from("calls")
@@ -257,7 +268,8 @@ router.get(
     const { data, error } = await req.supabase
       .from("agent_active_skills")
       .select("*, skill:agent_skills(*)")
-      .eq("agent_id", req.params.id);
+      .eq("agent_id", req.params.id)
+      .eq("org_id", req.auth.orgId);
     if (error) throw error;
     res.json({ skills: data || [] });
   })

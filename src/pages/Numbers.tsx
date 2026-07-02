@@ -23,8 +23,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SetupNumber } from "./SetupNumber";
 
 
 type PhoneNumber = {
@@ -48,6 +56,7 @@ export default function Numbers() {
   const [numbers, setNumbers] = useState<PhoneNumber[] | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isBuyOpen, setIsBuyOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -105,7 +114,7 @@ export default function Numbers() {
             Manage your phone numbers, assign agents, and track renewals.
           </p>
         </div>
-        <Button size="sm">
+        <Button size="sm" onClick={() => setIsBuyOpen(true)}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Buy Phone Number
         </Button>
@@ -122,7 +131,7 @@ export default function Numbers() {
           <CardContent className="py-16 text-center">
             <Phone className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground mb-4">No phone numbers yet.</p>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setIsBuyOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Buy Phone Number
             </Button>
@@ -240,6 +249,23 @@ export default function Numbers() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isBuyOpen} onOpenChange={setIsBuyOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Buy / Link Phone Number</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <SetupNumber
+              embedded={true}
+              onComplete={() => {
+                load();
+                setIsBuyOpen(false);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

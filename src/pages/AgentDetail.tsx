@@ -608,10 +608,15 @@ export default function AgentDetail() {
             <Button
               disabled={!agent.provider_ref || !testNumber.trim() || calling}
               onClick={async () => {
+                const cleanedNumber = testNumber.replace(/\s+/g, "");
+                if (!/^\+[1-9]\d{1,14}$/.test(cleanedNumber)) {
+                  toast.error("Please enter a valid E.164 phone number (e.g., +14155552671).");
+                  return;
+                }
                 setCalling(true);
                 setActiveCallId(null);
                 try {
-                  const res = await api.post<any>(`/v1/agents/${id}/test-call`, { to_number: testNumber.trim() });
+                  const res = await api.post<any>(`/v1/agents/${id}/test-call`, { to_number: cleanedNumber });
                   toast.success("Call initiated. Your phone should ring shortly.");
                   if (res?.call?.id) setActiveCallId(res.call.id);
                 } catch (e: any) {

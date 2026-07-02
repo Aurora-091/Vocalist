@@ -232,11 +232,12 @@ router.post(
     const { requireAdmin } = require("../../config/supabase");
     const admin = requireAdmin();
 
-    if (!called) {
-      return res.type("text/xml").send(
-        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Invalid call parameters.</Say><Hangup/></Response>`
-      );
-    }
+    try {
+      if (!called) {
+        return res.type("text/xml").send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Invalid call parameters.</Say><Hangup/></Response>`
+        );
+      }
 
     // 1. Resolve org_id and bound agent_id
     const { data: number, error: numErr } = await admin
@@ -363,13 +364,19 @@ router.post(
       ? `Thanks for calling ${agentName}. This call may be recorded for quality and training.`
       : "Thanks for calling. This call may be recorded for quality and training.";
 
-    res
-      .type("text/xml")
-      .send(
-        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">${escapeXml(
-          greeting
-        )}</Say><Connect><Stream url="wss://${req.get("host")}/v1/twilio/stream/${callId}" /></Connect><Say voice="alice">Thank you for calling. Goodbye.</Say><Hangup/></Response>`
+      res
+        .type("text/xml")
+        .send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">${escapeXml(
+            greeting
+          )}</Say><Connect><Stream url="wss://${req.get("host")}/v1/twilio/stream/${callId}" /></Connect><Say voice="alice">Thank you for calling. Goodbye.</Say><Hangup/></Response>`
+        );
+    } catch (err) {
+      logger.error({ err: err.message, body: req.body }, "Failed to process inbound Twilio call");
+      res.type("text/xml").send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Sorry, we are currently experiencing technical difficulties. Please try again later.</Say><Hangup/></Response>`
       );
+    }
   })
 );
 

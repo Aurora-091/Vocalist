@@ -14,11 +14,11 @@ router.use(requireAuth, requireOrg);
 
 const SEARCH_TTL_MS = 10 * 60_000;
 
-function buildTwilioWebhookUrls() {
-  const base = env.TWILIO_VOICE_BASE_URL;
+function buildTwilioWebhookUrls(req) {
+  const base = env.TWILIO_VOICE_BASE_URL || `${req.protocol}://${req.get("host")}`;
   return {
-    voiceUrl: base ? `${base}/webhooks/twilio/voice` : null,
-    statusCallback: base ? `${base}/webhooks/twilio` : null,
+    voiceUrl: `${base}/webhooks/twilio/voice`,
+    statusCallback: `${base}/webhooks/twilio`,
   };
 }
 
@@ -243,7 +243,7 @@ router.post(
     await getOrCreateSubaccount(req.auth.orgId);
     const client = await getTenantClient(req.auth.orgId);
 
-    const { voiceUrl, statusCallback } = buildTwilioWebhookUrls();
+    const { voiceUrl, statusCallback } = buildTwilioWebhookUrls(req);
 
     let twilioRow;
     try {
@@ -324,7 +324,7 @@ router.post(
       throw BadRequest("No active Twilio account linked. Link your account or provision an Aurora-managed sub-account first.");
     }
 
-    const { voiceUrl, statusCallback } = buildTwilioWebhookUrls();
+    const { voiceUrl, statusCallback } = buildTwilioWebhookUrls(req);
 
     let provider_ref = req.body.twilio_sid || null;
     if (!isSandbox() && provider_ref) {
@@ -388,6 +388,14 @@ router.delete(
     if (!isSandbox() && row.owner === "aurora" && row.provider_ref) {
       const client = await getTenantClient(req.auth.orgId);
       await client.incomingPhoneNumbers(row.provider_ref).remove().catch(() => {});
+    } else if (!isSandbox() && row.owner === "tenant" && row.provider_ref) {
+      const client = await getTenantClient(req.auth.orgId);
+      await client.incomingPhoneNumbers(row.provider_ref).update({
+        voiceUrl: "",
+        statusCallback: ""
+      }).catch((err) => {
+        logger.warn({ err: err.message }, "Failed to clear BYO number webhooks on unlink");
+      });
     }
 
     await req.supabase

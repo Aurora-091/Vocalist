@@ -35,28 +35,10 @@ async function signup({ email, password, org_name }) {
   });
 
   if (signErr) {
-    // If it's an "already exists" error, check if we can heal an orphaned auth user
+    // If it's an "already exists" error, throw a conflict so the user knows they need to log in or reset password.
     if (signErr.message?.toLowerCase().includes("already")) {
-      // Find the existing auth user's ID
-      const { data: { users }, error: listErr } = await admin.auth.admin.listUsers();
-      const existingAuthUser = users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-
-      if (existingAuthUser) {
-        userId = existingAuthUser.id;
-        // Update the orphaned user's password and app_metadata
-        const { data: updatedUser, error: updateErr } = await admin.auth.admin.updateUserById(userId, {
-          password,
-          app_metadata: { org_id: orgRow.id, role: "owner" },
-        });
-        if (updateErr) {
-          await admin.from("orgs").delete().eq("id", orgRow.id);
-          throw new Error(`Failed to heal orphaned user: ${updateErr.message}`);
-        }
-        userObject = updatedUser.user;
-      } else {
-        await admin.from("orgs").delete().eq("id", orgRow.id);
-        throw Conflict("User already exists");
-      }
+      await admin.from("orgs").delete().eq("id", orgRow.id);
+      throw Conflict("Account with this email already exists. Please log in or reset your password.");
     } else {
       await admin.from("orgs").delete().eq("id", orgRow.id);
       throw new Error(signErr.message);
@@ -90,6 +72,15 @@ async function signup({ email, password, org_name }) {
     });
   } catch (e) {}
 
+  // Proactively create Twilio subaccount and link it to the org
+  try {
+    const { getOrCreateSubaccount } = require("../twilio/twilio.client");
+    await getOrCreateSubaccount(orgRow.id, org_name || `${email}'s org`);
+  } catch (err) {
+    const logger = require("../../config/logger");
+    logger.error({ err: err.message, orgId: orgRow.id }, "Failed to proactively create Twilio subaccount during signup");
+  }
+
   const { data: session, error: sessErr } = await supabaseConfig.anonClient.auth.signInWithPassword({
     email,
     password,
@@ -113,7 +104,8 @@ async function refresh({ refresh_token }) {
 
 async function logout(token) {
   if (!token) throw BadRequest("Missing token");
-  const { error } = await supabaseConfig.anonClient.auth.admin?.signOut?.(token) ?? { error: null };
+  const admin = supabaseConfig.requireAdmin();
+  const { error } = await admin.auth.admin.signOut(token, "global").catch(e => ({ error: e }));
   if (error) throw new Error(error.message);
   return { ok: true };
 }
@@ -122,7 +114,10 @@ async function requestPasswordReset({ email, redirect_to }) {
   const { error } = await supabaseConfig.anonClient.auth.resetPasswordForEmail(email, {
     redirectTo: redirect_to,
   });
-  if (error) throw BadRequest(error.message);
+  if (error) {
+    const logger = require("../../config/logger");
+    logger.warn({ err: error.message, email }, "Password reset failed (preventing enumeration)");
+  }
   return { ok: true };
 }
 

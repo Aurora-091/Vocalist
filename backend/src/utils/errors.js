@@ -13,10 +13,11 @@ const Forbidden = (message = "Forbidden") => new HttpError(403, "forbidden", mes
 const NotFound = (message = "Not Found") => new HttpError(404, "not_found", message);
 const Conflict = (message, details) => new HttpError(409, "conflict", message, details);
 const UnprocessableEntity = (message, details) =>
-  new HttpError(422, "unprocessable_entity", message, details);
+  new HttpError(422, "validation_error", message, details);
 const TooManyRequests = (message = "Rate limit exceeded") =>
   new HttpError(429, "rate_limited", message);
 const Internal = (message = "Internal Server Error") => new HttpError(500, "internal", message);
+const BadGateway = (message = "Bad Gateway", details) => new HttpError(502, "bad_gateway", message, details);
 
 module.exports = {
   HttpError,
@@ -28,4 +29,5 @@ module.exports = {
   UnprocessableEntity,
   TooManyRequests,
   Internal,
+  BadGateway,
 };

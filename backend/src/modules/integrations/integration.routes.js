@@ -16,6 +16,19 @@ router.delete("/shopify/disconnect", requireAuth, requireOrg, asyncHandler(handl
 
 router.use(requireAuth, requireOrg);
 
+router.get("/shopify/install", asyncHandler(async (req, res) => {
+  const shop = req.query.shop;
+  if (!shop) return res.status(400).json({ error: "Missing shop parameter" });
+  
+  const env = require("../../config/env");
+  // Default is something like https://weebersh.com/api/auth
+  const installUrl = new URL(env.WEEBERSH_INSTALL_URL);
+  installUrl.searchParams.set("shop", shop);
+  installUrl.searchParams.set("org_id", req.auth.orgId);
+  
+  res.json({ url: installUrl.toString() });
+}));
+
 const upsertSchema = z.object({
   type: z.enum(["shopify", "calcom", "google_cal", "outlook_cal", "crm", "zapier", "twilio"]),
   config: z.record(z.string(), z.any()).default({}),

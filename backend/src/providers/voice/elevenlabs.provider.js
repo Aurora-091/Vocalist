@@ -20,7 +20,8 @@ class ElevenLabsProvider extends VoiceProvider {
   async _call(method, path, body, isMultipart = false) {
     const apiKey = this.config.api_key || process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
-      throw new Error("ElevenLabs provider requires config.api_key or ELEVENLABS_API_KEY env var");
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("ElevenLabs provider requires config.api_key or ELEVENLABS_API_KEY env var");
     }
 
     const headers = {
@@ -43,10 +44,11 @@ class ElevenLabsProvider extends VoiceProvider {
       } catch {
         detail = await res.text().catch(() => "");
       }
-      const err = new Error(`ElevenLabs ${method} ${path} failed: ${res.status}`);
-      err.status = res.status;
-      err.detail = detail;
-      throw err;
+      const { BadGateway, BadRequest } = require("../../utils/errors");
+      if (res.status >= 400 && res.status < 500) {
+        throw BadRequest(`ElevenLabs ${method} ${path} failed: ${res.status}`, detail);
+      }
+      throw BadGateway(`ElevenLabs ${method} ${path} failed: ${res.status}`, detail);
     }
 
     if (res.status === 204) return null;
@@ -80,7 +82,8 @@ class ElevenLabsProvider extends VoiceProvider {
     const accountSid = sub?.subaccount_sid || process.env.TWILIO_ACCOUNT_SID;
 
     if (!accountSid || !authToken) {
-      throw new Error("Twilio credentials unavailable - cannot proceed with telephony operation");
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Twilio credentials unavailable - cannot proceed with telephony operation");
     }
 
     return { accountSid, authToken };
@@ -94,7 +97,8 @@ class ElevenLabsProvider extends VoiceProvider {
     // Import it
     const credentials = await this._getTwilioCredentials();
     if (!credentials.accountSid || !credentials.authToken) {
-      throw new Error("Twilio credentials missing, cannot import number to ElevenLabs");
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Twilio credentials missing, cannot import number to ElevenLabs");
     }
 
     const importRes = await this._call("POST", "/v1/convai/phone-numbers", {
@@ -226,7 +230,10 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   async updateAgent(providerRef, agent, systemPrompt) {
-    if (!providerRef) throw new Error("Missing providerRef");
+    if (!providerRef) {
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Missing providerRef");
+    }
     const payload = this._buildAgentPayload(agent, systemPrompt);
     const result = await this._call("PATCH", `/v1/convai/agents/${providerRef}`, payload);
     return { provider_ref: providerRef, provider_meta: result };

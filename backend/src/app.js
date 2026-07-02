@@ -3,11 +3,12 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const crypto = require("crypto");
+const cookieParser = require("cookie-parser");
 
 const env = require("./config/env");
 const logger = require("./config/logger");
 const { notFound, errorHandler } = require("./middleware/error.middleware");
-const { apiLimiter } = require("./middleware/rate-limit.middleware");
+const { apiLimiter, authLimiter } = require("./middleware/rate-limit.middleware");
 const asyncHandler = require("./utils/asyncHandler");
 
 const authRoutes = require("./modules/auth/auth.routes");
@@ -97,6 +98,7 @@ function createApp() {
 
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+  app.use(cookieParser());
 
   app.get("/", (_req, res) => res.json({ service: "aurora-api", status: "ok" }));
   app.get("/health", (_req, res) =>
@@ -152,8 +154,8 @@ function createApp() {
     })
   );
 
-  app.use("/v1/auth", authRoutes);
-  app.use("/v1/waitlist", waitlistRoutes);
+  app.use("/v1/auth", authLimiter, authRoutes);
+  app.use("/v1/waitlist", authLimiter, waitlistRoutes);
   app.use("/v1/enterprise", enterpriseRoutes);
 
   app.use("/v1", apiLimiter);

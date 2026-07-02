@@ -3,6 +3,9 @@ const { requireAdmin, clientForToken } = require("../config/supabase");
 const asyncHandler = require("../utils/asyncHandler");
 
 function decodeBearer(req) {
+  if (req.cookies && req.cookies["sb-access-token"]) {
+    return req.cookies["sb-access-token"];
+  }
   const header = req.headers.authorization || req.headers.Authorization;
   if (!header || typeof header !== "string") return null;
   const [scheme, token] = header.split(" ");

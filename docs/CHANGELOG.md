@@ -4,6 +4,38 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.8.7] - Thursday, 2026-07-02 21:20 IST
+
+### Added
+- **Proactive Twilio Provisioning**: Updated `auth.service.js` to immediately provision and link an Aurora-managed Twilio subaccount to new organizations upon signup.
+- **Client-Side E.164 Validation**: Added strict E.164 format validation (`^\+[1-9]\d{1,14}$`) for test call numbers in `AgentDetail.tsx` and `Onboarding.tsx` to preempt invalid provider requests.
+
+### Fixed
+- **Test-Call Silent Failure Loop**: Added a pre-flight check in `agents.routes.js` to block test calls and return a structured `400 BadRequest` if the organization lacks Twilio credentials.
+- **Legacy Agent Provisioning Check**: Hardened the test-call route to explicitly reject legacy unprovisioned agent IDs (IDs prefixed with `local_`).
+- **Log Level Adjustment**: Changed the "No Twilio subaccount found" log in `elevenlabs.provider.js` to `warn` to reduce log noise.
+
+---
+
+## [1.8.6] - Thursday, 2026-07-02 10:57 IST
+
+### Added
+- **Outbound Calls Endpoint**: Added `POST /v1/calls/outbound` in `calls.routes.js` to dispatch outbound calls seamlessly using the shared `call.service.js`.
+- **Onboarding BYO Support**: Injected `SetupNumber` embedded flow into the `Onboarding.tsx` wizard to allow merchants to bring their own Twilio accounts directly during onboarding.
+- **A2P 10DLC Guide** (`A2P_10DLC_GUIDE.md`): Authored compliance documentation for telecom registration.
+- **Error Normalization**: Added `BadGateway` error class for upstream service failures.
+
+### Changed
+- **Auth Cookies Migration**: Migrated authentication from `localStorage` JWTs to `httpOnly`, `SameSite=Lax` cookies, significantly reducing XSS token theft vectors.
+- **Provider Error Normalization**: Mapped all upstream provider API errors (ElevenLabs, Twilio, Vapi) to `502 BadGateway` or `400 BadRequest` to prevent noisy unhandled `500` exceptions on the backend and provide better UI feedback.
+- **Zod Validation Details**: Renamed `UnprocessableEntity` error code to `"validation_error"` so the global error handler securely allows form validation structures (like missing fields) to be exposed to the client in production.
+
+### Fixed
+- **Forgot Password Enumeration**: Silenced the reset password route to unconditionally return success, preventing user enumeration.
+- **Signup Limbo Bug Fix Phase 2**: Fully removed the legacy self-healing DB script during signup. Now safely returns a `409 Conflict`.
+
+---
+
 ## [1.8.5] - Wednesday, 2026-07-01 23:15 IST
 
 ### Fixed

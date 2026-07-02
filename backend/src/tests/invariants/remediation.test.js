@@ -198,7 +198,7 @@ test("remediation: createAgent ignores tools parameter to prevent database colum
 
   const agentData = {
     name: "Support Bot",
-    provider: "elevenlabs",
+    provider: "mock",
     tools: [{ type: "web_search" }],
     prompt: "Talk friendly",
     model: "gemini-2.5-flash",
@@ -342,70 +342,3 @@ test("remediation: elevenlabs provider complies with agent payload structure req
   assert.equal(payload.conversation_config.agent.prompt.tools[0].name, "book_appointment");
 });
 
-test("remediation: self-healing signup flow for orphaned auth users", async () => {
-  const authService = require("../../modules/auth/auth.service");
-  const db = makeMockDatabase();
-  supabaseConfig.setMockAdminClient(db);
-
-  // Mock anonClient for login-after-signup
-  const originalAnon = supabaseConfig.anonClient;
-  supabaseConfig.anonClient = {
-    auth: {
-      signInWithPassword: async ({ email, password }) => {
-        return {
-          data: {
-            user: { id: "auth-orphaned-123", email },
-            session: { access_token: "mock-session-token", refresh_token: "mock-refresh-token" }
-          },
-          error: null
-        };
-      }
-    }
-  };
-
-  const email = "orphaned@example.com";
-  const password = "secure-new-password";
-
-  // Simulate orphaned user existing in authStore but NOT in database store.users
-  db.authStore.push({
-    id: "auth-orphaned-123",
-    email,
-    app_metadata: {},
-  });
-
-  // Perform self-healing signup
-  const signupResult = await authService.signup({
-    email,
-    password,
-    org_name: "Rahul's Org",
-  });
-
-  assert.ok(signupResult);
-  assert.ok(signupResult.org);
-  assert.equal(signupResult.org.name, "Rahul's Org");
-  
-  // Verify that a row has been linked in users table
-  const dbUser = db.store.users.find(u => u.email === email);
-  assert.ok(dbUser);
-  assert.equal(dbUser.org_id, signupResult.org.id);
-
-  // Verify that the auth credentials and app_metadata have been updated
-  const authUser = db.authStore.find(u => u.email === email);
-  assert.ok(authUser);
-  assert.equal(authUser.app_metadata.org_id, signupResult.org.id);
-  assert.equal(authUser.app_metadata.role, "owner");
-  assert.equal(authUser.password, password);
-
-  // Verify that waitlist or second signup attempt with same email throws Conflict
-  await assert.rejects(
-    authService.signup({
-      email,
-      password,
-      org_name: "Another Org",
-    }),
-    /already exists/i
-  );
-
-  supabaseConfig.anonClient = originalAnon;
-  supabaseConfig.setMockAdminClient(null);
-});

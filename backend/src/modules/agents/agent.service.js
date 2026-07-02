@@ -1,6 +1,7 @@
 const personaService = require("../../services/persona.service");
 const crypto = require("crypto");
 const { BadRequest, NotFound } = require("../../utils/errors");
+const { buildVoiceProvider } = require("../../providers/voice/factory");
 
 class AgentService {
   async getIntegrationConfig(supabase, orgId) {
@@ -67,7 +68,21 @@ class AgentService {
     };
 
     const voice_id = agentData.voice_id || "21m00Tcm4TlvDq8ikWAM";
-    const provider_ref = agentData.provider_ref || "local_" + crypto.randomUUID();
+    let provider_ref = agentData.provider_ref;
+
+    // Call Voice Provider to provision agent if not provided
+    if (!provider_ref) {
+      const systemPrompt = personaService.generateSystemPrompt(localPersona);
+      const agentPayload = { ...dbAgentData, org_id: orgId, persona: localPersona, provider, voice_id };
+      const voiceProvider = buildVoiceProvider({ agent: agentPayload });
+      
+      try {
+        const createRes = await voiceProvider.createAgent(agentPayload, systemPrompt);
+        provider_ref = createRes.provider_ref;
+      } catch (err) {
+        throw BadRequest("Failed to provision agent on voice provider: " + err.message);
+      }
+    }
 
     // 4. Save to Database
     const { data: agent, error } = await supabase

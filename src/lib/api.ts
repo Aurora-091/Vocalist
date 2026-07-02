@@ -48,6 +48,7 @@ async function request<T>(
     const res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
+      credentials: "include",
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     });
@@ -63,6 +64,7 @@ async function request<T>(
       const retry = await fetch(`${BASE_URL}${path}`, {
         method,
         headers: retryHeaders,
+        credentials: "include",
         body: body ? JSON.stringify(body) : undefined,
       });
       if (!retry.ok) {
