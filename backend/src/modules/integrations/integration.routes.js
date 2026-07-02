@@ -14,6 +14,28 @@ router.post("/shopify/connected", verifyInternalSecret, asyncHandler(handleConne
 router.post("/shopify/uninstalled", verifyInternalSecret, asyncHandler(handleUninstalled));
 router.delete("/shopify/disconnect", requireAuth, requireOrg, asyncHandler(handleDisconnect));
 
+router.post("/shopify/webhooks/checkouts", verifyInternalSecret, asyncHandler(async (req, res) => {
+  const { shop, topic, body } = req.body;
+  if (!shop || !topic) return res.status(400).json({ error: "Missing shop or topic" });
+
+  const admin = require("../../config/supabase").requireAdmin();
+  const { data: integration } = await admin
+    .from("integrations")
+    .select("org_id, config")
+    .eq("type", "shopify")
+    .eq("config->>shop_domain", shop)
+    .maybeSingle();
+
+  if (!integration) {
+    return res.status(404).json({ error: "Integration not found" });
+  }
+
+  const provider = buildProvider("shopify", integration.org_id, integration.config);
+  await provider.webhook({ topic, body });
+  
+  res.json({ ok: true });
+}));
+
 router.use(requireAuth, requireOrg);
 
 router.get("/shopify/install", asyncHandler(async (req, res) => {
