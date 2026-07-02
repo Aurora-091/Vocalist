@@ -20,8 +20,13 @@ router.get("/shopify/install", asyncHandler(async (req, res) => {
   const shop = req.query.shop;
   if (!shop) return res.status(400).json({ error: "Missing shop parameter" });
   
+  // Basic validation for myshopify.com domain
+  const shopRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
+  if (!shopRegex.test(shop)) {
+    return res.status(400).json({ error: "Invalid shop domain. Must end with .myshopify.com" });
+  }
+
   const env = require("../../config/env");
-  // Default is something like https://weebersh.com/api/auth
   const installUrl = new URL(env.WEEBERSH_INSTALL_URL);
   installUrl.searchParams.set("shop", shop);
   installUrl.searchParams.set("org_id", req.auth.orgId);
