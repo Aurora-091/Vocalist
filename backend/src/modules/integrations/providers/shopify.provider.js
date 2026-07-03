@@ -1,5 +1,6 @@
 const { IntegrationProvider } = require("./interface");
 const { requireAdmin } = require("../../../config/supabase");
+const { BadGateway, Internal } = require("../../../utils/errors");
 const logger = require("../../../config/logger");
 
 const API_VERSION = "2025-01";
@@ -46,7 +47,7 @@ class ShopifyProvider extends IntegrationProvider {
       { headers }
     );
     if (!res.ok) {
-      throw new Error(`Shopify customers fetch failed: ${res.status}`);
+      throw BadGateway(`Shopify customers fetch failed: ${res.status}`);
     }
 
     const { customers } = await res.json();
@@ -78,7 +79,7 @@ class ShopifyProvider extends IntegrationProvider {
 
     if (error) {
       logger.error({ err: error }, "Shopify contact sync upsert failed");
-      throw new Error(`Contact sync failed: ${error.message}`);
+      throw Internal(`Contact sync failed: ${error.message}`);
     }
 
     return { synced: contacts.length, last_id: customers[customers.length - 1].id };
@@ -94,7 +95,7 @@ class ShopifyProvider extends IntegrationProvider {
     );
     if (!res.ok) {
       if (res.status === 404) return { found: false };
-      throw new Error(`Shopify order lookup failed: ${res.status}`);
+      throw BadGateway(`Shopify order lookup failed: ${res.status}`);
     }
     const { order } = await res.json();
     return {
@@ -162,11 +163,11 @@ class ShopifyProvider extends IntegrationProvider {
       }
     );
     if (!res.ok) {
-      throw new Error(`Shopify GraphQL failed: ${res.status}`);
+      throw BadGateway(`Shopify GraphQL failed: ${res.status}`);
     }
     const json = await res.json();
     if (json.errors) {
-      throw new Error(`Shopify GraphQL error: ${JSON.stringify(json.errors)}`);
+      throw BadGateway(`Shopify GraphQL error: ${JSON.stringify(json.errors)}`);
     }
 
     return (json.data?.abandonedCheckouts?.edges || []).map(({ node: c }) => {
@@ -204,7 +205,7 @@ class ShopifyProvider extends IntegrationProvider {
     );
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Shopify discount creation failed: ${res.status} ${body}`);
+      throw BadGateway(`Shopify discount creation failed: ${res.status} ${body}`);
     }
     const { discount_code } = await res.json();
     return {
@@ -225,7 +226,7 @@ class ShopifyProvider extends IntegrationProvider {
     );
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Shopify order cancel failed: ${res.status} ${body}`);
+      throw BadGateway(`Shopify order cancel failed: ${res.status} ${body}`);
     }
     const { order } = await res.json();
     return {

@@ -1,5 +1,5 @@
 const supabaseConfig = require("../../config/supabase");
-const { Unauthorized, BadRequest, Conflict } = require("../../utils/errors");
+const { Unauthorized, BadRequest, Conflict, Internal } = require("../../utils/errors");
 
 async function signup({ email, password, org_name }) {
   const admin = supabaseConfig.requireAdmin();
@@ -21,7 +21,7 @@ async function signup({ email, password, org_name }) {
     .insert({ name: org_name || `${email}'s org`, plan_id: "starter" })
     .select("id, name, plan_id, created_at")
     .single();
-  if (orgErr) throw new Error(`Failed to create org: ${orgErr.message}`);
+  if (orgErr) throw Internal(`Failed to create org: ${orgErr.message}`);
 
   let userId;
   let userObject;
@@ -41,7 +41,7 @@ async function signup({ email, password, org_name }) {
       throw Conflict("Account with this email already exists. Please log in or reset your password.");
     } else {
       await admin.from("orgs").delete().eq("id", orgRow.id);
-      throw new Error(signErr.message);
+      throw Internal(signErr.message);
     }
   } else {
     userId = created.user.id;
@@ -61,7 +61,7 @@ async function signup({ email, password, org_name }) {
       await admin.from("orgs").delete().eq("id", orgRow.id);
     } catch (e) {}
     if (linkErr.code === "23505") throw Conflict("User already exists");
-    throw new Error(`Failed to link user: ${linkErr.message}`);
+    throw Internal(`Failed to link user: ${linkErr.message}`);
   }
 
   // Initialize onboarding state
@@ -85,7 +85,7 @@ async function signup({ email, password, org_name }) {
     email,
     password,
   });
-  if (sessErr) throw new Error(sessErr.message);
+  if (sessErr) throw Internal(sessErr.message);
 
   return { user: session.user, session: session.session, org: orgRow };
 }

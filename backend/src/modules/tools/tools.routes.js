@@ -5,6 +5,7 @@ const calcomTools = require("./handlers/calcom.tools");
 const calendarTools = require("./handlers/calendar.tools");
 const twilioTools = require("./handlers/twilio.tools");
 const { NotFound } = require("../../utils/errors");
+const asyncHandler = require("../../utils/asyncHandler");
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ const HANDLERS = {
   twilio: twilioTools,
 };
 
-router.post("/:integration/:action", async (req, res, next) => {
+router.post("/:integration/:action", asyncHandler(async (req, res, next) => {
   const { integration, action } = req.params;
   const handler = HANDLERS[integration];
   if (!handler) {
@@ -30,12 +31,8 @@ router.post("/:integration/:action", async (req, res, next) => {
     return next(NotFound(`Tool action not found: ${integration}/${action}`));
   }
 
-  try {
-    const result = await actionFn(req);
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
-});
+  const result = await actionFn(req);
+  res.json(result);
+}));
 
 module.exports = router;

@@ -4,7 +4,7 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
 const { requireAdmin } = require("../../config/supabase");
-const { Conflict, NotFound, BadRequest } = require("../../utils/errors");
+const { Conflict, NotFound, BadRequest, Internal } = require("../../utils/errors");
 
 const router = express.Router();
 
@@ -45,7 +45,7 @@ router.post(
     });
     if (createErr) {
       if (createErr.message?.toLowerCase().includes("already")) throw Conflict("User already exists");
-      throw new Error(createErr.message);
+      throw Internal(createErr.message);
     }
 
     const userId = created.user.id;
@@ -56,7 +56,7 @@ router.post(
     const { error: linkErr } = await admin
       .from("users")
       .upsert({ id: userId, org_id: req.auth.orgId, email, role });
-    if (linkErr) throw new Error(linkErr.message);
+    if (linkErr) throw Internal(linkErr.message);
 
     res.status(201).json({ user: { id: userId, email, role, org_id: req.auth.orgId } });
   })
@@ -118,7 +118,7 @@ router.delete(
 
     const admin = requireAdmin();
     const { error } = await admin.auth.admin.deleteUser(req.params.id);
-    if (error) throw new Error(error.message);
+    if (error) throw Internal(error.message);
     res.status(204).end();
   })
 );

@@ -1,5 +1,6 @@
 const { IntegrationProvider } = require("./interface");
 const { requireAdmin } = require("../../../config/supabase");
+const { BadGateway, Internal, BadRequest } = require("../../../utils/errors");
 const logger = require("../../../config/logger");
 
 class HubspotProvider extends IntegrationProvider {
@@ -32,7 +33,7 @@ class HubspotProvider extends IntegrationProvider {
     const config = await this.getResolvedConfig();
     const token = config.access_token || config.api_key;
     if (!token) {
-      throw new Error("HubSpot credentials unavailable");
+      throw BadRequest("HubSpot credentials unavailable");
     }
     const res = await fetch(`https://api.hubapi.com/crm/v3/objects/contacts?limit=${limit}&properties=firstname,lastname,email,phone`, {
       headers: {
@@ -41,7 +42,7 @@ class HubspotProvider extends IntegrationProvider {
       },
     });
     if (!res.ok) {
-      throw new Error(`HubSpot CRM contacts fetch failed: ${res.status}`);
+      throw BadGateway(`HubSpot CRM contacts fetch failed: ${res.status}`);
     }
     const { results } = await res.json();
     if (!results || results.length === 0) {
@@ -78,7 +79,7 @@ class HubspotProvider extends IntegrationProvider {
 
     if (error) {
       logger.error({ err: error }, "HubSpot contact sync upsert failed");
-      throw new Error(`Contact sync failed: ${error.message}`);
+      throw Internal(`Contact sync failed: ${error.message}`);
     }
 
     return { synced: contacts.length };

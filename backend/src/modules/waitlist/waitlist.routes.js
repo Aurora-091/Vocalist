@@ -4,6 +4,7 @@ const { requireAdmin } = require("../../config/supabase");
 const logger = require("../../config/logger");
 const { authLimiter } = require("../../middleware/rate-limit.middleware");
 const { sendWaitlistWelcome } = require("../../services/email.service");
+const asyncHandler = require("../../utils/asyncHandler");
 
 const router = Router();
 
@@ -17,7 +18,7 @@ const joinSchema = z.object({
 
 const OFFSET = 43;
 
-router.post("/join", authLimiter, async (req, res) => {
+router.post("/join", authLimiter, asyncHandler(async (req, res) => {
   const parsed = joinSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: { code: "validation_error", message: "Please provide a valid name and email" } });
@@ -69,10 +70,10 @@ router.post("/join", authLimiter, async (req, res) => {
   void sendWaitlistWelcome(email, name, inserted.id, OFFSET + (position || 1));
 
   return res.status(201).json({ success: true, referral_code: shortCode });
-});
+}));
 
 // GET /api/waitlist/unsubscribe?token=<uuid>
-router.get("/unsubscribe", async (req, res) => {
+router.get("/unsubscribe", asyncHandler(async (req, res) => {
   const token = req.query.token;
   if (!token || !/^[0-9a-f-]{36}$/.test(token)) {
     return res.status(400).send(unsubscribePage("Invalid unsubscribe link."));
@@ -91,7 +92,7 @@ router.get("/unsubscribe", async (req, res) => {
 
   logger.info({ token }, "Waitlist unsubscribe");
   return res.status(200).send(unsubscribePage(null));
-});
+}));
 
 function unsubscribePage(errorMsg) {
   const body = errorMsg
