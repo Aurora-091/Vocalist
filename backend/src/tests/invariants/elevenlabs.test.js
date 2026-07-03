@@ -375,3 +375,19 @@ test("Placeholder replacement in ElevenLabs payload builder", () => {
   assert.equal(payload.conversation_config.agent.prompt.prompt, "You are selling to John Doe on behalf of Acme Corp.");
 });
 
+
+// 13. Test Call validation
+test("ElevenLabs startCall rejects outbound test calls without fromE164", async () => {
+  const ElevenLabsProvider = require("../../providers/voice/elevenlabs.provider");
+  const provider = new ElevenLabsProvider({ api_key: "dummy" });
+  provider.agent = { provider_ref: "agent-uuid" };
+  try {
+    await provider.startCall({ toE164: "+15551234567", fromE164: null, leaseToken: "token" });
+    assert.fail("Should have thrown BadRequest");
+  } catch (err) {
+    assert.equal(err.status, 400);
+    assert.equal(err.code, "bad_request");
+    assert.match(err.message, /Agent must have an inbound number assigned/);
+  }
+});
+
