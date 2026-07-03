@@ -137,9 +137,9 @@ router.post(
       console.error("Failed to sync knowledge to ElevenLabs:", err.message);
       await req.supabase
         .from("knowledge_sources")
-        .update({ status: "error" })
+        .update({ status: "error", meta: { error: err.message } })
         .eq("id", source.id);
-      res.status(201).json({ ...source, status: "error" });
+      res.status(201).json({ ...source, status: "error", meta: { error: err.message } });
     }
   })
 );

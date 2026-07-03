@@ -141,6 +141,11 @@ export default function Knowledge() {
                         {STATUS_LABEL[s.status]}
                       </span>
                     </div>
+                    {s.status === "error" && s.meta?.error && (
+                      <div className="mt-1 text-xs text-danger">
+                        Failed: {s.meta.error}
+                      </div>
+                    )}
                     {s.uri && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <LinkIcon className="w-3 h-3 text-text-muted shrink-0" />

@@ -268,6 +268,10 @@ class ElevenLabsProvider extends VoiceProvider {
   async startCall({ toE164, fromE164, leaseToken, metadata = {}, dynamicVars }) {
     const agentId = this.agent?.provider_ref;
     if (!agentId) throw new Error("agent.provider_ref (ElevenLabs agent_id) is required");
+    if (!fromE164) {
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Agent must have an inbound number assigned to make outbound test calls.");
+    }
 
     // Pre-flight: verify credentials before initiating the call
     const credentials = await this._getTwilioCredentials();

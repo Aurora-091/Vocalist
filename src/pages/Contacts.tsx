@@ -274,7 +274,7 @@ function CreateForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
     setBusy(true);
     setErr(null);
     try {
-      await createContact({ phone, name, email, source: "manual" });
+      await createContact({ phone, name, email, source: "upload" });
       onSaved();
       onClose();
     } catch (e: any) {
