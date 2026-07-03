@@ -4,6 +4,18 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.8.8] - Saturday, 2026-07-04 00:38 IST
+
+### Added
+- **Whitebox Testing Enforcement**: Added workspace `.agents/AGENTS.md` rules mandating unit/whitebox tests for logic modifications.
+- **Missing Async Handlers**: Added `asyncHandler` wrappers to `waitlist.routes.js` and `tools.routes.js` to prevent node process crashes from unhandled promise rejections.
+
+### Changed
+- **Error Standardization (Business Logic)**: Replaced generic `new Error()` throws with custom `HttpError` (`BadRequest`, `NotFound`, `Internal`) in `auth.service.js`, `call.service.js`, and `users.routes.js` for precise 4xx/500 HTTP responses.
+- **Provider API Error Encapsulation**: Refactored `shopify.provider.js` and `hubspot.provider.js` to wrap upstream integration failures cleanly into `502 BadGateway` HTTP errors, preventing unhandled 500s.
+
+---
+
 ## [1.8.7] - Thursday, 2026-07-02 21:20 IST
 
 ### Added
