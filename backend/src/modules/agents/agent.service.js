@@ -299,7 +299,7 @@ class AgentService {
     
     const { data: updatedAgent, error: updateErr } = await supabase
       .from("agents")
-      .update({ inbound_number: phone.number, updated_at: new Date().toISOString() })
+      .update({ inbound_number: phone.e164, updated_at: new Date().toISOString() })
       .eq("id", agentId)
       .select("*")
       .single();

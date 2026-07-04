@@ -4,6 +4,18 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.9.0] - Saturday, 2026-07-04 18:20 IST
+
+### Added
+- **Manual Agent Creation Dropdown**: Added a dropdown select to choose an available phone number to assign to the agent during manual creation (Step 1).
+- **Agent Detail Configuration Page Assignment UI**: Added a dropdown select under Agent Details next to "Human transfer number" to assign or swap phone numbers for the agent.
+- **Parity Database Helpers**: Created `unassignPhoneNumberAgent` helper in `db.ts` to cleanly clear all references (`phone_numbers.agent_id`, `agents.inbound_number`, `organization_agents.phone_number_id`) upon unlinking.
+
+### Fixed
+- **Backend assignNumber Bug Fix**: Fixed a bug in `AgentService.assignNumber()` where a typo in referencing `phone.number` (which was `undefined` in the database schema) caused `agents.inbound_number` to get updated to `undefined`/`null`, resulting in "Agent must have an inbound number assigned" failures during test calls. Corrected the reference to `phone.e164`.
+
+---
+
 ## [1.8.9] - Saturday, 2026-07-04 17:00 IST
 
 ### Fixed

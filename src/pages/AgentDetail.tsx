@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { getAgent, listVoices, listAgentKnowledge, getCall } from "../lib/db";
+import { getAgent, listVoices, listAgentKnowledge, getCall, listPhoneNumbers, listAgents, unassignPhoneNumberAgent } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/legacy-ui/Button";
@@ -122,6 +122,11 @@ export default function AgentDetail() {
   const [activeSkillIds, setActiveSkillIds] = useState<Set<string>>(new Set());
   const [skillsLoading, setSkillsLoading] = useState(false);
 
+  // Phone numbers
+  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
+  const [allAgents, setAllAgents] = useState<any[]>([]);
+  const [selectedNumberId, setSelectedNumberId] = useState<string>("none");
+
   async function load() {
     try {
       const a = await getAgent(id!);
@@ -173,13 +178,20 @@ export default function AgentDetail() {
       setKnowledge(kb);
 
       // Load skills catalog and active skills for this agent
-      const [skillsRes, activeRes] = await Promise.all([
+      const [skillsRes, activeRes, nums, ags] = await Promise.all([
         api.get<{ skills: any[] }>("/v1/skills"),
         api.get<{ skills: any[] }>(`/v1/agents/${id}/skills`),
+        listPhoneNumbers(),
+        listAgents(),
       ]);
       setAllSkills(skillsRes.skills || []);
       const ids = new Set((activeRes.skills || []).map((s: any) => s.skill_id));
       setActiveSkillIds(ids);
+      setPhoneNumbers(nums || []);
+      setAllAgents(ags || []);
+
+      const boundNum = (nums || []).find((n: any) => n.agent_id === a.id);
+      setSelectedNumberId(boundNum ? boundNum.id : "none");
     } catch {
       setAgent(null);
     } finally {
@@ -228,6 +240,21 @@ export default function AgentDetail() {
         timezone: timezone || "America/New_York",
         languages: selectedLanguages,
       });
+
+      // Handle phone number assignment changes
+      const previouslyBound = phoneNumbers.find((n: any) => n.agent_id === agent.id);
+      const prevId = previouslyBound ? previouslyBound.id : "none";
+      if (selectedNumberId !== prevId) {
+        if (prevId !== "none") {
+          await unassignPhoneNumberAgent(previouslyBound.id, agent.id);
+        }
+        if (selectedNumberId !== "none") {
+          await api.post(`/v1/agents/${id}/assign-number`, {
+            phone_number_id: selectedNumberId,
+          });
+        }
+      }
+
       if (!silent) toast.success("Agent saved and synced.");
       await load();
       return true;
@@ -419,6 +446,34 @@ export default function AgentDetail() {
                 placeholder="+14155551234"
                 className="font-mono"
               />
+            </Field>
+            <Field label="Phone number (Assigned)">
+              <Select value={selectedNumberId} onValueChange={setSelectedNumberId}>
+                <SelectTrigger className="w-full font-mono text-sm">
+                  <SelectValue placeholder="Select phone number" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="none">None / Unassigned</SelectItem>
+                    {phoneNumbers.map((n) => {
+                      const otherAgent = allAgents.find((a) => a.id === n.agent_id);
+                      let label = n.e164;
+                      if (n.agent_id === agent.id) {
+                        label += " (Currently assigned)";
+                      } else if (otherAgent) {
+                        label += ` (Assigned to ${otherAgent.name})`;
+                      } else {
+                        label += " (Unassigned)";
+                      }
+                      return (
+                        <SelectItem key={n.id} value={n.id}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
           </div>
 
