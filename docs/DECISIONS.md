@@ -144,3 +144,16 @@ This document tracks all major product, architecture, and technology decisions m
 * **Key Files**:
   - `backend/src/providers/voice/elevenlabs.provider.js`
   - `backend/src/tests/invariants/remediation.test.js`
+
+---
+
+## DEC-014: Phone Number Assignment and Swap UI Integration
+* **Date**: Saturday, 2026-07-04 18:22 IST
+* **Status**: Accepted
+* **Context**: The platform lacked a way for merchants to assign or swap phone numbers directly on the agent creation form and the agent detail details tab, and the backend method `assignNumber` was setting `agents.inbound_number` to `undefined` due to a column reference typo.
+* **Decision**: Added phone number select dropdown fields in the agent manual creation form and the configuration details tab. Added a database unbind helper in `db.ts` to cleanly wipe references on swap/unlink, and fixed `phone.number` typo to `phone.e164` in `agent.service.js` to ensure the number persists cleanly in the database, unblocking test calls.
+* **Key Files**:
+  - `backend/src/modules/agents/agent.service.js`
+  - `src/lib/db.ts`
+  - `src/pages/AgentDetail.tsx`
+  - `src/pages/AgentsList.tsx`
