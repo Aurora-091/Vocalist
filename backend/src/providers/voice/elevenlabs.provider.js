@@ -46,6 +46,7 @@ class ElevenLabsProvider extends VoiceProvider {
       }
       const { BadGateway, BadRequest } = require("../../utils/errors");
       if (res.status >= 400 && res.status < 500) {
+        logger.error({ detail, status: res.status, method, path, payload: body }, "ElevenLabs 4xx error");
         throw BadRequest(`ElevenLabs ${method} ${path} failed: ${res.status}`, detail);
       }
       throw BadGateway(`ElevenLabs ${method} ${path} failed: ${res.status}`, detail);
@@ -164,9 +165,6 @@ class ElevenLabsProvider extends VoiceProvider {
           prompt: promptConfig,
           first_message: firstMessage,
           language,
-          interaction_budget: {
-            total_budget: normalizedBudget,
-          },
         },
         tts: {
           voice_id: voiceId,
