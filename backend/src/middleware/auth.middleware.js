@@ -3,14 +3,21 @@ const { requireAdmin, clientForToken } = require("../config/supabase");
 const asyncHandler = require("../utils/asyncHandler");
 
 function decodeBearer(req) {
+  // Always prefer the Authorization header — the Supabase JS SDK sends a fresh
+  // Bearer token on every request and refreshes it automatically. If we prefer
+  // the httpOnly cookie we risk reading a stale token even after the SDK has
+  // already refreshed the session, which creates infinite 401 retry loops.
+  const header = req.headers.authorization || req.headers.Authorization;
+  if (header && typeof header === "string") {
+    const [scheme, token] = header.split(" ");
+    if (scheme === "Bearer" && token) return token;
+  }
+  // Fallback: cookie-based auth for non-JS clients (e.g. server-side rendering,
+  // curl testing) that do not send an Authorization header.
   if (req.cookies && req.cookies["sb-access-token"]) {
     return req.cookies["sb-access-token"];
   }
-  const header = req.headers.authorization || req.headers.Authorization;
-  if (!header || typeof header !== "string") return null;
-  const [scheme, token] = header.split(" ");
-  if (scheme !== "Bearer" || !token) return null;
-  return token;
+  return null;
 }
 
 const requireAuth = asyncHandler(async (req, _res, next) => {
