@@ -3,6 +3,7 @@ const { z } = require("zod");
 const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
+const { expensiveOpsLimiter } = require("../../middleware/rate-limit.middleware");
 const { NotFound, BadRequest, UnprocessableEntity } = require("../../utils/errors");
 const agentService = require("./agent.service");
 const callService = require("../calls/call.service");
@@ -188,6 +189,7 @@ router.delete(
 
 router.post(
   "/:id/sync",
+  expensiveOpsLimiter,
   requireRole("owner", "admin"),
   validate({ params: z.object({ id: z.string().uuid() }) }),
   asyncHandler(async (req, res) => {

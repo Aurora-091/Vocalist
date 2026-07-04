@@ -54,4 +54,14 @@ const enterpriseLimiter = rateLimit({
   message: { error: { code: "rate_limited", message: "Too many attempts. Please try again shortly." } },
 });
 
-module.exports = { apiLimiter, webhookLimiter, authLimiter, waitlistLimiter, enterpriseLimiter };
+// Strict limiter for expensive operations (agent sync, campaign launch, knowledge ingestion).
+const expensiveOpsLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: keyForReq,
+  message: { error: { code: "rate_limited", message: "Too many requests for this operation. Please wait." } },
+});
+
+module.exports = { apiLimiter, webhookLimiter, authLimiter, waitlistLimiter, enterpriseLimiter, expensiveOpsLimiter };

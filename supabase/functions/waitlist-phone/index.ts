@@ -7,9 +7,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW = 60_000;
+const RATE_LIMIT_MAX = 5;
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (isRateLimited(clientIp)) {
+    return jsonResponse(
+      { error: { code: "rate_limited", message: "Too many attempts. Please try again shortly." } },
+      429
+    );
   }
 
   try {
@@ -34,10 +57,23 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Only allow update if the waitlist entry was created recently (within 30 minutes)
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60_000).toISOString();
+    const { data: existing } = await admin
+      .from("waitlist")
+      .select("id, created_at")
+      .eq("email", email.trim())
+      .gte("created_at", thirtyMinAgo)
+      .maybeSingle();
+
+    if (!existing) {
+      return jsonResponse({ error: { code: "not_found", message: "Waitlist entry not found or expired" } }, 404);
+    }
+
     const { error } = await admin
       .from("waitlist")
       .update({ phone: phone.trim() })
-      .eq("email", email.trim());
+      .eq("id", existing.id);
 
     if (error) {
       console.error("Waitlist phone update failed", error);

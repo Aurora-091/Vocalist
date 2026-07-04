@@ -14,6 +14,14 @@ interface BridgeRequest {
   params?: Record<string, any>;
 }
 
+const FETCH_TIMEOUT_MS = 15_000;
+
+function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 const PROVIDER_HANDLERS: Record<string, (action: string, params: Record<string, any>, config: any, secret: any) => Promise<any>> = {
   shopify: handleShopify,
   hubspot: handleHubspot,
@@ -141,7 +149,7 @@ async function handleShopify(action: string, params: Record<string, any>, config
   const path = pathMap[action];
   if (!path) throw new Error(`Unknown Shopify action: ${action}`);
 
-  const res = await fetch(`https://${domain}${path}`, {
+  const res = await fetchWithTimeout(`https://${domain}${path}`, {
     headers: { "X-Shopify-Access-Token": apiKey, "Content-Type": "application/json" },
   });
 
@@ -157,12 +165,12 @@ async function handleHubspot(action: string, params: Record<string, any>, config
 
   const routes: Record<string, () => Promise<any>> = {
     get_contact: async () => {
-      const res = await fetch(`${baseUrl}/crm/v3/objects/contacts/${params.contact_id}`, { headers });
+      const res = await fetchWithTimeout(`${baseUrl}/crm/v3/objects/contacts/${params.contact_id}`, { headers });
       if (!res.ok) throw new Error(`HubSpot error: ${res.status}`);
       return res.json();
     },
     search_contacts: async () => {
-      const res = await fetch(`${baseUrl}/crm/v3/objects/contacts/search`, {
+      const res = await fetchWithTimeout(`${baseUrl}/crm/v3/objects/contacts/search`, {
         method: "POST",
         headers,
         body: JSON.stringify({ filterGroups: [{ filters: [{ propertyName: "email", operator: "EQ", value: params.email }] }] }),
@@ -171,7 +179,7 @@ async function handleHubspot(action: string, params: Record<string, any>, config
       return res.json();
     },
     create_note: async () => {
-      const res = await fetch(`${baseUrl}/crm/v3/objects/notes`, {
+      const res = await fetchWithTimeout(`${baseUrl}/crm/v3/objects/notes`, {
         method: "POST",
         headers,
         body: JSON.stringify({ properties: { hs_note_body: params.note, hs_timestamp: new Date().toISOString() } }),
@@ -191,18 +199,19 @@ async function handlePipedrive(action: string, params: Record<string, any>, conf
   if (!token) throw new Error("Pipedrive not configured");
 
   const baseUrl = `https://${domain}.pipedrive.com/api/v1`;
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 
   const routes: Record<string, string> = {
-    get_person: `/persons/${params.person_id}?api_token=${token}`,
-    search_persons: `/persons/search?term=${encodeURIComponent(params.query || "")}&api_token=${token}`,
-    get_deal: `/deals/${params.deal_id}?api_token=${token}`,
-    list_deals: `/deals?status=open&limit=${params.limit || 10}&api_token=${token}`,
+    get_person: `/persons/${params.person_id}`,
+    search_persons: `/persons/search?term=${encodeURIComponent(params.query || "")}`,
+    get_deal: `/deals/${params.deal_id}`,
+    list_deals: `/deals?status=open&limit=${params.limit || 10}`,
   };
 
   const path = routes[action];
   if (!path) throw new Error(`Unknown Pipedrive action: ${action}`);
 
-  const res = await fetch(`${baseUrl}${path}`);
+  const res = await fetchWithTimeout(`${baseUrl}${path}`, { headers });
   if (!res.ok) throw new Error(`Pipedrive error: ${res.status}`);
   return await res.json();
 }
@@ -223,7 +232,7 @@ async function handleFreshsales(action: string, params: Record<string, any>, con
   const path = routes[action];
   if (!path) throw new Error(`Unknown Freshsales action: ${action}`);
 
-  const res = await fetch(`${baseUrl}${path}`, { headers });
+  const res = await fetchWithTimeout(`${baseUrl}${path}`, { headers });
   if (!res.ok) throw new Error(`Freshsales error: ${res.status}`);
   return await res.json();
 }
@@ -248,7 +257,7 @@ async function handleCliniko(action: string, params: Record<string, any>, config
   const path = routes[action];
   if (!path) throw new Error(`Unknown Cliniko action: ${action}`);
 
-  const res = await fetch(`${baseUrl}${path}`, { headers });
+  const res = await fetchWithTimeout(`${baseUrl}${path}`, { headers });
   if (!res.ok) throw new Error(`Cliniko error: ${res.status}`);
   return await res.json();
 }
@@ -270,7 +279,7 @@ async function handleJaneApp(action: string, params: Record<string, any>, config
   const path = routes[action];
   if (!path) throw new Error(`Unknown Jane App action: ${action}`);
 
-  const res = await fetch(`${baseUrl}${path}`, { headers });
+  const res = await fetchWithTimeout(`${baseUrl}${path}`, { headers });
   if (!res.ok) throw new Error(`Jane App error: ${res.status}`);
   return await res.json();
 }
@@ -303,12 +312,12 @@ async function handleGoogleCalendar(action: string, params: Record<string, any>,
     list_events: async () => {
       const timeMin = params.time_min || new Date().toISOString();
       const timeMax = params.time_max || new Date(Date.now() + 7 * 86400000).toISOString();
-      const res = await fetch(`${baseUrl}/calendars/${calendarId}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, { headers });
+      const res = await fetchWithTimeout(`${baseUrl}/calendars/${calendarId}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, { headers });
       if (!res.ok) throw new Error(`Google Calendar error: ${res.status}`);
       return res.json();
     },
     get_freebusy: async () => {
-      const res = await fetch(`${baseUrl}/freeBusy`, {
+      const res = await fetchWithTimeout(`${baseUrl}/freeBusy`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -321,7 +330,7 @@ async function handleGoogleCalendar(action: string, params: Record<string, any>,
       return res.json();
     },
     create_event: async () => {
-      const res = await fetch(`${baseUrl}/calendars/${calendarId}/events`, {
+      const res = await fetchWithTimeout(`${baseUrl}/calendars/${calendarId}/events`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -346,17 +355,18 @@ async function handleCalcom(action: string, params: Record<string, any>, config:
   if (!apiKey) throw new Error("Cal.com not configured");
 
   const baseUrl = "https://api.cal.com/v1";
+  const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
 
   const routes: Record<string, string> = {
-    list_event_types: `/event-types?apiKey=${apiKey}`,
-    get_availability: `/availability?apiKey=${apiKey}&dateFrom=${params.date_from || ""}&dateTo=${params.date_to || ""}`,
-    list_bookings: `/bookings?apiKey=${apiKey}&status=${params.status || "upcoming"}`,
+    list_event_types: `/event-types`,
+    get_availability: `/availability?dateFrom=${params.date_from || ""}&dateTo=${params.date_to || ""}`,
+    list_bookings: `/bookings?status=${params.status || "upcoming"}`,
   };
 
   const path = routes[action];
   if (!path) throw new Error(`Unknown Cal.com action: ${action}`);
 
-  const res = await fetch(`${baseUrl}${path}`);
+  const res = await fetchWithTimeout(`${baseUrl}${path}`, { headers });
   if (!res.ok) throw new Error(`Cal.com error: ${res.status}`);
   return await res.json();
 }
@@ -381,7 +391,7 @@ async function handleWhatsApp(action: string, params: Record<string, any>, confi
     formData.append("From", `whatsapp:${fromNumber}`);
     formData.append("Body", body);
 
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       method: "POST",
       headers: {
         Authorization: `Basic ${btoa(accountSid + ":" + authToken)}`,
@@ -417,7 +427,7 @@ async function refreshGoogleToken(tokenRow: any, adminClient: any): Promise<stri
     return currentToken.access_token;
   }
 
-  const res = await fetch("https://oauth2.googleapis.com/token", {
+  const res = await fetchWithTimeout("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({

@@ -1,6 +1,7 @@
 const express = require("express");
 const asyncHandler = require("../../utils/asyncHandler");
 const { requireAuth, requireOrg } = require("../../middleware/auth.middleware");
+const { expensiveOpsLimiter } = require("../../middleware/rate-limit.middleware");
 const { BadRequest, NotFound } = require("../../utils/errors");
 
 const router = express.Router();
@@ -58,6 +59,7 @@ router.get(
 
 router.post(
   "/sources",
+  expensiveOpsLimiter,
   asyncHandler(async (req, res) => {
     const { kind, title, uri, storage_ref, meta = {} } = req.body || {};
     if (!kind || !title) throw BadRequest("kind and title are required");
@@ -146,6 +148,7 @@ router.post(
 
 router.post(
   "/sources/:id/resync",
+  expensiveOpsLimiter,
   asyncHandler(async (req, res) => {
     const { error } = await req.supabase
       .from("knowledge_sources")

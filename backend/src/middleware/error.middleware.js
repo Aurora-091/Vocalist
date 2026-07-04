@@ -14,8 +14,7 @@ function errorHandler(err, req, res, _next) {
       logger.warn({ code: err.code, path: req.path, message: err.message, requestId: req.id }, "Request error");
     }
 
-    const details =
-      env.NODE_ENV === "production" && err.code !== "validation_error" ? undefined : err.details;
+    const details = env.NODE_ENV === "production" ? undefined : err.details;
 
     return res.status(err.status).json({
       error: { code: err.code, message: err.message, details },
