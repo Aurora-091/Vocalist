@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowRight, CircleCheck as CheckCircle2, Circle as XCircle, Mail, Shield, Lock, SlidersHorizontal, Copy, Check, Sparkles } from "lucide-react";
+import { ArrowRight, CircleCheck as CheckCircle2, Circle as XCircle, Mail, Shield, Lock, SlidersHorizontal, Copy, Check, Sparkles, Phone } from "lucide-react";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { joinWaitlist } from "../lib/api";
@@ -164,6 +164,7 @@ function HeroBadge() {
 function ReferralCopyLink({ referralCode }: { referralCode: string }) {
   const [copied, setCopied] = useState(false);
   const referralUrl = `https://weeber.ai/?ref=${referralCode}`;
+  const shareText = `I just joined the Weeber waitlist — AI voice agents that book, recover carts, and follow up. 24/7, no code. Join here:`;
 
   function handleCopy() {
     navigator.clipboard.writeText(referralUrl).then(() => {
@@ -171,6 +172,15 @@ function ReferralCopyLink({ referralCode }: { referralCode: string }) {
       setTimeout(() => setCopied(false), 2000);
     });
   }
+
+  function handleNativeShare() {
+    if (navigator.share) {
+      navigator.share({ title: "Weeber — AI Voice Agents", text: shareText, url: referralUrl }).catch(() => {});
+    }
+  }
+
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${referralUrl}`)}`;
+  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
 
   return (
     <div className="mt-5">
@@ -186,10 +196,30 @@ function ReferralCopyLink({ referralCode }: { referralCode: string }) {
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <p className="mt-2 text-[11.5px] text-[var(--m-text-muted)] flex items-center gap-1">
-        <ArrowRight className="w-3 h-3" />
-        Each referral moves you up 2 spots in line
-      </p>
+      <div className="mt-2.5 flex items-center gap-2">
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-md border border-[var(--m-border)] text-[var(--m-text)] hover:bg-[var(--m-surface)] transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.563 4.14 1.547 5.878L0 24l6.335-1.517A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.015-1.378l-.36-.214-3.727.893.943-3.618-.235-.372A9.764 9.764 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+          WhatsApp
+        </a>
+        {canNativeShare && (
+          <button
+            type="button"
+            onClick={handleNativeShare}
+            className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-md border border-[var(--m-border)] text-[var(--m-text)] hover:bg-[var(--m-surface)] transition-colors"
+          >
+            Share
+          </button>
+        )}
+        <p className="text-[11.5px] text-[var(--m-text-muted)] flex items-center gap-1 ml-auto">
+          <ArrowRight className="w-3 h-3" />
+          Each referral moves you up 2 spots
+        </p>
+      </div>
     </div>
   );
 }
@@ -199,31 +229,37 @@ function HeroForm() {
   const { count } = useWaitlistCount();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [touched, setTouched] = useState({ name: false, email: false, phone: false });
+  const [touched, setTouched] = useState({ name: false, email: false });
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [referralCode, setReferralCode] = useState("");
+  const [submittedEmail, setSubmittedEmail] = useState("");
+
+  // Post-submit phone capture
+  const [phone, setPhone] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [phoneSaving, setPhoneSaving] = useState(false);
+  const [phoneSaved, setPhoneSaved] = useState(false);
 
   const emailValid = isValidEmail(email);
-  const phoneValid = isValidPhone(phone);
   const nameValid = name.trim().length > 0;
-  const canSubmit = nameValid && emailValid && phoneValid;
+  const phoneValid = isValidPhone(phone);
+  const canSubmit = nameValid && emailValid;
   const displayCount = Math.max(BASE_COUNT, count ?? BASE_COUNT);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setTouched({ name: true, email: true });
     if (!canSubmit) return;
     setState("loading");
     setErrorMsg("");
     trackFormSubmit();
 
-    const payload: { name: string; email: string; phone?: string; ref?: string } = {
+    const payload: { name: string; email: string; ref?: string } = {
       name: name.trim(),
       email: email.trim(),
     };
-    if (phone.trim()) payload.phone = phone.trim();
     const urlRef = new URLSearchParams(window.location.search).get("ref");
     if (urlRef) payload.ref = urlRef;
 
@@ -231,6 +267,7 @@ function HeroForm() {
     if (result.success) {
       setState("success");
       setReferralCode(result.referral_code || "");
+      setSubmittedEmail(email.trim());
       setShowSuccess(true);
       trackFormSuccess();
       trackSignupConversion();
@@ -240,24 +277,49 @@ function HeroForm() {
     }
   }
 
+  async function handlePhoneSave() {
+    if (!phoneValid || !phone.trim() || !submittedEmail) return;
+    setPhoneSaving(true);
+    try {
+      const { default: api } = await import("../lib/api");
+      await api.patch("/v1/waitlist/phone", { email: submittedEmail, phone: phone.trim() });
+      setPhoneSaved(true);
+    } catch {
+      // non-critical — silently ignore
+    } finally {
+      setPhoneSaving(false);
+    }
+  }
+
   const inputClass = "w-full h-12 px-4 pr-10 text-[16px] font-medium bg-[var(--m-surface)] border-[1.5px] border-[var(--m-input-border)] text-[var(--m-text)] placeholder:text-[var(--m-text-muted)] placeholder:font-normal shadow-[var(--m-input-shadow)] focus:border-[var(--m-text)] focus:outline-none focus:shadow-[0_0_0_3px_var(--m-input-focus-ring)] transition-all rounded-lg";
+  const inputErrorClass = "border-red-400 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.15)]";
 
   return (
     <div className="max-w-[430px] mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-2.5">
+      <form onSubmit={handleSubmit} className="space-y-2.5" noValidate>
         <div className="relative">
           <input
             type="text"
+            id="waitlist-name"
+            name="name"
+            autoComplete="name"
             required
             value={name}
             onChange={(e) => { setName(e.target.value); setTouched((t) => ({ ...t, name: true })); }}
+            onBlur={() => setTouched((t) => ({ ...t, name: true }))}
             placeholder="Your name"
-            className={inputClass}
+            aria-label="Your name"
+            aria-invalid={touched.name && !nameValid ? "true" : undefined}
+            aria-describedby={touched.name && !nameValid ? "name-error" : undefined}
+            className={`${inputClass} ${touched.name && !nameValid ? inputErrorClass : ""}`}
           />
           {touched.name && name.length >= 1 && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2" aria-hidden="true">
               {nameValid ? <CheckCircle2 className="w-4 h-4 text-[#22C55E]" /> : <XCircle className="w-4 h-4 text-red-500" />}
             </span>
+          )}
+          {touched.name && !nameValid && (
+            <p id="name-error" className="mt-1 text-[11.5px] text-red-500 font-medium">Please enter your name.</p>
           )}
         </div>
 
@@ -265,14 +327,22 @@ function HeroForm() {
           <div className="relative flex-1">
             <input
               type="email"
+              id="waitlist-email"
+              name="email"
+              autoComplete="email"
+              inputMode="email"
               required
               value={email}
               onChange={(e) => { setEmail(e.target.value); setTouched((t) => ({ ...t, email: true })); }}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
               placeholder="you@yourbrand.com"
-              className={inputClass}
+              aria-label="Business email"
+              aria-invalid={touched.email && !emailValid ? "true" : undefined}
+              aria-describedby={touched.email && !emailValid ? "email-error" : undefined}
+              className={`${inputClass} ${touched.email && !emailValid ? inputErrorClass : ""}`}
             />
             {touched.email && email.length >= 3 && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2" aria-hidden="true">
                 {emailValid ? <CheckCircle2 className="w-4 h-4 text-[#22C55E]" /> : <XCircle className="w-4 h-4 text-red-500" />}
               </span>
             )}
@@ -285,21 +355,9 @@ function HeroForm() {
             {state === "loading" ? "Joining..." : "Get early access"}
           </button>
         </div>
-
-        <div className="relative">
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => { setPhone(e.target.value); setTouched((t) => ({ ...t, phone: true })); }}
-            placeholder="+91 98765 43210 (optional)"
-            className={inputClass}
-          />
-          {touched.phone && phone.length >= 7 && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2">
-              {phoneValid ? <CheckCircle2 className="w-4 h-4 text-[#22C55E]" /> : <XCircle className="w-4 h-4 text-red-500" />}
-            </span>
-          )}
-        </div>
+        {touched.email && !emailValid && email.length >= 3 && (
+          <p id="email-error" className="text-[11.5px] text-red-500 font-medium -mt-1">Please enter a valid email address.</p>
+        )}
 
         {state === "error" && (
           <p className="text-xs text-red-600">{errorMsg}</p>
@@ -327,9 +385,47 @@ function HeroForm() {
 
             <div className="mt-6 flex items-center gap-3 px-4 py-3.5 bg-[#F3F2EF] dark:bg-[#141414] border border-[#E6E5E2] dark:border-[rgba(255,255,255,0.08)] rounded-lg">
               <Mail className="w-4 h-4 text-[var(--m-text-secondary)] flex-shrink-0" />
-              <span className="text-sm text-[var(--m-text)] truncate flex-1">{email}</span>
+              <span className="text-sm text-[var(--m-text)] truncate flex-1">{submittedEmail}</span>
               <span className="text-[11px] font-mono text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded font-medium">Confirmed</span>
             </div>
+
+            {!phoneSaved ? (
+              <div className="mt-4">
+                <p className="text-[12.5px] font-medium text-[var(--m-text-secondary)] mb-2">Add your phone <span className="text-[var(--m-text-muted)] font-normal">(optional — we'll text when you're up next)</span></p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--m-text-muted)]" aria-hidden="true" />
+                    <input
+                      type="tel"
+                      name="tel"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); setPhoneTouched(true); }}
+                      placeholder="+91 98765 43210"
+                      aria-label="Phone number (optional)"
+                      className="w-full h-10 pl-8 pr-3 text-[14px] bg-[var(--m-surface)] border-[1.5px] border-[var(--m-input-border)] text-[var(--m-text)] placeholder:text-[var(--m-text-muted)] focus:border-[var(--m-text)] focus:outline-none rounded-lg transition-all"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={phoneSaving || !phone.trim() || !phoneValid}
+                    onClick={handlePhoneSave}
+                    className="h-10 px-4 text-[13px] font-semibold bg-[var(--m-text)] text-[var(--m-bg)] rounded-lg hover:opacity-80 transition-opacity disabled:opacity-40 whitespace-nowrap cursor-pointer"
+                  >
+                    {phoneSaving ? "Saving..." : "Save"}
+                  </button>
+                </div>
+                {phoneTouched && phone.length >= 3 && !phoneValid && (
+                  <p className="mt-1 text-[11px] text-red-500">Please enter a valid phone number.</p>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4 flex items-center gap-2 text-[13px] text-[#22C55E]">
+                <CheckCircle2 className="w-4 h-4" />
+                Phone saved — we'll text you when your spot opens.
+              </div>
+            )}
 
             <ReferralCopyLink referralCode={referralCode} />
           </div>

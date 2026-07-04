@@ -2,7 +2,7 @@ const { Router } = require("express");
 const { z } = require("zod");
 const { requireAdmin } = require("../../config/supabase");
 const logger = require("../../config/logger");
-const { authLimiter } = require("../../middleware/rate-limit.middleware");
+const { waitlistLimiter } = require("../../middleware/rate-limit.middleware");
 const { sendWaitlistWelcome } = require("../../services/email.service");
 
 const router = Router();
@@ -15,9 +15,14 @@ const joinSchema = z.object({
   ref: z.string().max(20).optional(),
 });
 
+const phoneSchema = z.object({
+  email: z.string().email(),
+  phone: z.string().min(7).max(20),
+});
+
 const OFFSET = 43;
 
-router.post("/join", authLimiter, async (req, res) => {
+router.post("/join", waitlistLimiter, async (req, res) => {
   const parsed = joinSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: { code: "validation_error", message: "Please provide a valid name and email" } });
@@ -69,6 +74,28 @@ router.post("/join", authLimiter, async (req, res) => {
   void sendWaitlistWelcome(email, name, inserted.id, OFFSET + (position || 1));
 
   return res.status(201).json({ success: true, referral_code: shortCode });
+});
+
+router.patch("/phone", waitlistLimiter, async (req, res) => {
+  const parsed = phoneSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: { code: "validation_error", message: "Please provide a valid email and phone number" } });
+  }
+
+  const { email, phone } = parsed.data;
+  const admin = requireAdmin();
+
+  const { error } = await admin
+    .from("waitlist")
+    .update({ phone })
+    .eq("email", email);
+
+  if (error) {
+    logger.error({ err: error }, "Waitlist phone update failed");
+    return res.status(500).json({ error: { code: "internal", message: "Something went wrong" } });
+  }
+
+  return res.status(200).json({ success: true });
 });
 
 // GET /api/waitlist/unsubscribe?token=<uuid>

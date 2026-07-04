@@ -5,6 +5,22 @@ import { supabase } from "../../lib/supabase";
 import { upsertBridgeConfig } from "../../lib/db";
 import { Button } from "../../components/legacy-ui/Button";
 
+const OAUTH_STATE_SECRET = import.meta.env.VITE_OAUTH_STATE_SECRET || "";
+
+async function signState(stateRaw: string): Promise<string> {
+  const keyData = new TextEncoder().encode(OAUTH_STATE_SECRET);
+  const msgData = new TextEncoder().encode(stateRaw);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, msgData);
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
+}
+
 export default function OAuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -34,7 +50,7 @@ export default function OAuthCallback() {
         return;
       }
 
-      let state: { provider: string; redirect: string; csrf?: string };
+      let state: { provider: string; redirect: string; csrf?: string; ts?: number };
       try {
         state = JSON.parse(atob(stateRaw));
       } catch {
@@ -54,8 +70,16 @@ export default function OAuthCallback() {
 
       setProviderName(state.provider.replace(/_/g, " "));
 
+      const hmac = await signState(stateRaw);
+
       const { data, error: fnError } = await supabase.functions.invoke("oauth-exchange", {
-        body: { code, provider: state.provider, redirect_uri: `${window.location.origin}${window.location.pathname}` },
+        body: {
+          code,
+          provider: state.provider,
+          redirect_uri: `${window.location.origin}${window.location.pathname}`,
+          state: stateRaw,
+          hmac,
+        },
       });
 
       if (fnError) throw new Error(fnError.message || "Token exchange failed");

@@ -24,8 +24,7 @@ const webhookLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Strict limiter for unauthenticated, abuse-prone endpoints
-// (login, signup, password reset, waitlist join). Keyed by IP.
+// Strict limiter for unauthenticated, abuse-prone endpoints (login, signup, password reset).
 const authLimiter = rateLimit({
   windowMs: 60_000,
   max: 10,
@@ -35,4 +34,24 @@ const authLimiter = rateLimit({
   message: { error: { code: "rate_limited", message: "Too many attempts. Please try again shortly." } },
 });
 
-module.exports = { apiLimiter, webhookLimiter, authLimiter };
+// Generous limiter for the public waitlist join endpoint.
+const waitlistLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 80,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req, res) => ipKeyGenerator(req, res),
+  message: { error: { code: "rate_limited", message: "Too many attempts. Please try again shortly." } },
+});
+
+// Mid-tier limiter for the enterprise inquiry endpoint.
+const enterpriseLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req, res) => ipKeyGenerator(req, res),
+  message: { error: { code: "rate_limited", message: "Too many attempts. Please try again shortly." } },
+});
+
+module.exports = { apiLimiter, webhookLimiter, authLimiter, waitlistLimiter, enterpriseLimiter };

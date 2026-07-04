@@ -12,6 +12,8 @@ interface TokenExchangeRequest {
   code: string;
   provider: string;
   redirect_uri: string;
+  state: string;
+  hmac: string;
 }
 
 const PROVIDER_CONFIG: Record<string, {
@@ -52,6 +54,31 @@ const PROVIDER_CONFIG: Record<string, {
   },
 };
 
+async function verifyStateHmac(state: string, hmac: string): Promise<boolean> {
+  const secret = Deno.env.get("OAUTH_STATE_SECRET");
+  if (!secret) return false;
+
+  const keyData = new TextEncoder().encode(secret);
+  const msgData = new TextEncoder().encode(state);
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+
+  let sigBytes: Uint8Array;
+  try {
+    sigBytes = Uint8Array.from(atob(hmac), (c) => c.charCodeAt(0));
+  } catch {
+    return false;
+  }
+
+  return crypto.subtle.verify("HMAC", key, sigBytes, msgData);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -80,10 +107,28 @@ Deno.serve(async (req: Request) => {
     }
 
     const body: TokenExchangeRequest = await req.json();
-    const { code, provider, redirect_uri } = body;
+    const { code, provider, redirect_uri, state, hmac } = body;
 
-    if (!code || !provider || !redirect_uri) {
-      return jsonResponse({ error: "code, provider, and redirect_uri are required" }, 400);
+    if (!code || !provider || !redirect_uri || !state || !hmac) {
+      return jsonResponse({ error: "code, provider, redirect_uri, state, and hmac are required" }, 400);
+    }
+
+    // Verify HMAC-SHA256 of the state string
+    const hmacValid = await verifyStateHmac(state, hmac);
+    if (!hmacValid) {
+      return jsonResponse({ error: "Invalid state signature" }, 403);
+    }
+
+    // Verify timestamp embedded in state (reject if older than 10 minutes)
+    let parsedState: { provider: string; redirect: string; csrf?: string; ts?: number };
+    try {
+      parsedState = JSON.parse(atob(state));
+    } catch {
+      return jsonResponse({ error: "Invalid state parameter" }, 400);
+    }
+
+    if (parsedState.ts && Date.now() - parsedState.ts > 10 * 60 * 1000) {
+      return jsonResponse({ error: "OAuth state expired" }, 403);
     }
 
     const config = PROVIDER_CONFIG[provider];

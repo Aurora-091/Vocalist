@@ -2,7 +2,7 @@ const { Router } = require("express");
 const { z } = require("zod");
 const { requireAdmin } = require("../../config/supabase");
 const logger = require("../../config/logger");
-const { authLimiter } = require("../../middleware/rate-limit.middleware");
+const { enterpriseLimiter } = require("../../middleware/rate-limit.middleware");
 const { sendEnterpriseConfirmation } = require("../../services/email.service");
 
 const router = Router();
@@ -17,7 +17,7 @@ const inquireSchema = z.object({
   extraInfo: z.string().max(2000).optional(),
 });
 
-router.post("/inquire", authLimiter, async (req, res) => {
+router.post("/inquire", enterpriseLimiter, async (req, res) => {
   const parsed = inquireSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: { code: "validation_error", message: "Please provide a valid name and email" } });

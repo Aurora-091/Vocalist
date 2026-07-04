@@ -172,7 +172,7 @@ export default function IntegrationConnect() {
     const redirectBase = window.location.origin;
     const csrf = crypto.randomUUID();
     sessionStorage.setItem("oauth_csrf_state", csrf);
-    const state = btoa(JSON.stringify({ provider: provider!, redirect: "/integrations", csrf }));
+    const state = btoa(JSON.stringify({ provider: provider!, redirect: "/integrations", csrf, ts: Date.now() }));
 
     if (provider === "google_cal" || provider === "google_sheets") {
       const scopes = (catalogEntry.scopes || []).join(" ");
