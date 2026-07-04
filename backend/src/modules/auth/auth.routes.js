@@ -8,27 +8,6 @@ const { signupSchema, loginSchema, refreshSchema, resetSchema } = require("./aut
 
 const router = express.Router();
 
-const isProd = process.env.NODE_ENV === "production";
-const cookieOptions = {
-  httpOnly: true,
-  secure: isProd,
-  sameSite: "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-};
-
-function setAuthCookies(res, session) {
-  if (session?.access_token) {
-    res.cookie("sb-access-token", session.access_token, cookieOptions);
-  }
-  if (session?.refresh_token) {
-    res.cookie("sb-refresh-token", session.refresh_token, cookieOptions);
-  }
-}
-
-function clearAuthCookies(res) {
-  res.clearCookie("sb-access-token", cookieOptions);
-  res.clearCookie("sb-refresh-token", cookieOptions);
-}
 
 router.post(
   "/signup",
@@ -36,7 +15,6 @@ router.post(
   validate({ body: signupSchema }),
   asyncHandler(async (req, res) => {
     const result = await service.signup(req.body);
-    setAuthCookies(res, result.session);
     res.status(201).json(result);
   })
 );
@@ -47,7 +25,6 @@ router.post(
   validate({ body: loginSchema }),
   asyncHandler(async (req, res) => {
     const result = await service.login(req.body);
-    setAuthCookies(res, result.session);
     res.json(result);
   })
 );
@@ -57,11 +34,9 @@ router.post(
   authLimiter,
   validate({ body: refreshSchema }),
   asyncHandler(async (req, res) => {
-    // Check if refresh_token is in body or cookies
-    const refresh_token = req.body.refresh_token || req.cookies?.["sb-refresh-token"];
+    const refresh_token = req.body.refresh_token;
     if (!refresh_token) throw new Error("Missing refresh token");
     const result = await service.refresh({ refresh_token });
-    setAuthCookies(res, result.session);
     res.json(result);
   })
 );
@@ -71,7 +46,6 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const result = await service.logout(req.auth.token);
-    clearAuthCookies(res);
     res.json(result);
   })
 );

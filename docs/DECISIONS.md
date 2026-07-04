@@ -112,11 +112,11 @@ This document tracks all major product, architecture, and technology decisions m
   - `src/pages/admin/analytics/MarketingAnalytics.tsx` — Marketing analytics dashboard
   - `.github/workflows/ci.yml` — Updated Node version to 22
 
-## DEC-011: Auth Security Hardening (HttpOnly Cookies & Self-Healing Removal)
+## DEC-011: Auth Security Hardening (Self-Healing Removal & Email Enumeration)
 * **Date**: Thursday, 2026-07-02 10:57 IST
-* **Status**: Accepted
-* **Context**: JWT bearer tokens were previously stored in `localStorage`, which exposed them to XSS attacks. Furthermore, a legacy self-healing script during signup silently reset passwords and swallowed `409` errors if a user already existed in Supabase Auth but not `public.users`. Finally, the forgot password route allowed email enumeration by throwing errors on non-existent users.
-* **Decision**: We eliminated `localStorage` usage in favor of `httpOnly`, `SameSite=Lax` cookies set natively by the Express server. The frontend API client uses `credentials: "include"`. The self-healing signup script was removed entirely; the server now correctly rejects duplicate accounts with a `409 Conflict`. The forgot-password endpoint now silently succeeds regardless of user existence.
+* **Status**: Accepted (cookie portion superseded by DEC-015)
+* **Context**: JWT bearer tokens were previously stored in `localStorage`, which exposed them to XSS attacks. A legacy self-healing script during signup silently reset passwords and swallowed `409` errors if a user already existed in Supabase Auth but not `public.users`. The forgot-password route allowed email enumeration by throwing errors on non-existent users.
+* **Decision**: Removed `localStorage` usage and the self-healing signup script. The server now correctly rejects duplicate accounts with a `409 Conflict`. The forgot-password endpoint silently succeeds regardless of user existence. A cookie-based session layer was attempted at this point (httpOnly, SameSite=Lax) but was later found to conflict with the Supabase JS SDK's independent session management — see DEC-015 for the superseding decision and rationale.
 * **Key Files**:
   - `backend/src/modules/auth/auth.routes.js`
   - `backend/src/modules/auth/auth.service.js`
@@ -159,3 +159,22 @@ This document tracks all major product, architecture, and technology decisions m
   - `src/lib/db.ts`
   - `src/pages/AgentDetail.tsx`
   - `src/pages/AgentsList.tsx`
+## DEC-015: Bearer-Token-Only Session Model (Cookie Layer Removed)
+* **Date**: Saturday, 2026-07-04 20:19 IST
+* **Status**: Accepted
+* **Context**: DEC-011 introduced httpOnly cookies (`sb-access-token`, `sb-refresh-token`) as the primary session carrier. However, the Supabase JS SDK (`@supabase/supabase-js`) manages its own independent session with `autoRefreshToken: true`, emitting a fresh Bearer token in the `Authorization` header on every request. The two systems drifted out of sync: after SDK-driven token refresh, the backend's `decodeBearer()` read the stale httpOnly cookie first (because cookies win over headers) and rejected the fresh token, creating an infinite 401 retry loop. The `credentials: "include"` flag on `fetch()` was what allowed the browser to deliver the stale cookie alongside the fresh header on every request.
+* **Decision**: Adopt a single, consistent session mechanism — **Supabase JS SDK Bearer tokens only**:
+  - `auth.routes.js`: removed `cookieOptions`, `setAuthCookies()`, `clearAuthCookies()`, and all `res.cookie()` / `res.clearCookie()` calls from signup, login, refresh, and logout.
+  - `auth.middleware.js`: `decodeBearer()` now reads **only** the `Authorization: Bearer` header — no cookie fallback.
+  - `app.js`: removed `cookie-parser` middleware entirely (nothing sets or reads cookies).
+  - `api.ts`: removed `credentials: "include"` from all `fetch()` calls.
+* **Tradeoffs accepted**:
+  - **XSS exposure**: Bearer tokens held in the Supabase SDK's internal storage (memory + `localStorage` fallback in some SDK versions) are accessible to JavaScript, unlike httpOnly cookies. This is the standard tradeoff for SPAs using client-side auth SDKs. Mitigations: strict CSP headers via `helmet`, no `eval()` or `dangerouslySetInnerHTML`, input sanitization at API boundary. Revisit when implementing a BFF (Backend-For-Frontend) proxy pattern.
+  - **CSRF**: Not applicable — Bearer tokens in the Authorization header are not sent automatically by the browser, so there is no CSRF surface.
+  - **Non-browser clients** (curl, server-to-server): Must send `Authorization: Bearer <token>`. This was already the expectation; the cookie path was only ever an unintended shortcut.
+* **Key Files**:
+  - `backend/src/modules/auth/auth.routes.js`
+  - `backend/src/middleware/auth.middleware.js`
+  - `backend/src/app.js`
+  - `src/lib/api.ts`
+  - `backend/src/tests/invariants/auth-middleware.test.js`
