@@ -91,12 +91,16 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   async _getOrImportPhoneNumberId(phone_number) {
+    const credentials = await this._getTwilioCredentials();
+    if (credentials.accountSid && credentials.accountSid.startsWith("ACsandbox")) {
+      return "sandbox-phone-number-id";
+    }
+
     const res = await this._call("GET", "/v1/convai/phone-numbers");
     const matched = res.phone_numbers?.find((p) => p.phone_number === phone_number);
     if (matched) return matched.phone_number_id;
 
     // Import it
-    const credentials = await this._getTwilioCredentials();
     if (!credentials.accountSid || !credentials.authToken) {
       const { BadRequest } = require("../../utils/errors");
       throw BadRequest("Twilio credentials missing, cannot import number to ElevenLabs");
@@ -343,6 +347,15 @@ class ElevenLabsProvider extends VoiceProvider {
 
     // Pre-flight: verify credentials before initiating the call
     const credentials = await this._getTwilioCredentials();
+    if (credentials.accountSid && credentials.accountSid.startsWith("ACsandbox")) {
+      logger.info({ orgId: this.orgId, agentId, toE164 }, "Sandbox mode: Bypassing real ElevenLabs outbound call");
+      const crypto = require("crypto");
+      return {
+        provider_call_id: `sandbox-${crypto.randomUUID()}`,
+        status: "queued",
+      };
+    }
+
     logger.info({ orgId: this.orgId, agentId, toE164 }, "Starting ElevenLabs outbound call");
 
     const agentPhoneNumberId = await this._getOrImportPhoneNumberId(fromE164);
@@ -386,6 +399,11 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   async endCall(providerCallId) {
+    if (providerCallId && providerCallId.startsWith("sandbox-")) {
+      logger.info({ providerCallId }, "Sandbox mode: Bypassing real Twilio endCall");
+      return { ok: true };
+    }
+
     try {
       const credentials = await this._getTwilioCredentials();
       const client = require("twilio")(credentials.accountSid, credentials.authToken);

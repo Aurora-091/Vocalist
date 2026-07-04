@@ -14,6 +14,7 @@ All notable changes to the Weeber platform will be documented in this file. This
 ### Fixed
 - **Backend assignNumber Bug Fix**: Fixed a bug in `AgentService.assignNumber()` where a typo in referencing `phone.number` (which was `undefined` in the database schema) caused `agents.inbound_number` to get updated to `undefined`/`null`, resulting in "Agent must have an inbound number assigned" failures during test calls. Corrected the reference to `phone.e164`.
 - **ElevenLabs Phone Import API Fields**: Fixed a 422 validation error during outbound test calls when importing a number to ElevenLabs. The `POST /v1/convai/phone-numbers` request payload was passing `twilio_account_sid` and `twilio_auth_token`, whereas the ElevenLabs API requires `sid` and `token` for Twilio credential parameters.
+- **Twilio Sandbox Mode Support**: Resolved a 400 Bad Request error occurring in sandbox environments when placing test calls. When Twilio sandbox credentials (e.g. `ACsandbox...` subaccount SIDs) are detected, the ElevenLabs provider now dynamically bypasses the live `POST /v1/convai/phone-numbers` import and `POST /v1/convai/twilio/outbound-call` calling APIs, simulating successful sandbox mock routing instead of failing on validation.
 
 ---
 
