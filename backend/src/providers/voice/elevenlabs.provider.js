@@ -106,8 +106,8 @@ class ElevenLabsProvider extends VoiceProvider {
       phone_number: phone_number,
       label: `Imported ${phone_number}`,
       provider: "twilio",
-      twilio_account_sid: credentials.accountSid,
-      twilio_auth_token: credentials.authToken,
+      sid: credentials.accountSid,
+      token: credentials.authToken,
     });
 
     return importRes.phone_number_id;
