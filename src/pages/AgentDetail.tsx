@@ -203,8 +203,8 @@ export default function AgentDetail() {
     })();
   }, [selectedLanguages]);
 
-  async function save() {
-    if (!agent) return;
+  async function save(silent = false) {
+    if (!agent) return false;
     setSaving(true);
     try {
       const effectiveTone = toneMode === "custom" ? customTone : toneMode;
@@ -228,8 +228,9 @@ export default function AgentDetail() {
         timezone: timezone || "America/New_York",
         languages: selectedLanguages,
       });
-      toast.success("Agent saved and synced.");
-      load();
+      if (!silent) toast.success("Agent saved and synced.");
+      await load();
+      return true;
     } catch (e: any) {
       const detail = e.details || e.detail;
       if (detail && typeof detail === "object") {
@@ -240,6 +241,7 @@ export default function AgentDetail() {
       } else {
         toast.error(e.message || "Couldn't save.");
       }
+      return false;
     } finally {
       setSaving(false);
     }
@@ -431,7 +433,7 @@ export default function AgentDetail() {
           )}
 
           <div className="mt-6 flex items-center gap-3 flex-wrap">
-            <Button onClick={save} disabled={saving}>
+            <Button onClick={() => save()} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Saving…" : "Save changes"}
             </Button>
@@ -549,6 +551,11 @@ export default function AgentDetail() {
                     onClick={async () => {
                       setSkillsLoading(true);
                       try {
+                        if (!agent.provider_ref) {
+                          toast.info("Saving agent to enable skills...");
+                          const success = await save(true);
+                          if (!success) return;
+                        }
                         await api.post(`/v1/agents/${id}/skills/${skill.id}/toggle`, { enabled: !isActive });
                         setActiveSkillIds((prev) => {
                           const next = new Set(prev);
@@ -557,7 +564,11 @@ export default function AgentDetail() {
                           return next;
                         });
                       } catch (e: any) {
-                        toast.error(e.message || "Failed to toggle skill.");
+                        if (e.code === "bad_request") {
+                          toast.error(e.message || "Please save or provision your agent before toggling skills.");
+                        } else {
+                          toast.error(e.message || "Failed to toggle skill.");
+                        }
                       } finally {
                         setSkillsLoading(false);
                       }
@@ -600,14 +611,18 @@ export default function AgentDetail() {
             <Input
               value={testNumber}
               onChange={(e) => setTestNumber(e.target.value)}
-              disabled={!agent.provider_ref || calling}
+              disabled={calling}
               placeholder="+1 415 555 0199"
               aria-label="Test call phone number"
               className="flex-1 min-w-[240px] font-mono"
             />
             <Button
-              disabled={!agent.provider_ref || !testNumber.trim() || calling}
+              disabled={!testNumber.trim() || calling}
               onClick={async () => {
+                if (!agent.provider_ref) {
+                  toast.error("Please save or provision your agent before testing.");
+                  return;
+                }
                 const cleanedNumber = testNumber.replace(/\s+/g, "");
                 if (!/^\+[1-9]\d{1,14}$/.test(cleanedNumber)) {
                   toast.error("Please enter a valid E.164 phone number (e.g., +14155552671).");
@@ -620,7 +635,11 @@ export default function AgentDetail() {
                   toast.success("Call initiated. Your phone should ring shortly.");
                   if (res?.call?.id) setActiveCallId(res.call.id);
                 } catch (e: any) {
-                  toast.error(e.message || "Failed to place call.");
+                  if (e.code === "bad_request") {
+                    toast.error(e.message || "Please save or provision your agent before testing.");
+                  } else {
+                    toast.error(e.message || "Failed to place call.");
+                  }
                 } finally {
                   setCalling(false);
                 }

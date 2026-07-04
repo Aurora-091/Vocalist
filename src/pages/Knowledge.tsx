@@ -12,6 +12,7 @@ type KnowledgeSource = {
   title: string;
   uri: string | null;
   status: "processing" | "ready" | "error" | "syncing" | "pending";
+  meta?: any;
   created_at: string;
   updated_at: string;
 };
@@ -64,6 +65,18 @@ export default function Knowledge() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Polling mechanism as a fallback for async syncing
+  useEffect(() => {
+    const hasPending = sources?.some((s) => ["syncing", "processing", "pending"].includes(s.status));
+    if (!hasPending) return;
+
+    const intervalId = setInterval(() => {
+      load();
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, [sources]);
+
   async function deleteSource(id: string) {
     setDeletingId(id);
     try {
@@ -77,10 +90,12 @@ export default function Knowledge() {
 
   async function resync(id: string) {
     try {
-      await api.post(`/v1/knowledge/sources/${id}/resync`);
-      setSources((prev) =>
-        prev?.map((s) => (s.id === id ? { ...s, status: "syncing" } : s)) ?? null
-      );
+      const res = await api.post<{ ok: boolean }>(`/v1/knowledge/sources/${id}/resync`);
+      if (res && res.ok) {
+        setSources((prev) =>
+          prev?.map((s) => (s.id === id ? { ...s, status: "syncing" } : s)) ?? null
+        );
+      }
     } catch {}
   }
 
