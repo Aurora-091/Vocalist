@@ -5,9 +5,9 @@ import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls } fro
 import { supabase } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
 import { StatCard } from "../components/legacy-ui/StatCard";
-import { Card, CardHeader, CardBody } from "../components/legacy-ui/Card";
-import { Button } from "../components/legacy-ui/Button";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const STEP_LABELS: Record<string, string> = {
   pick_vertical: "Pick your business",
@@ -127,8 +127,8 @@ export default function Dashboard() {
       </div>
 
       {isEmpty && !steps && (
-        <Card className="border-border bg-surface-2">
-          <CardBody>
+        <Card className="gap-0 overflow-visible py-0 shadow-card border-border bg-surface-2">
+          <CardContent className="px-6 py-5">
             <div className="flex items-start gap-4">
               <span className="w-9 h-9 rounded-md bg-surface border border-border text-text-muted flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />
@@ -145,20 +145,20 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-          </CardBody>
+          </CardContent>
         </Card>
       )}
 
       {steps && !checklistDone && (
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 overflow-visible py-0 shadow-card">
+          <div className="border-b px-6 py-4">
             <div className="font-medium">Finish setting up Weeber</div>
             <p className="text-xs text-text-muted mt-1">
               {Object.values(steps).filter(Boolean).length} of{" "}
               {Object.keys(steps).length} done
             </p>
-          </CardHeader>
-          <CardBody>
+          </div>
+          <CardContent className="px-6 py-5">
             <ul className="space-y-2">
               {Object.entries(steps).map(([key, done]) => (
                 <li key={key} className="flex items-center justify-between">
@@ -184,7 +184,7 @@ export default function Dashboard() {
                 </li>
               ))}
             </ul>
-          </CardBody>
+          </CardContent>
         </Card>
       )}
 
@@ -212,8 +212,8 @@ export default function Dashboard() {
             ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
             : "bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400";
           return (
-            <Card key={card.id} className="hover:border-primary/30 transition-colors">
-              <CardBody>
+            <Card key={card.id} className="gap-0 overflow-visible py-0 shadow-card hover:border-primary/30 transition-colors">
+              <CardContent className="px-6 py-5">
                 <div className="flex items-start gap-4">
                   <span className={`w-10 h-10 rounded-md ${bgColor} flex items-center justify-center shrink-0`}>
                     <CardIcon className="w-5 h-5" />
@@ -224,7 +224,7 @@ export default function Dashboard() {
                     <div className="mt-3 flex flex-wrap gap-2">
                       {card.links.map((link, i) => (
                         <Link key={link.to} to={link.to}>
-                          <Button size="sm" variant={i === 0 ? "secondary" : "ghost"}>
+                          <Button size="sm" variant={i === 0 ? "outline" : "ghost"}>
                             {i === 0 && card.id === "inbound" && <Bot className="w-3.5 h-3.5 mr-1.5" />}
                             {i === 0 && card.id === "outbound" && <Megaphone className="w-3.5 h-3.5 mr-1.5" />}
                             {link.label}
@@ -234,7 +234,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-              </CardBody>
+              </CardContent>
             </Card>
           );
         })}
@@ -242,11 +242,11 @@ export default function Dashboard() {
 
       {/* Quick actions from vertical config */}
       {config.quickActions.length > 0 && !isEmpty && (
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 overflow-visible py-0 shadow-card">
+          <div className="border-b px-6 py-4">
             <div className="font-medium">Quick actions</div>
-          </CardHeader>
-          <CardBody>
+          </div>
+          <CardContent className="px-6 py-5">
             <div className="grid sm:grid-cols-3 gap-3">
               {config.quickActions.map((action) => {
                 const ActionIcon = action.icon;
@@ -263,14 +263,14 @@ export default function Dashboard() {
                 );
               })}
             </div>
-          </CardBody>
+          </CardContent>
         </Card>
       )}
 
       {/* Live calls + Usage */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 overflow-visible py-0 shadow-card">
+          <div className="border-b px-6 py-4">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 {liveCalls.length > 0 && (
@@ -283,8 +283,8 @@ export default function Dashboard() {
                 <span className="text-xs text-text-muted ml-1">({liveCalls.length})</span>
               )}
             </div>
-          </CardHeader>
-          <CardBody>
+          </div>
+          <CardContent className="px-6 py-5">
             {liveCalls.length === 0 ? (
               recentCalls.length > 0 ? (
                 <div>
@@ -323,13 +323,13 @@ export default function Dashboard() {
                 ))}
               </ul>
             )}
-          </CardBody>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 overflow-visible py-0 shadow-card">
+          <div className="border-b px-6 py-4">
             <div className="font-medium">Usage this period</div>
-          </CardHeader>
-          <CardBody>
+          </div>
+          <CardContent className="px-6 py-5">
             {usage ? (
               <>
                 <div className="font-mono text-3xl font-bold">
@@ -350,7 +350,7 @@ export default function Dashboard() {
             ) : (
               <Skeleton className="h-24" />
             )}
-          </CardBody>
+          </CardContent>
         </Card>
       </div>
     </div>

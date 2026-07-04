@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { listAgents, createCampaign } from "../lib/db";
-import { Button } from "../components/legacy-ui/Button";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Field,
@@ -78,11 +78,11 @@ export default function CampaignNew() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Campaign details</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           {agents.length === 0 ? (
             <div className="text-sm text-text-muted">
               You need an agent before creating a campaign.{" "}
@@ -165,7 +165,7 @@ export default function CampaignNew() {
               </FieldGroup>
             </form>
           )}
-        </CardBody>
+        </CardContent>
       </Card>
     </div>
   );

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Bot, Phone, PhoneOutgoing, ArrowRight, ArrowLeft } from "lucide-react";
 import { listAgentPresets } from "../lib/db";
-import { Badge } from "./legacy-ui/Badge";
-import { Button } from "./legacy-ui/Button";
-import { Skeleton } from "./legacy-ui/States";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import VoiceLibrary from "../pages/VoiceLibrary";
 
 type Preset = {
@@ -154,7 +154,8 @@ export function AgentPresetPicker({
                       <div className="font-medium text-sm">{p.name}</div>
                     </div>
                     <Badge
-                      tone={p.direction === "inbound" ? "info" : p.direction === "outbound" ? "warning" : "neutral"}
+                      variant="secondary"
+                      className={p.direction === "inbound" ? "bg-info/15 text-info" : p.direction === "outbound" ? "bg-warning/15 text-warning" : "bg-muted text-foreground"}
                     >
                       {p.direction === "inbound" && <Phone className="w-3 h-3 mr-1" />}
                       {p.direction === "outbound" && <PhoneOutgoing className="w-3 h-3 mr-1" />}

@@ -19,10 +19,14 @@ import {
   MessageCircle,
   Mail,
   Globe,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Bell,
 } from "lucide-react";
 import { useState } from "react";
 import { listCalls, getCallsSummary, getCall, listAgents } from "../lib/db";
-import { StatCard } from "@/components/legacy-ui/StatCard";
+import { supabase } from "../lib/supabase";
+import { StatCard } from "../components/legacy-ui/StatCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,6 +139,7 @@ export default function Conversations() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [newCallsCount, setNewCallsCount] = useState(0);
 
   // Filter state from URL
   const agentId = searchParams.get("agent") || "";
@@ -212,6 +217,16 @@ export default function Conversations() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("calls-live")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "calls" }, () => {
+        setNewCallsCount((n) => n + 1);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
@@ -225,7 +240,7 @@ export default function Conversations() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { setNewCallsCount(0); load(); }} disabled={loading}>
             <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", loading && "animate-spin")} />
             Refresh
           </Button>
@@ -370,12 +385,21 @@ export default function Conversations() {
         />
       </div>
 
-      {/* Count */}
+      {/* Count + live banner */}
       {!loading && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
           <Badge variant="outline" className="text-xs">
             {totalCount} conversation{totalCount !== 1 ? "s" : ""}
           </Badge>
+          {newCallsCount > 0 && (
+            <button
+              onClick={() => { setNewCallsCount(0); load(); }}
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+            >
+              <Bell className="h-3 w-3" />
+              {newCallsCount} new call{newCallsCount !== 1 ? "s" : ""} — tap to refresh
+            </button>
+          )}
         </div>
       )}
 
@@ -395,7 +419,57 @@ export default function Conversations() {
         </div>
       ) : (
         <>
-          <div className="border border-border rounded-lg overflow-hidden bg-card shadow-sm">
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-2">
+            {conversations.map((c) => {
+              const ChannelIcon = CHANNEL_ICON[c.channel || "voice"] || Phone;
+              const DirectionIcon = c.direction === "inbound" ? ArrowDownLeft : ArrowUpRight;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setSelectedId(c.id)}
+                  className="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                        <ChannelIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{c.agents?.name || "—"}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <DirectionIcon className="h-3 w-3 flex-shrink-0" />
+                          <span className="capitalize">{c.direction}</span>
+                          {c.duration_sec != null && (
+                            <span className="ml-1 font-mono">{c.duration_sec}s</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <Badge variant={STATUS_VARIANT[c.status] || "outline"} className="capitalize text-xs">
+                        {c.status.replace(/_/g, " ")}
+                      </Badge>
+                      <span className="text-[11px] text-muted-foreground">
+                        {c.started_at
+                          ? new Date(c.started_at).toLocaleString(undefined, {
+                              month: "short",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-sm">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -471,6 +545,7 @@ export default function Conversations() {
               </Table>
             </div>
           </div>
+          {/* end desktop table */}
 
           {/* Pagination */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

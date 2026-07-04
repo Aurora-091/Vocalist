@@ -8,7 +8,7 @@ import {
 import { getIntegrationCatalogEntry, getBridgeConfig, upsertBridgeConfig } from "../lib/db";
 import { supabase } from "../lib/supabase";
 import { IntegrationConnectWizard, type FieldConfig, type WizardStep } from "../components/IntegrationConnectWizard";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   "shopping-bag": ShoppingBag,

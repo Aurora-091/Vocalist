@@ -11,7 +11,7 @@ import {
   primaryUseCase,
   type UseCaseId,
 } from "../lib/voiceCategories";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {

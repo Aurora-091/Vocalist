@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { listPlanTiers, getUsageSummary, getSubscription } from "../lib/db";
 import { api } from "../lib/api";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
-import { Button } from "../components/legacy-ui/Button";
-import { Badge } from "../components/legacy-ui/Badge";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Tier = {
   id: string;
@@ -66,7 +66,6 @@ export default function Billing() {
 
   async function handleSwitchPlan(tierKey: string) {
     if (!subscription?.stripe_subscription_id) {
-      // No subscription yet — go to checkout
       setSwitching(tierKey);
       try {
         const { url } = await api.post<{ url: string }>("/v1/billing/checkout", {
@@ -143,18 +142,27 @@ export default function Billing() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="font-medium">Usage this period</div>
             {usage && (
-              <Badge tone={tone === "danger" ? "danger" : tone === "warning" ? "warning" : "neutral"}>
+              <Badge
+                variant="secondary"
+                className={
+                  tone === "danger"
+                    ? "bg-danger/15 text-danger"
+                    : tone === "warning"
+                    ? "bg-warning/15 text-warning"
+                    : "bg-muted text-foreground"
+                }
+              >
                 {Math.round(pct)}% used
               </Badge>
             )}
           </div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           {!usage ? (
             <Skeleton className="h-24" />
           ) : (
@@ -182,24 +190,31 @@ export default function Billing() {
               </div>
             </>
           )}
-        </CardBody>
+        </CardContent>
       </Card>
 
       {subscription && (
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 overflow-visible py-0 shadow-card">
+          <div className="border-b px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="font-medium">Subscription</div>
-              <Badge tone={
-                subscription.status === "active" ? "success" :
-                subscription.status === "cancel_at_period_end" ? "warning" :
-                subscription.status === "past_due" ? "danger" : "neutral"
-              }>
+              <Badge
+                variant="secondary"
+                className={
+                  subscription.status === "active"
+                    ? "bg-success/15 text-success"
+                    : subscription.status === "cancel_at_period_end"
+                    ? "bg-warning/15 text-warning"
+                    : subscription.status === "past_due"
+                    ? "bg-danger/15 text-danger"
+                    : "bg-muted text-foreground"
+                }
+              >
                 {subscription.status === "cancel_at_period_end" ? "Cancels at period end" : subscription.status}
               </Badge>
             </div>
-          </CardHeader>
-          <CardBody>
+          </div>
+          <CardContent className="px-6 py-5">
             <div className="flex items-center justify-between">
               <div className="text-sm text-text-muted">
                 {subscription.period_end
@@ -208,12 +223,12 @@ export default function Billing() {
               </div>
               <div className="flex gap-2">
                 {subscription.stripe_customer_id && (
-                  <Button variant="secondary" size="sm" onClick={openPortal}>
+                  <Button variant="outline" size="sm" onClick={openPortal}>
                     Manage invoices
                   </Button>
                 )}
                 {isCanceling ? (
-                  <Button variant="primary" size="sm" onClick={handleReactivate} disabled={canceling}>
+                  <Button size="sm" onClick={handleReactivate} disabled={canceling}>
                     {canceling ? "Reactivating…" : "Reactivate"}
                   </Button>
                 ) : subscription.status === "active" ? (
@@ -223,7 +238,7 @@ export default function Billing() {
                 ) : null}
               </div>
             </div>
-          </CardBody>
+          </CardContent>
         </Card>
       )}
 
@@ -248,7 +263,11 @@ export default function Billing() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{t.label}</div>
-                      {isCurrent && <Badge tone="primary">current</Badge>}
+                      {isCurrent && (
+                        <Badge variant="secondary" className="bg-primary/15 text-primary">
+                          current
+                        </Badge>
+                      )}
                     </div>
                     <div className="mt-4 font-mono text-3xl font-bold">
                       ${Number(t.monthly_usd)}
@@ -267,10 +286,10 @@ export default function Billing() {
                     </ul>
                     <div className="mt-6">
                       <Button
-                        variant={isCurrent ? "secondary" : "primary"}
+                        variant={isCurrent ? "outline" : "default"}
                         size="sm"
                         className="w-full"
-                        disabled={isCurrent || isLoading || switching !== null}
+                        disabled={!!isCurrent || isLoading || switching !== null}
                         onClick={() => !isCurrent && handleSwitchPlan(t.key)}
                       >
                         {isLoading ? "Switching…" : isCurrent ? "Current plan" : "Switch"}

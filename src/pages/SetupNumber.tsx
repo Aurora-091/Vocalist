@@ -3,9 +3,9 @@ import { Phone, ShieldCheck, CircleAlert as AlertCircle, Link2, Server, Loader a
 import { toast } from "sonner";
 import { listPhoneNumbers } from "../lib/db";
 import { api } from "../lib/api";
-import { Button } from "../components/legacy-ui/Button";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
-import { Badge } from "../components/legacy-ui/Badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type PhoneNumber = {
   id: string;
@@ -65,11 +65,11 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
       </div>
 
       {numbers.length > 0 && (
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 overflow-visible py-0 shadow-card">
+          <div className="border-b px-6 py-4">
             <div className="font-medium">Your numbers</div>
-          </CardHeader>
-          <CardBody>
+          </div>
+          <CardContent className="px-6 py-5">
             <div className="divide-y divide-border">
               {numbers.map((n) => (
                 <div key={n.id} className="py-3 flex items-center justify-between">
@@ -83,14 +83,14 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
                     </div>
                   </div>
                   {n.agent_id ? (
-                    <Badge tone="info">bound</Badge>
+                    <Badge variant="secondary" className="bg-info/15 text-info">bound</Badge>
                   ) : (
-                    <Badge tone="neutral">unassigned</Badge>
+                    <Badge variant="secondary" className="bg-muted text-foreground">unassigned</Badge>
                   )}
                 </div>
               ))}
             </div>
-          </CardBody>
+          </CardContent>
         </Card>
       )}
 
@@ -171,14 +171,14 @@ function TwilioSetupChoice({
 
   if (mode === "byo") {
     return (
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="flex items-center gap-2">
             <Link2 className="w-4 h-4" />
             <span className="font-medium">Link your Twilio account</span>
           </div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <form onSubmit={handleByo} className="space-y-4">
             <div>
               <label className="block text-xs font-medium mb-1">Account SID</label>
@@ -211,15 +211,15 @@ function TwilioSetupChoice({
               />
             </div>
             <div className="flex gap-2">
-              <Button type="submit" variant="primary" size="sm" disabled={loading}>
+              <Button type="submit" disabled={loading}>
                 {loading ? "Linking…" : "Link account"}
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setMode("choose")}>
+              <Button type="button" variant="ghost" onClick={() => setMode("choose")}>
                 Back
               </Button>
             </div>
           </form>
-        </CardBody>
+        </CardContent>
       </Card>
     );
   }
@@ -283,8 +283,8 @@ function AccountLinked({
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {account.account_type === "byo_linked" ? (
@@ -298,12 +298,12 @@ function AccountLinked({
                 : "Weeber-managed sub-account"}
             </span>
           </div>
-          <Badge tone={account.status === "active" ? "success" : "warning"}>
+          <Badge variant="secondary" className={account.status === "active" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}>
             {account.status}
           </Badge>
         </div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             {account.friendly_name && (
@@ -327,18 +327,18 @@ function AccountLinked({
             </Button>
           )}
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
 
 function CompliancePreflight() {
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="font-medium">Compliance preflight</div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <ul className="space-y-2 text-sm">
           <li className="flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-success mt-0.5 shrink-0" />
@@ -356,7 +356,7 @@ function CompliancePreflight() {
             </span>
           </li>
         </ul>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }

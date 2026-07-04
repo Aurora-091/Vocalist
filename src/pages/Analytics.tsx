@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { ChartBar as BarChart2, TrendingDown, Phone, CircleCheck as CheckCircle, UserMinus, DollarSign } from "lucide-react";
 import { api } from "../lib/api";
 import { StatCard } from "../components/legacy-ui/StatCard";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Range = "7d" | "30d" | "90d";
 
@@ -266,11 +266,11 @@ export default function Analytics() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
+            <Card className="gap-0 overflow-visible py-0 shadow-card">
+              <div className="border-b px-6 py-4">
                 <div className="font-medium">Call outcomes</div>
-              </CardHeader>
-              <CardBody>
+              </div>
+              <CardContent className="px-6 py-5">
                 {!outcomes || outcomes.length === 0 ? (
                   <div className="text-sm text-text-muted py-8 text-center">No outcome data yet</div>
                 ) : (
@@ -294,31 +294,31 @@ export default function Analytics() {
                       ))}
                   </div>
                 )}
-              </CardBody>
+              </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
+            <Card className="gap-0 overflow-visible py-0 shadow-card">
+              <div className="border-b px-6 py-4">
                 <div className="font-medium">Calls over time</div>
-              </CardHeader>
-              <CardBody>
+              </div>
+              <CardContent className="px-6 py-5">
                 {series !== null ? (
                   <SparkLine series={series} color="#60a5fa" label="Calls per day" />
                 ) : (
                   <Skeleton className="h-28" />
                 )}
-              </CardBody>
+              </CardContent>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
+          <Card className="gap-0 overflow-visible py-0 shadow-card">
+            <div className="border-b px-6 py-4">
               <div className="flex items-center gap-2">
                 <TrendingDown className="w-4 h-4 text-danger" />
                 <div className="font-medium">Opt-out trend</div>
               </div>
-            </CardHeader>
-            <CardBody>
+            </div>
+            <CardContent className="px-6 py-5">
               {optouts !== null ? (
                 <SparkLine series={optouts} color="#f97316" label="Opt-outs per day" />
               ) : (
@@ -330,7 +330,7 @@ export default function Analytics() {
                   your agent's opening script if you see a spike.
                 </p>
               )}
-            </CardBody>
+            </CardContent>
           </Card>
         </>
       )}

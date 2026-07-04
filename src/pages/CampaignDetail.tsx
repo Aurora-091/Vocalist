@@ -15,11 +15,11 @@ import {
 import { getCampaign, listContacts, listCampaignTargets, updateCampaign } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
-import { Button } from "../components/legacy-ui/Button";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
-import { Badge } from "../components/legacy-ui/Badge";
-import { StatCard } from "../components/legacy-ui/StatCard";
-import { Skeleton } from "../components/legacy-ui/States";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const STATUS_TONE: Record<string, "success" | "info" | "neutral" | "warning" | "danger"> = {
   draft: "neutral",
@@ -114,9 +114,13 @@ export default function CampaignDetail() {
   async function setStatus(status: string) {
     if (status === "running" && review && !review.ready_to_launch) return;
     setActing(true);
+    const prevCampaign = campaign;
+    setCampaign((c: any) => ({ ...c, status }));
     try {
       await updateCampaign(id!, { status });
-      await load();
+    } catch (e: any) {
+      setCampaign(prevCampaign);
+      toast.error(e?.message || "Failed to update campaign status.");
     } finally {
       setActing(false);
     }
@@ -146,7 +150,7 @@ export default function CampaignDetail() {
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-semibold tracking-tight">{campaign.name}</h1>
-              <Badge tone={STATUS_TONE[status] || "neutral"} dot>
+              <Badge variant="secondary" className="bg-info/15 text-info"><span className="size-1.5 rounded-full bg-current mr-1" />
                 {status}
               </Badge>
             </div>
@@ -157,11 +161,11 @@ export default function CampaignDetail() {
           <div className="flex gap-2 flex-wrap">
             {isDraft && (
               <>
-                <Button variant="secondary" onClick={() => setShowAddContacts(true)}>
+                <Button variant="outline" onClick={() => setShowAddContacts(true)}>
                   <Users className="w-4 h-4 mr-2" />
                   Add contacts
                 </Button>
-                <Button variant="secondary" onClick={() => setShowSchedule(true)}>
+                <Button variant="outline" onClick={() => setShowSchedule(true)}>
                   <Clock className="w-4 h-4 mr-2" />
                   Schedule
                 </Button>
@@ -179,7 +183,7 @@ export default function CampaignDetail() {
             )}
             {canPause && (
               <Button
-                variant="secondary"
+                variant="outline"
                 onClick={() => setStatus("paused")}
                 disabled={acting}
               >
@@ -218,8 +222,8 @@ export default function CampaignDetail() {
       )}
 
       {canStart && review && (
-        <Card>
-          <CardHeader>
+        <Card className="gap-0 overflow-visible py-0 shadow-card">
+          <div className="border-b px-6 py-4">
             <div className="flex items-center gap-2 font-medium">
               {review.ready_to_launch ? (
                 <ShieldCheck className="w-4 h-4 text-success" />
@@ -228,8 +232,8 @@ export default function CampaignDetail() {
               )}
               Pre-launch compliance review
             </div>
-          </CardHeader>
-          <CardBody>
+          </div>
+          <CardContent className="px-6 py-5">
             {reviewLoading ? (
               <Skeleton className="h-16" />
             ) : (
@@ -272,27 +276,39 @@ export default function CampaignDetail() {
                 )}
               </div>
             )}
-          </CardBody>
+          </CardContent>
         </Card>
       )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total targets" value={total} />
-        <StatCard label="Queued" value={stats.queued ?? 0} />
-        <StatCard label="In progress" value={stats.in_progress ?? 0} />
-        <StatCard label="Completed" value={stats.completed ?? 0} />
+        <div className="p-4 bg-card border border-border rounded-md">
+          <div className="text-xs text-muted-foreground mb-1">Total targets</div>
+          <div className="text-2xl font-semibold">{total}</div>
+        </div>
+        <div className="p-4 bg-card border border-border rounded-md">
+          <div className="text-xs text-muted-foreground mb-1">Queued</div>
+          <div className="text-2xl font-semibold">{stats.queued ?? 0}</div>
+        </div>
+        <div className="p-4 bg-card border border-border rounded-md">
+          <div className="text-xs text-muted-foreground mb-1">In progress</div>
+          <div className="text-2xl font-semibold">{stats.in_progress ?? 0}</div>
+        </div>
+        <div className="p-4 bg-card border border-border rounded-md">
+          <div className="text-xs text-muted-foreground mb-1">Completed</div>
+          <div className="text-2xl font-semibold">{stats.completed ?? 0}</div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="font-medium">Target breakdown</div>
             {status === "running" && (
-              <Badge tone="success" dot>Live updates</Badge>
+              <Badge variant="secondary" className="bg-success/15 text-success"><span className="size-1.5 rounded-full bg-current mr-1" />Live updates</Badge>
             )}
           </div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <div className="grid sm:grid-cols-2 gap-3">
             {Object.entries(stats).map(([k, v]) => (
               <div
@@ -314,7 +330,7 @@ export default function CampaignDetail() {
               </div>
             )}
           </div>
-        </CardBody>
+        </CardContent>
       </Card>
     </div>
   );
@@ -388,8 +404,8 @@ function AddContactsPanel({
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="font-medium flex items-center gap-2">
             <Users className="w-4 h-4" />
@@ -399,8 +415,8 @@ function AddContactsPanel({
             <X className="w-4 h-4" />
           </button>
         </div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex gap-1 p-1 bg-surface-2 rounded-md border border-border">
@@ -487,7 +503,7 @@ function AddContactsPanel({
             </div>
           </div>
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -544,8 +560,8 @@ function SchedulePanel({
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="font-medium flex items-center gap-2">
             <Clock className="w-4 h-4" />
@@ -555,8 +571,8 @@ function SchedulePanel({
             <X className="w-4 h-4" />
           </button>
         </div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <form onSubmit={save} className="space-y-4">
           <div className="grid sm:grid-cols-3 gap-4">
             <div>
@@ -599,7 +615,7 @@ function SchedulePanel({
             <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save schedule"}</Button>
           </div>
         </form>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }

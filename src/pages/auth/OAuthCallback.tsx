@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader, Check, CircleAlert } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { upsertBridgeConfig } from "../../lib/db";
-import { Button } from "../../components/legacy-ui/Button";
+import { Button } from "@/components/ui/button";
 
 const OAUTH_STATE_SECRET = import.meta.env.VITE_OAUTH_STATE_SECRET || "";
 

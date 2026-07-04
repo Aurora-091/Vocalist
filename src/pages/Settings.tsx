@@ -18,9 +18,9 @@ import {
 import { supabase, getSession } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
 import { VERTICAL_REGISTRY, listVerticals, type VerticalKey } from "../config/verticals";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
-import { Button } from "../components/legacy-ui/Button";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Field, FieldLabel, FieldGroup, FieldDescription } from "@/components/ui/field";
@@ -122,11 +122,11 @@ function ProfilePanel() {
   if (loading) return <Skeleton className="h-48" />;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="font-medium">Your Profile</div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <FieldGroup className="max-w-md gap-4">
           <Field>
             <FieldLabel htmlFor="profile-name">Display name</FieldLabel>
@@ -161,7 +161,7 @@ function ProfilePanel() {
             {busy ? "Saving..." : "Save profile"}
           </Button>
         </FieldGroup>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -186,11 +186,11 @@ function AppearancePanel() {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="font-medium">Appearance</div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <p className="text-sm text-text-muted mb-4">
           Choose how Weeber looks for you. This syncs across devices.
         </p>
@@ -210,7 +210,7 @@ function AppearancePanel() {
             </button>
           ))}
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -237,7 +237,7 @@ function SecurityPanel() {
     }
   }
 
-  async function revokeSession(id: string) {
+  async function handleRevokeSession(id: string) {
     try {
       await revokeSession(id);
       toast.success("Session revoked");
@@ -276,13 +276,13 @@ function SecurityPanel() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Password</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           {!changingPw ? (
-            <Button variant="secondary" onClick={() => setChangingPw(true)}>
+            <Button variant="outline" onClick={() => setChangingPw(true)}>
               Change password
             </Button>
           ) : (
@@ -302,15 +302,15 @@ function SecurityPanel() {
                 <Button onClick={changePassword} disabled={pwBusy || newPw.length < 8}>
                   {pwBusy ? "Updating..." : "Update password"}
                 </Button>
-                <Button variant="secondary" onClick={() => setChangingPw(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setChangingPw(false)}>Cancel</Button>
               </div>
             </div>
           )}
-        </CardBody>
+        </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="font-medium">Active Sessions</div>
             {sessions && sessions.length > 1 && (
@@ -322,8 +322,8 @@ function SecurityPanel() {
               </button>
             )}
           </div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           {sessions === null ? (
             <Skeleton className="h-20" />
           ) : sessions.length === 0 ? (
@@ -345,7 +345,7 @@ function SecurityPanel() {
                   </div>
                   {i !== 0 && (
                     <button
-                      onClick={() => revokeSession(s.id)}
+                      onClick={() => handleRevokeSession(s.id)}
                       className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
@@ -355,26 +355,26 @@ function SecurityPanel() {
               ))}
             </div>
           )}
-        </CardBody>
+        </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium text-danger">Danger Zone</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <p className="text-sm text-text-muted mb-3">
             Permanently delete your account and all associated data. This cannot be undone.
           </p>
           <Button
-            variant="secondary"
+            variant="outline"
             onClick={() => toast.error("Contact support to delete your account.")}
             className="border-danger/30 text-danger hover:bg-danger/5"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Delete account
           </Button>
-        </CardBody>
+        </CardContent>
       </Card>
     </div>
   );
@@ -423,11 +423,11 @@ function OrgPanel() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Organization</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <FieldGroup className="max-w-md gap-4">
             <Field>
               <FieldLabel htmlFor="org-name">Organization name</FieldLabel>
@@ -444,14 +444,14 @@ function OrgPanel() {
               {saved && <span className="text-sm text-success">Saved.</span>}
             </div>
           </FieldGroup>
-        </CardBody>
+        </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Business type</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <p className="text-sm text-text-muted mb-4">
             This controls which agent templates, integrations, and dashboard metrics you see.
             Changing this re-scopes your workspace.
@@ -484,7 +484,7 @@ function OrgPanel() {
               );
             })}
           </div>
-        </CardBody>
+        </CardContent>
       </Card>
     </div>
   );
@@ -493,11 +493,11 @@ function OrgPanel() {
 function CompliancePanel() {
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Compliance posture</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <p className="text-sm text-text-muted">
             Weeber enforces consent on every outbound dial. Opt-outs propagate
             instantly across active campaigns. Recording disclosure is part of
@@ -517,20 +517,20 @@ function CompliancePanel() {
               <div className="text-sm font-medium text-success">Auto-prepended</div>
             </div>
           </div>
-        </CardBody>
+        </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">GDPR / data subject requests</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <p className="text-sm text-text-muted">
             Use the Compliance API to export or erase contact data. Look up by phone
             number. Export returns contact, consent, and call history as JSON. Erase
             revokes consent, deletes contact data, and adds the number to your DNC list.
           </p>
-        </CardBody>
+        </CardContent>
       </Card>
     </div>
   );
@@ -562,11 +562,11 @@ function NotificationsPanel() {
   if (!prefs) return <Skeleton className="h-32" />;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="font-medium">Notifications</div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <div className="space-y-3">
           <Toggle
             label="Usage alerts"
@@ -590,7 +590,7 @@ function NotificationsPanel() {
             {saved && <span className="text-sm text-success">Saved.</span>}
           </div>
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -640,11 +640,11 @@ function WebhooksPanel() {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="font-medium">Webhooks</div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <p className="text-sm text-text-muted mb-4">
           We sign every event with HMAC-SHA256 in the <code className="font-mono">X-Weeber-Signature</code> header.
         </p>
@@ -676,7 +676,7 @@ function WebhooksPanel() {
             ))}
           </div>
         )}
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }

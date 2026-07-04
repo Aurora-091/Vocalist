@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate, Link } from "react-router-dom";
-import { LogOut, ShieldCheck, Sun, Moon, Monitor, ChevronDown } from "lucide-react";
+import { LogOut, ShieldCheck, Sun, Moon, Monitor, ChevronDown, Search } from "lucide-react";
 import { useTheme } from "next-themes";
 import { supabase } from "../../lib/supabase";
 import { Suspense, useEffect, useState } from "react";
@@ -7,6 +7,7 @@ import { PageSkeleton } from "./PageSkeleton";
 import { getUsageSummary, getOrg } from "../../lib/db";
 import { NotificationsBell } from "./NotificationsBell";
 import { VerticalProvider, useVertical } from "../../lib/VerticalContext";
+import { CommandPalette } from "./CommandPalette";
 import type { NavGroup } from "../../config/verticals";
 import {
   Sidebar,
@@ -182,6 +183,18 @@ function AppSidebar() {
 export function AppShell() {
   const [usage, setUsage] = useState<{ used: number; included: number } | null>(null);
   const [orgName, setOrgName] = useState<string>("");
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -225,6 +238,17 @@ export function AppShell() {
                   </div>
                 )}
                 <ShieldCheck className="w-4 h-4 text-success hidden sm:block" aria-label="Compliance: healthy" />
+                <button
+                  onClick={() => setCmdOpen(true)}
+                  aria-label="Open command palette"
+                  className="hidden sm:flex items-center gap-2 h-8 px-3 rounded-md border border-border bg-muted/50 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Search className="h-3 w-3" />
+                  <span>Search</span>
+                  <kbd className="pointer-events-none ml-1 hidden select-none items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium opacity-60 sm:flex">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                </button>
                 <Link
                   to="/about"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
@@ -250,6 +274,7 @@ export function AppShell() {
             </main>
           </SidebarInset>
         </SidebarProvider>
+        <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
       </TooltipProvider>
     </VerticalProvider>
   );

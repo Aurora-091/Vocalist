@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ShoppingBag, Check, Loader as Loader2, ArrowRight, ExternalLink } from "lucide-react";
 import { getShopifyIntegration, getOrgId } from "../lib/db";
-import { Button } from "../components/legacy-ui/Button";
-import { Badge } from "../components/legacy-ui/Badge";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 type Step = "domain" | "redirecting" | "done";
 
@@ -157,7 +157,7 @@ export default function ShopifyConnect() {
               Your agents can access orders, carts, and customer data.
             </p>
             <div className="mt-4">
-              <Badge tone="success" dot>Active</Badge>
+              <Badge variant="secondary" className="bg-success/15 text-success"><span className="size-1.5 rounded-full bg-current mr-1" />Active</Badge>
             </div>
             <div className="mt-8 flex justify-center gap-3">
               <Button onClick={() => navigate("/agents")}>

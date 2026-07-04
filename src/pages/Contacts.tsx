@@ -4,10 +4,11 @@ import { listContacts, createContact, deleteContact as deleteContactDb } from ".
 import { api } from "../lib/api";
 import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
-import { Button } from "../components/legacy-ui/Button";
-import { Card, CardBody } from "../components/legacy-ui/Card";
-import { ConsentBadge } from "../components/legacy-ui/Badge";
-import { EmptyState, Skeleton } from "../components/legacy-ui/States";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableHeader,
@@ -68,14 +69,16 @@ export default function Contacts() {
 
   async function deleteContact(id: string) {
     setDeletingId(id);
+    setConfirmDeleteId(null);
+    const prev = contacts;
+    setContacts((c) => c?.filter((x) => x.id !== id) ?? null);
     try {
       await deleteContactDb(id);
-      setContacts((prev) => prev?.filter((c) => c.id !== id) ?? null);
     } catch {
+      setContacts(prev);
       toast.error("Failed to delete contact");
     } finally {
       setDeletingId(null);
-      setConfirmDeleteId(null);
     }
   }
 
@@ -94,7 +97,7 @@ export default function Contacts() {
             <span className="hidden sm:inline">DNC Upload</span>
             <span className="sm:hidden">DNC</span>
           </Button>
-          <Button variant="secondary" onClick={() => setImporting(true)}>
+          <Button variant="outline" onClick={() => setImporting(true)}>
             <Upload className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Import CSV</span>
             <span className="sm:hidden">Import</span>
@@ -126,16 +129,19 @@ export default function Contacts() {
       {contacts === null ? (
         <Skeleton className="h-64" aria-label="Loading contacts" />
       ) : contacts.length === 0 ? (
-        <EmptyState
-          title="No contacts yet"
-          description="Add a single contact or import a CSV. We'll match consent on the way in."
-          cta={
+        <Empty className="bg-card border py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Plus className="w-8 h-8" /></EmptyMedia>
+            <EmptyTitle>No contacts yet</EmptyTitle>
+            <EmptyDescription>Add a single contact or import a CSV. We'll match consent on the way in.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button onClick={() => setCreating(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add contact
             </Button>
-          }
-        />
+          </EmptyContent>
+        </Empty>
       ) : (
         <>
           {/* Desktop table */}
@@ -161,7 +167,23 @@ export default function Contacts() {
                     <Td className="font-mono">{c.e164}</Td>
                     <Td>{c.email || <span className="text-muted-foreground" aria-label="No email">—</span>}</Td>
                     <Td className="text-muted-foreground">{c.source || "—"}</Td>
-                    <Td><ConsentBadge status={c.consent_status} /></Td>
+                    <Td>
+                      {c.consent_status === "granted" && (
+                        <Badge variant="secondary" className="bg-success/15 text-success">
+                          <span className="size-1.5 rounded-full bg-current mr-1" />granted
+                        </Badge>
+                      )}
+                      {c.consent_status === "revoked" && (
+                        <Badge variant="secondary" className="bg-danger/15 text-danger">
+                          <span className="size-1.5 rounded-full bg-current mr-1" />revoked
+                        </Badge>
+                      )}
+                      {c.consent_status === "none" && (
+                        <Badge variant="secondary" className="bg-muted text-foreground">
+                          <span className="size-1.5 rounded-full bg-current mr-1" />none
+                        </Badge>
+                      )}
+                    </Td>
                     <Td>
                       {confirmDeleteId === c.id ? (
                         <div className="flex items-center gap-1.5" role="group" aria-label={`Confirm delete ${c.name || c.e164}`}>
@@ -211,7 +233,21 @@ export default function Contacts() {
                     {c.email && <div className="text-xs text-text-muted mt-0.5 truncate">{c.email}</div>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <ConsentBadge status={c.consent_status} />
+                    {c.consent_status === "granted" && (
+                      <Badge variant="secondary" className="bg-success/15 text-success">
+                        <span className="size-1.5 rounded-full bg-current mr-1" />granted
+                      </Badge>
+                    )}
+                    {c.consent_status === "revoked" && (
+                      <Badge variant="secondary" className="bg-danger/15 text-danger">
+                        <span className="size-1.5 rounded-full bg-current mr-1" />revoked
+                      </Badge>
+                    )}
+                    {c.consent_status === "none" && (
+                      <Badge variant="secondary" className="bg-muted text-foreground">
+                        <span className="size-1.5 rounded-full bg-current mr-1" />none
+                      </Badge>
+                    )}
                     {confirmDeleteId === c.id ? (
                       <div className="flex items-center gap-1">
                         <button
@@ -285,8 +321,8 @@ function CreateForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
   }
 
   return (
-    <Card>
-      <CardBody>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <CardContent className="px-6 py-5">
         <form onSubmit={submit}>
           <FieldGroup className="grid sm:grid-cols-3 gap-3">
             <Field>
@@ -326,7 +362,7 @@ function CreateForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
             </div>
           </FieldGroup>
         </form>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -393,8 +429,8 @@ function ImportForm({ onClose, onDone }: { onClose: () => void; onDone: () => vo
   }
 
   return (
-    <Card>
-      <CardBody>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <CardContent className="px-6 py-5">
         <div className="space-y-3">
           <div>
             <p className="text-sm font-medium mb-1">Import contacts from CSV</p>
@@ -463,7 +499,7 @@ function ImportForm({ onClose, onDone }: { onClose: () => void; onDone: () => vo
             </Button>
           </div>
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -508,8 +544,8 @@ function DncUploadForm({ onClose, onDone }: { onClose: () => void; onDone: () =>
   }
 
   return (
-    <Card>
-      <CardBody>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <CardContent className="px-6 py-5">
         <p className="text-sm text-muted-foreground mb-3">
           Paste phone numbers to add to the Do Not Call list. One per line.
           These numbers will be blocked from all outbound campaigns.
@@ -529,7 +565,7 @@ function DncUploadForm({ onClose, onDone }: { onClose: () => void; onDone: () =>
             <Button type="submit" disabled={busy || !text.trim()}>{busy ? "Blocking…" : "Block numbers"}</Button>
           </div>
         </form>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }

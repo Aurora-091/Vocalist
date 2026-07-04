@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { getAgent, listVoices, listAgentKnowledge, getCall } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
-import { Button } from "../components/legacy-ui/Button";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
-import { Badge } from "../components/legacy-ui/Badge";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -300,10 +300,10 @@ export default function AgentDetail() {
             <p className="text-sm text-text-muted mt-1">{direction} · {agent.provider}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {agent.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
-            {agent.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
-            {agent.sync_status === "failed" && <Badge tone="danger">Sync failed</Badge>}
-            {agent.consent_required && <Badge tone="success" dot>consent locked on</Badge>}
+            {agent.sync_status === "synced" && <Badge variant="secondary" className="bg-success/15 text-success">Synced</Badge>}
+            {agent.sync_status === "pending" && <Badge variant="secondary" className="bg-warning/15 text-warning">Pending</Badge>}
+            {agent.sync_status === "failed" && <Badge variant="secondary" className="bg-danger/15 text-danger">Sync failed</Badge>}
+            {agent.consent_required && <Badge variant="secondary" className="bg-success/15 text-success"><span className="size-1.5 rounded-full bg-current mr-1" />consent locked on</Badge>}
           </div>
         </div>
       </div>
@@ -318,7 +318,7 @@ export default function AgentDetail() {
               <div className="text-xs text-text-muted mt-1 break-words">{agent.sync_error}</div>
             )}
           </div>
-          <Button variant="secondary" onClick={retrySync} disabled={syncing}>
+          <Button variant="outline" onClick={retrySync} disabled={syncing}>
             <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Retrying…" : "Retry sync"}
           </Button>
@@ -326,11 +326,11 @@ export default function AgentDetail() {
       )}
 
       {/* Persona card */}
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Persona</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Display name">
               <Input
@@ -459,15 +459,15 @@ export default function AgentDetail() {
               )}
             </div>
           )}
-        </CardBody>
+        </CardContent>
       </Card>
 
       {/* Deployment card */}
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Deployment (ElevenLabs CAI)</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <div className="grid sm:grid-cols-2 gap-4 text-sm">
             <Field label="Provider Agent ID">
               <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs">
@@ -479,7 +479,7 @@ export default function AgentDetail() {
                 <div className="flex-1 h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs truncate">
                   {voiceName}
                 </div>
-                <Button variant="secondary" onClick={() => setVoiceDrawerOpen(true)}>
+                <Button variant="outline" onClick={() => setVoiceDrawerOpen(true)}>
                   <Mic className="w-4 h-4 mr-1.5" />
                   Change
                 </Button>
@@ -492,10 +492,10 @@ export default function AgentDetail() {
             </Field>
             <Field label="Sync Status">
               <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center gap-2">
-                {agent.sync_status === "synced" && <Badge tone="success">Synced</Badge>}
-                {agent.sync_status === "pending" && <Badge tone="warning">Pending</Badge>}
-                {agent.sync_status === "failed" && <Badge tone="danger">Failed</Badge>}
-                {!agent.sync_status && <Badge tone="neutral">Not synced</Badge>}
+                {agent.sync_status === "synced" && <Badge variant="secondary" className="bg-success/15 text-success">Synced</Badge>}
+                {agent.sync_status === "pending" && <Badge variant="secondary" className="bg-warning/15 text-warning">Pending</Badge>}
+                {agent.sync_status === "failed" && <Badge variant="secondary" className="bg-danger/15 text-danger">Failed</Badge>}
+                {!agent.sync_status && <Badge variant="secondary" className="bg-muted text-foreground">Not synced</Badge>}
               </div>
             </Field>
             <Field label="Linked Knowledge" full>
@@ -511,7 +511,7 @@ export default function AgentDetail() {
                         <div className="font-medium">{k.knowledge_sources?.title || "Source"}</div>
                         <div className="text-text-muted capitalize">{k.knowledge_sources?.kind}</div>
                       </div>
-                      <Badge tone={k.knowledge_sources?.status === "ready" ? "success" : "warning"}>
+                      <Badge variant="secondary" className={k.knowledge_sources?.status === "ready" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}>
                         {k.knowledge_sources?.status || "pending"}
                       </Badge>
                     </div>
@@ -520,18 +520,18 @@ export default function AgentDetail() {
               </div>
             </Field>
           </div>
-        </CardBody>
+        </CardContent>
       </Card>
 
       {/* Skills card */}
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="flex items-center gap-2 font-medium">
             <Zap className="w-4 h-4" />
             Skills
           </div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <p className="text-sm text-text-muted mb-4">
             Toggle capabilities for this agent. Changes sync to the provider on next save.
           </p>
@@ -548,15 +548,21 @@ export default function AgentDetail() {
                     disabled={skillsLoading}
                     onClick={async () => {
                       setSkillsLoading(true);
+                      setActiveSkillIds((prev) => {
+                        const next = new Set(prev);
+                        if (isActive) next.delete(skill.id);
+                        else next.add(skill.id);
+                        return next;
+                      });
                       try {
                         await api.post(`/v1/agents/${id}/skills/${skill.id}/toggle`, { enabled: !isActive });
+                      } catch (e: any) {
                         setActiveSkillIds((prev) => {
                           const next = new Set(prev);
-                          if (isActive) next.delete(skill.id);
-                          else next.add(skill.id);
+                          if (isActive) next.add(skill.id);
+                          else next.delete(skill.id);
                           return next;
                         });
-                      } catch (e: any) {
                         toast.error(e.message || "Failed to toggle skill.");
                       } finally {
                         setSkillsLoading(false);
@@ -577,21 +583,21 @@ export default function AgentDetail() {
                       </div>
                     </div>
                     <div className="text-xs text-text-muted line-clamp-2">{skill.description}</div>
-                    <Badge tone="neutral" className="mt-2 text-[10px]">{skill.category}</Badge>
+                    <Badge variant="secondary" className="mt-2 text-[10px] bg-muted text-foreground">{skill.category}</Badge>
                   </button>
                 );
               })}
             </div>
           )}
-        </CardBody>
+        </CardContent>
       </Card>
 
       {/* Test call card */}
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Place a test call</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           <p className="text-sm text-text-muted mb-4">
             Weeber will call the number below so you can hear your agent live.
             Requires ElevenLabs provider to be configured.
@@ -630,7 +636,7 @@ export default function AgentDetail() {
               Agent not yet provisioned with ElevenLabs. Save the agent first to trigger provisioning.
             </p>
           )}
-        </CardBody>
+        </CardContent>
       </Card>
 
       {activeCallId && (
@@ -819,13 +825,13 @@ function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => vo
   const isEnded = ["completed", "failed", "no_answer", "busy"].includes(callStatus);
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 font-medium">
             <Phone className="w-4 h-4" />
             Test call
-            <Badge tone={isEnded ? "neutral" : "success"} dot={!isEnded}>
+            <Badge variant="secondary" className={`${isEnded ? "bg-muted text-foreground" : "bg-success/15 text-success"}`}>{isEnded ? null : <span className="size-1.5 rounded-full bg-current mr-1" />}
               {callStatus.replace(/_/g, " ")}
             </Badge>
           </div>
@@ -838,8 +844,8 @@ function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => vo
             </button>
           </div>
         </div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <div
           ref={scrollRef}
           className="h-48 overflow-y-auto space-y-2 bg-surface-2 rounded-md p-3 border border-border"
@@ -858,7 +864,7 @@ function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => vo
             ))
           )}
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }

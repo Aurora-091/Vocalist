@@ -5,9 +5,17 @@ import { listAgents, deleteAgent as deleteAgentDb } from "../lib/db";
 import { api } from "../lib/api";
 import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
-import { Button } from "../components/legacy-ui/Button";
-import { EmptyState, Skeleton } from "../components/legacy-ui/States";
-import { Badge } from "../components/legacy-ui/Badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
 import { AgentPresetPicker } from "../components/AgentPresetPicker";
 import VoiceLibrary from "./VoiceLibrary";
 
@@ -224,16 +232,19 @@ export default function AgentsList() {
       {agents === null ? (
         <Skeleton className="h-32" />
       ) : agents.length === 0 ? (
-        <EmptyState
-          title="Create your first agent"
-          description="Pick a template and place a real test call in under five minutes."
-          cta={
+        <Empty className="bg-card border py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Bot /></EmptyMedia>
+            <EmptyTitle>Create your first agent</EmptyTitle>
+            <EmptyDescription>Pick a template and place a real test call in under five minutes.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button onClick={() => setMode("preset")}>
               <Plus className="w-4 h-4 mr-2" />
               New agent
             </Button>
-          }
-        />
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {agents.map((a) => {
@@ -265,8 +276,14 @@ export default function AgentsList() {
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
-                  {a.consent_required && <Badge tone="success" dot>consent on</Badge>}
-                  {a.inbound_number && <Badge tone="info">{a.inbound_number}</Badge>}
+                  {a.consent_required && (
+                    <Badge variant="secondary" className="bg-success/15 text-success">
+                      <span className="size-1.5 rounded-full bg-success mr-1" />consent on
+                    </Badge>
+                  )}
+                  {a.inbound_number && (
+                    <Badge variant="secondary" className="bg-info/15 text-info">{a.inbound_number}</Badge>
+                  )}
                 </div>
               </Link>
 
@@ -300,7 +317,7 @@ export default function AgentsList() {
                     <Button size="sm" variant="ghost" onClick={() => setConfirmId(null)}>Cancel</Button>
                     <Button
                       size="sm"
-                      variant="danger"
+                      variant="destructive"
                       disabled={deletingId === a.id}
                       onClick={() => deleteAgent(a.id)}
                     >

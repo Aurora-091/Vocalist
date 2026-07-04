@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, ArrowRight, ExternalLink, Loader, Eye, EyeOff, CircleAlert } from "lucide-react";
-import { Button } from "./legacy-ui/Button";
+import { Button } from "@/components/ui/button";
 
 export type WizardStep = {
   key: string;

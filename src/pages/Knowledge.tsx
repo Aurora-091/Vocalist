@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import { Plus, Globe, FileText, Trash2, RefreshCw, Link as LinkIcon, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Loader as Loader2 } from "lucide-react";
+import { Plus, Globe, FileText, Trash2, RefreshCw, Link as LinkIcon, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Loader as Loader2, Inbox } from "lucide-react";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
-import { Button } from "../components/legacy-ui/Button";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
-import { EmptyState, Skeleton } from "../components/legacy-ui/States";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 
 type KnowledgeSource = {
   id: string;
@@ -110,21 +111,24 @@ export default function Knowledge() {
       {sources === null ? (
         <Skeleton className="h-64" />
       ) : sources.length === 0 ? (
-        <EmptyState
-          title="No knowledge sources"
-          description="Add a website URL or upload a document. Agents will reference it during live calls."
-          cta={
+        <Empty className="bg-card border py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Inbox className="w-6 h-6" /></EmptyMedia>
+            <EmptyTitle>No knowledge sources</EmptyTitle>
+            <EmptyDescription>Add a website URL or upload a document. Agents will reference it during live calls.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button onClick={() => setAdding(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add source
             </Button>
-          }
-        />
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="space-y-3">
           {sources.map((s) => (
-            <Card key={s.id}>
-              <CardBody>
+            <Card key={s.id} className="gap-0 overflow-visible py-0 shadow-card">
+              <CardContent className="px-6 py-5">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 shrink-0">
                     {s.kind === "website" ? (
@@ -185,7 +189,7 @@ export default function Knowledge() {
                     )}
                   </div>
                 </div>
-              </CardBody>
+              </CardContent>
             </Card>
           ))}
           <div className="text-xs text-text-muted text-right">
@@ -231,8 +235,8 @@ function AddSourceForm({
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 overflow-visible py-0 shadow-card">
+      <div className="border-b px-6 py-4">
         <div className="flex gap-1 p-1 bg-surface-2 rounded-md border border-border w-fit">
           <button
             type="button"
@@ -255,8 +259,8 @@ function AddSourceForm({
             Document
           </button>
         </div>
-      </CardHeader>
-      <CardBody>
+      </div>
+      <CardContent className="px-6 py-5">
         <form onSubmit={submit} className="space-y-3">
           <input
             required
@@ -292,7 +296,7 @@ function AddSourceForm({
             </Button>
           </div>
         </form>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }

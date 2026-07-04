@@ -26,9 +26,9 @@ import {
 } from "../lib/db";
 import { useVertical } from "../lib/VerticalContext";
 import type { IntegrationRef } from "../config/verticals";
-import { Button } from "../components/legacy-ui/Button";
-import { Badge } from "../components/legacy-ui/Badge";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 type CatalogEntry = {
@@ -174,7 +174,7 @@ export default function Integrations() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone="info">{connections.filter((c) => c.status === "active").length} connected</Badge>
+          <Badge variant="secondary" className="bg-info/15 text-info">{connections.filter((c) => c.status === "active").length} connected</Badge>
         </div>
       </div>
 
@@ -263,10 +263,10 @@ export default function Integrations() {
                   </span>
                   <div className="flex items-center gap-2">
                     {isConnected && (
-                      <Badge tone="success" dot>Active</Badge>
+                      <Badge variant="secondary" className="bg-success/15 text-success"><span className="size-1.5 rounded-full bg-current mr-1" />Active</Badge>
                     )}
                     {entry.tier_required !== "starter" && !isConnected && (
-                      <Badge tone="warning">{entry.tier_required}</Badge>
+                      <Badge variant="secondary" className="bg-warning/15 text-warning">{entry.tier_required}</Badge>
                     )}
                   </div>
                 </div>

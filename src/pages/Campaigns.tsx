@@ -3,9 +3,17 @@ import { Link } from "react-router-dom";
 import { Plus, Megaphone, ChevronRight } from "lucide-react";
 import { listCampaigns } from "../lib/db";
 import { useVertical } from "../lib/VerticalContext";
-import { Button } from "../components/legacy-ui/Button";
-import { EmptyState, Skeleton } from "../components/legacy-ui/States";
-import { Badge } from "../components/legacy-ui/Badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
 import {
   Table,
   TableHeader,
@@ -26,13 +34,13 @@ type Campaign = {
   max_retries: number;
 };
 
-const STATUS_TONE: Record<string, "success" | "info" | "neutral" | "warning" | "danger"> = {
-  draft: "neutral",
-  scheduled: "info",
-  running: "success",
-  paused: "warning",
-  completed: "neutral",
-  canceled: "danger",
+const STATUS_CLASS: Record<string, string> = {
+  draft: "bg-muted text-foreground",
+  scheduled: "bg-info/15 text-info",
+  running: "bg-success/15 text-success",
+  paused: "bg-warning/15 text-warning",
+  completed: "bg-muted text-foreground",
+  canceled: "bg-danger/15 text-danger",
 };
 
 const FILTERS = ["all", "running", "paused", "draft", "completed"] as const;
@@ -106,18 +114,21 @@ export default function Campaigns() {
       {visible === null ? (
         <Skeleton className="h-32" />
       ) : visible.length === 0 && campaigns?.length === 0 ? (
-        <EmptyState
-          title="No campaigns yet"
-          description="Run your first outbound campaign once you've created an agent and uploaded contacts."
-          cta={
+        <Empty className="bg-card border py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Megaphone /></EmptyMedia>
+            <EmptyTitle>No campaigns yet</EmptyTitle>
+            <EmptyDescription>Run your first outbound campaign once you've created an agent and uploaded contacts.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Link to="/campaigns/new">
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
                 New campaign
               </Button>
             </Link>
-          }
-        />
+          </EmptyContent>
+        </Empty>
       ) : visible.length === 0 ? (
         <div className="text-sm text-text-muted text-center py-12">
           No {filter} campaigns.
@@ -215,7 +226,8 @@ function StatusBadge({ status }: { status: string }) {
           <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
         </span>
       )}
-      <Badge tone={STATUS_TONE[status] || "neutral"} dot={status !== "running"}>
+      <Badge variant="secondary" className={STATUS_CLASS[status] || "bg-muted text-foreground"}>
+        {status !== "running" && <span className="size-1.5 rounded-full bg-current mr-1 opacity-70" />}
         {status}
       </Badge>
     </span>

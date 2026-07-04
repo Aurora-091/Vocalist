@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Check, ArrowRight, ArrowLeft, Phone, Loader as Loader2, Play } from "lucide-react";
 import { api } from "../lib/api";
 import { listAgentPresets, listVoices } from "../lib/db";
-import { Button } from "../components/legacy-ui/Button";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { VerticalProvider, useVertical } from "../lib/VerticalContext";
 import type { VerticalKey } from "../config/verticals";

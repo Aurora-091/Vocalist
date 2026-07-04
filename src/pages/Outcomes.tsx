@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { getOverview, getRecentCallStatuses } from "../lib/db";
 import { StatCard } from "../components/legacy-ui/StatCard";
-import { Card, CardBody, CardHeader } from "../components/legacy-ui/Card";
-import { Skeleton } from "../components/legacy-ui/States";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Outcomes() {
   const [overview, setOverview] = useState<any>(null);
@@ -48,11 +48,11 @@ export default function Outcomes() {
         />
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
           <div className="font-medium">Call status breakdown</div>
-        </CardHeader>
-        <CardBody>
+        </div>
+        <CardContent className="px-6 py-5">
           {outcomes === null ? (
             <Skeleton className="h-32" />
           ) : outcomes.length === 0 ? (
@@ -62,7 +62,7 @@ export default function Outcomes() {
           ) : (
             <Bars items={outcomes} valueKey="count" labelKey="outcome" />
           )}
-        </CardBody>
+        </CardContent>
       </Card>
     </div>
   );

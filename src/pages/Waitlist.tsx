@@ -409,6 +409,8 @@ function HeroForm() {
                       onChange={(e) => { setPhone(e.target.value); setPhoneTouched(true); }}
                       placeholder="+91 98765 43210"
                       aria-label="Phone number (optional)"
+                      aria-invalid={phoneTouched && phone.length >= 3 && !phoneValid ? "true" : undefined}
+                      aria-describedby={phoneTouched && phone.length >= 3 && !phoneValid ? "phone-error" : undefined}
                       className="w-full h-10 pl-8 pr-3 text-[14px] bg-[var(--m-surface)] border-[1.5px] border-[var(--m-input-border)] text-[var(--m-text)] placeholder:text-[var(--m-text-muted)] focus:border-[var(--m-text)] focus:outline-none rounded-lg transition-all"
                     />
                   </div>
@@ -422,7 +424,7 @@ function HeroForm() {
                   </button>
                 </div>
                 {phoneTouched && phone.length >= 3 && !phoneValid && (
-                  <p className="mt-1 text-[11px] text-red-500">Please enter a valid phone number.</p>
+                  <p id="phone-error" className="mt-1 text-[11px] text-red-500">Include country code, e.g. +91 98765 43210</p>
                 )}
               </div>
             ) : (
