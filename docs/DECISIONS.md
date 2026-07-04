@@ -133,3 +133,14 @@ This document tracks all major product, architecture, and technology decisions m
   - `backend/src/utils/errors.js`
   - `backend/src/providers/voice/elevenlabs.provider.js`
   - `backend/src/modules/twilio/twilio.client.js`
+
+---
+
+## DEC-013: ElevenLabs Webhook Tool Path Schema and URL Resolution
+* **Date**: Saturday, 2026-07-04 17:55 IST
+* **Status**: Accepted
+* **Context**: ElevenLabs agent creation failed with 422 errors due to incompatibilities with our DB-stored tool formats and templating. Webhook tool URLs contained Handlebars-style `{{placeholder}}` path parameters that ElevenLabs expected to be single-braced `{placeholder}` URL templates, and these path parameters were never declared in a `path_params_schema` block. Additionally, `request_body_schema` expected standard JSON Schema objects rather than flat lists of parameters, and the system needed static call variables like `CALL_ID` and `patient_id` populated as dynamic variables at call initiation.
+* **Decision**: Restructured `_resolveTools(agent)` in `elevenlabs.provider.js` to automatically convert double-braced URL templates to single braces and dynamically generate a companion `path_params_schema` object mapping these parameters to the conversation's dynamic variables. Standardized parameter-to-JSON Schema translation for `request_body_schema`. Updated `startCall()` to guarantee `CALL_ID` and `patient_id` are always injected into `conversation_initiation_client_data.dynamic_variables`.
+* **Key Files**:
+  - `backend/src/providers/voice/elevenlabs.provider.js`
+  - `backend/src/tests/invariants/remediation.test.js`
