@@ -42,7 +42,6 @@ router.get(
     const { data, error } = await req.supabase
       .from("campaigns")
       .select("*")
-      .eq("org_id", req.auth.orgId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     res.json({ campaigns: data || [] });
@@ -57,7 +56,6 @@ router.get(
       .from("campaigns")
       .select("*")
       .eq("id", req.params.id)
-      .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (error) throw error;
     if (!data) throw NotFound("Campaign not found");
@@ -93,7 +91,6 @@ router.patch(
         .from("campaigns")
         .select("status")
         .eq("id", req.params.id)
-        .eq("org_id", req.auth.orgId)
         .maybeSingle();
       if (!existing) throw NotFound("Campaign not found");
       const allowed = STATUS_TRANSITIONS[existing.status] || [];
@@ -105,7 +102,6 @@ router.patch(
       .from("campaigns")
       .update({ ...req.body, updated_at: new Date().toISOString() })
       .eq("id", req.params.id)
-      .eq("org_id", req.auth.orgId)
       .select("*")
       .maybeSingle();
     if (error) throw error;
@@ -122,15 +118,6 @@ router.post(
     body: addTargetsSchema,
   }),
   asyncHandler(async (req, res) => {
-    const { data: campaign, error: checkErr } = await req.supabase
-      .from("campaigns")
-      .select("id")
-      .eq("id", req.params.id)
-      .eq("org_id", req.auth.orgId)
-      .maybeSingle();
-    if (checkErr) throw checkErr;
-    if (!campaign) throw NotFound("Campaign not found");
-
     const rows = req.body.contact_ids.map((cid) => ({
       org_id: req.auth.orgId,
       campaign_id: req.params.id,
@@ -161,7 +148,6 @@ router.get(
       .from("campaign_targets")
       .select("id, state, attempts, next_attempt_at, last_call_id, created_at, contact_id")
       .eq("campaign_id", req.params.id)
-      .eq("org_id", req.auth.orgId)
       .order("created_at", { ascending: false })
       .limit(req.query.limit);
     if (req.query.state) q = q.eq("state", req.query.state);
@@ -179,8 +165,7 @@ router.get(
     const { data, error } = await req.supabase
       .from("campaign_targets")
       .select("state")
-      .eq("campaign_id", req.params.id)
-      .eq("org_id", req.auth.orgId);
+      .eq("campaign_id", req.params.id);
     if (error) throw error;
     const counts = {};
     for (const r of data || []) counts[r.state] = (counts[r.state] || 0) + 1;

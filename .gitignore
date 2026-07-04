@@ -18,4 +18,3 @@ build/
 # Supabase CLI State
 supabase/.temp/
 supabase/.branches/
-.vercel

@@ -1,6 +1,5 @@
 const { IntegrationProvider } = require("./interface");
 const { requireAdmin } = require("../../../config/supabase");
-const { BadGateway, Internal } = require("../../../utils/errors");
 const logger = require("../../../config/logger");
 
 const API_VERSION = "2025-01";
@@ -8,23 +7,23 @@ const API_VERSION = "2025-01";
 class ShopifyProvider extends IntegrationProvider {
   static get type() { return "shopify"; }
 
-  async getHeaders() {
-    const config = await this.getResolvedConfig();
+  get baseUrl() {
+    return `https://${this.config.shop_domain}/admin/api/${API_VERSION}`;
+  }
+
+  get headers() {
     return {
-      "X-Shopify-Access-Token": config.access_token,
+      "X-Shopify-Access-Token": this.config.access_token,
       "Content-Type": "application/json",
     };
   }
 
   async testConnection() {
-    const config = await this.getResolvedConfig();
-    if (!config.shop_domain || !config.access_token) {
+    if (!this.config.shop_domain || !this.config.access_token) {
       return { ok: false, reason: "missing_credentials" };
     }
     try {
-      const headers = await this.getHeaders();
-      const baseUrl = `https://${config.shop_domain}/admin/api/${API_VERSION}`;
-      const res = await fetch(`${baseUrl}/shop.json`, { headers });
+      const res = await fetch(`${this.baseUrl}/shop.json`, { headers: this.headers });
       if (!res.ok) {
         return { ok: false, reason: `shopify_api_${res.status}` };
       }
@@ -36,18 +35,15 @@ class ShopifyProvider extends IntegrationProvider {
   }
 
   async syncContacts({ limit = 250, since_id } = {}) {
-    const config = await this.getResolvedConfig();
     const params = new URLSearchParams({ limit: String(limit) });
     if (since_id) params.set("since_id", since_id);
 
-    const headers = await this.getHeaders();
-    const baseUrl = `https://${config.shop_domain}/admin/api/${API_VERSION}`;
     const res = await fetch(
-      `${baseUrl}/customers.json?${params}`,
-      { headers }
+      `${this.baseUrl}/customers.json?${params}`,
+      { headers: this.headers }
     );
     if (!res.ok) {
-      throw BadGateway(`Shopify customers fetch failed: ${res.status}`);
+      throw new Error(`Shopify customers fetch failed: ${res.status}`);
     }
 
     const { customers } = await res.json();
@@ -65,7 +61,7 @@ class ShopifyProvider extends IntegrationProvider {
         email: c.email || null,
         crm_ref: `shopify_${c.id}`,
         source: "shopify",
-        consent_status: c.email_marketing_consent?.state === "subscribed" ? "granted" : "none",
+        consent_status: c.marketing_consent?.state === "subscribed" ? "granted" : "none",
         fields: { shopify_id: c.id, tags: c.tags, orders_count: c.orders_count },
       }));
 
@@ -79,23 +75,20 @@ class ShopifyProvider extends IntegrationProvider {
 
     if (error) {
       logger.error({ err: error }, "Shopify contact sync upsert failed");
-      throw Internal(`Contact sync failed: ${error.message}`);
+      throw new Error(`Contact sync failed: ${error.message}`);
     }
 
     return { synced: contacts.length, last_id: customers[customers.length - 1].id };
   }
 
   async lookupOrder(orderId) {
-    const config = await this.getResolvedConfig();
-    const headers = await this.getHeaders();
-    const baseUrl = `https://${config.shop_domain}/admin/api/${API_VERSION}`;
     const res = await fetch(
-      `${baseUrl}/orders/${orderId}.json`,
-      { headers }
+      `${this.baseUrl}/orders/${orderId}.json`,
+      { headers: this.headers }
     );
     if (!res.ok) {
       if (res.status === 404) return { found: false };
-      throw BadGateway(`Shopify order lookup failed: ${res.status}`);
+      throw new Error(`Shopify order lookup failed: ${res.status}`);
     }
     const { order } = await res.json();
     return {
@@ -126,86 +119,44 @@ class ShopifyProvider extends IntegrationProvider {
   }
 
   async lookupAbandonedCheckouts({ limit = 10 } = {}) {
-    const config = await this.getResolvedConfig();
-    const headers = await this.getHeaders();
-    const query = `
-      query AbandonedCheckouts($first: Int!) {
-        abandonedCheckouts(first: $first, query: "completed_at:null") {
-          edges {
-            node {
-              id
-              email
-              phone
-              totalPriceSet { shopMoney { amount currencyCode } }
-              createdAt
-              abandonedCheckoutUrl
-              lineItems(first: 20) {
-                edges {
-                  node {
-                    title
-                    quantity
-                    variant { price }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    `;
-
     const res = await fetch(
-      `https://${config.shop_domain}/admin/api/${API_VERSION}/graphql.json`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ query, variables: { first: limit } }),
-      }
+      `${this.baseUrl}/checkouts.json?limit=${limit}&status=open`,
+      { headers: this.headers }
     );
     if (!res.ok) {
-      throw BadGateway(`Shopify GraphQL failed: ${res.status}`);
+      throw new Error(`Shopify checkouts fetch failed: ${res.status}`);
     }
-    const json = await res.json();
-    if (json.errors) {
-      throw BadGateway(`Shopify GraphQL error: ${JSON.stringify(json.errors)}`);
-    }
-
-    return (json.data?.abandonedCheckouts?.edges || []).map(({ node: c }) => {
-      const numericId = c.id.startsWith("gid://") ? c.id.split("/").pop() : c.id;
-      return {
-        id: numericId,
-        email: c.email,
-        phone: c.phone,
-        total_price: c.totalPriceSet?.shopMoney?.amount || null,
-        currency: c.totalPriceSet?.shopMoney?.currencyCode || null,
-        created_at: c.createdAt,
-        abandoned_url: c.abandonedCheckoutUrl,
-        line_items: (c.lineItems?.edges || []).map(({ node: li }) => ({
-          title: li.title,
-          quantity: li.quantity,
-          price: li.variant?.price || null,
-        })),
-      };
-    });
+    const { checkouts } = await res.json();
+    return (checkouts || []).map((c) => ({
+      id: c.id,
+      email: c.email,
+      phone: c.phone || c.billing_address?.phone,
+      total_price: c.total_price,
+      currency: c.currency,
+      created_at: c.created_at,
+      abandoned_url: c.abandoned_checkout_url,
+      line_items: (c.line_items || []).map((li) => ({
+        title: li.title,
+        quantity: li.quantity,
+        price: li.price,
+      })),
+    }));
   }
 
   async applyDiscountCode(priceRuleId, { code, usage_limit = 1 }) {
-    const config = await this.getResolvedConfig();
-    const headers = await this.getHeaders();
-    const baseUrl = `https://${config.shop_domain}/admin/api/${API_VERSION}`;
     const res = await fetch(
-      `${baseUrl}/price_rules/${priceRuleId}/discount_codes.json`,
+      `${this.baseUrl}/price_rules/${priceRuleId}/discount_codes.json`,
       {
         method: "POST",
-        headers,
+        headers: this.headers,
         body: JSON.stringify({
-          discount_code: { code },
+          discount_code: { code, usage_count: 0 },
         }),
       }
     );
     if (!res.ok) {
       const body = await res.text();
-      throw BadGateway(`Shopify discount creation failed: ${res.status} ${body}`);
+      throw new Error(`Shopify discount creation failed: ${res.status} ${body}`);
     }
     const { discount_code } = await res.json();
     return {
@@ -226,7 +177,7 @@ class ShopifyProvider extends IntegrationProvider {
     );
     if (!res.ok) {
       const body = await res.text();
-      throw BadGateway(`Shopify order cancel failed: ${res.status} ${body}`);
+      throw new Error(`Shopify order cancel failed: ${res.status} ${body}`);
     }
     const { order } = await res.json();
     return {

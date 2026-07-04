@@ -16,7 +16,7 @@ const elevenlabsHandler = require("./handlers/elevenlabs.handler");
 const router = express.Router();
 router.use(webhookLimiter);
 
-const stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" }) : null;
+const stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" }) : null;
 
 router.post(
   "/vapi",
@@ -136,43 +136,14 @@ router.post(
     });
     if (logged.duplicate) return res.json({ duplicate: true });
 
-    res.json({ received: true });
-
-    (async () => {
-      try {
-        const result = await stripeHandler.handle(event);
-        await markProcessed(logged);
-        logger.info({ eventId: event.id, result }, "Stripe webhook processed asynchronously");
-      } catch (err) {
-        logger.error({ err: err.message, eventId: event.id }, "Stripe webhook async handler failed");
-        const { requireAdmin } = require("../../config/supabase");
-        const admin = requireAdmin();
-
-        let orgId = event.data?.object?.metadata?.org_id || null;
-        if (!orgId && event.data?.object?.subscription) {
-          const { data: sub } = await admin
-            .from("subscriptions")
-            .select("org_id")
-            .eq("stripe_subscription_id", event.data.object.subscription)
-            .maybeSingle();
-          if (sub) orgId = sub.org_id;
-        }
-
-        try {
-          await admin.from("webhook_dlq").insert({
-            org_id: orgId,
-            source: "stripe",
-            event_type: event.type,
-            payload: event,
-            error_message: err.message,
-            retry_count: 0,
-            next_retry_at: new Date(Date.now() + 60_000).toISOString(),
-          });
-        } catch (dlqErr) {
-          logger.error({ err: dlqErr.message }, "Failed to write Stripe webhook to DLQ");
-        }
-      }
-    })();
+    try {
+      const result = await stripeHandler.handle(event);
+      await markProcessed(logged);
+      res.json({ received: true, ...result });
+    } catch (err) {
+      logger.error({ err: err.message }, "Stripe handler failed");
+      res.status(500).json({ error: { code: "handler_failed" } });
+    }
   })
 );
 
@@ -232,12 +203,11 @@ router.post(
     const { requireAdmin } = require("../../config/supabase");
     const admin = requireAdmin();
 
-    try {
-      if (!called) {
-        return res.type("text/xml").send(
-          `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Invalid call parameters.</Say><Hangup/></Response>`
-        );
-      }
+    if (!called) {
+      return res.type("text/xml").send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Invalid call parameters.</Say><Hangup/></Response>`
+      );
+    }
 
     // 1. Resolve org_id and bound agent_id
     const { data: number, error: numErr } = await admin
@@ -266,25 +236,8 @@ router.post(
 
     if (rateStatus === "blocked_rate") {
       logger.warn({ called, caller, orgId: number.org_id }, "Inbound call blocked by rate limit");
-      const callId = crypto.randomUUID();
-      await admin.from("calls").insert({
-        id: callId,
-        org_id: number.org_id,
-        agent_id: number.agent_id,
-        direction: "inbound",
-        status: "failed",
-        provider: number.agents?.provider || "mock",
-        provider_call_id: req.body.CallSid,
-        started_at: now,
-        ended_at: now,
-        outcome: { block_reason: "rate_limit" },
-        from_number: caller,
-        to_number: called,
-      });
-
       await admin.from("call_events").insert({
         org_id: number.org_id,
-        call_id: callId,
         kind: "blocked_rate",
         payload: { called, caller, now }
       });
@@ -305,25 +258,8 @@ router.post(
 
     if (!allowedToSpend) {
       logger.warn({ called, caller, orgId: number.org_id }, "Inbound call blocked by spend guard");
-      const callId = crypto.randomUUID();
-      await admin.from("calls").insert({
-        id: callId,
-        org_id: number.org_id,
-        agent_id: number.agent_id,
-        direction: "inbound",
-        status: "failed",
-        provider: number.agents?.provider || "mock",
-        provider_call_id: req.body.CallSid,
-        started_at: now,
-        ended_at: now,
-        outcome: { block_reason: "spend_guard" },
-        from_number: caller,
-        to_number: called,
-      });
-
       await admin.from("call_events").insert({
         org_id: number.org_id,
-        call_id: callId,
         kind: "blocked_spend",
         payload: { called, caller, now }
       });
@@ -342,9 +278,7 @@ router.post(
       status: "ringing",
       provider: number.agents?.provider || "mock",
       provider_call_id: req.body.CallSid,
-      started_at: now,
-      from_number: req.body.From,
-      to_number: req.body.To,
+      started_at: now
     });
     if (callErr) throw callErr;
 
@@ -364,19 +298,13 @@ router.post(
       ? `Thanks for calling ${agentName}. This call may be recorded for quality and training.`
       : "Thanks for calling. This call may be recorded for quality and training.";
 
-      res
-        .type("text/xml")
-        .send(
-          `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">${escapeXml(
-            greeting
-          )}</Say><Connect><Stream url="wss://${req.get("host")}/v1/twilio/stream/${callId}" /></Connect><Say voice="alice">Thank you for calling. Goodbye.</Say><Hangup/></Response>`
-        );
-    } catch (err) {
-      logger.error({ err: err.message, body: req.body }, "Failed to process inbound Twilio call");
-      res.type("text/xml").send(
-        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Sorry, we are currently experiencing technical difficulties. Please try again later.</Say><Hangup/></Response>`
+    res
+      .type("text/xml")
+      .send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">${escapeXml(
+          greeting
+        )}</Say><Connect><Stream url="wss://${req.get("host")}/v1/twilio/stream/${callId}" /></Connect><Say voice="alice">Thank you for calling. Goodbye.</Say><Hangup/></Response>`
       );
-    }
   })
 );
 

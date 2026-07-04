@@ -4,13 +4,6 @@ const { VoiceProvider } = require("./interface");
 class MockProvider extends VoiceProvider {
   static get name() { return "mock"; }
 
-  async createAgent(sanitizedData) {
-    return {
-      agent_id: `mock-agent-${crypto.randomUUID()}`,
-      mock: true
-    };
-  }
-
   async startCall({ toE164, leaseToken }) {
     return {
       provider_call_id: `mock-${crypto.randomUUID()}`,

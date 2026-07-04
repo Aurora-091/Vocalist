@@ -38,18 +38,13 @@ function buildVoiceProvider({ agent, integrationConfig = {}, force } = {}) {
     process.env.VOICE_PROVIDER ||
     "elevenlabs";
 
-  if (!name || !Object.prototype.hasOwnProperty.call(PROVIDERS, name)) {
+  const Cls = PROVIDERS[name];
+  if (!Cls) {
     throw new Error(
       `Unknown voice provider: "${name}". Registered: ${Object.keys(PROVIDERS).join(", ")}. ` +
         `See backend/src/providers/voice/README.md.`
     );
   }
-
-  const Cls = PROVIDERS[name];
-  if (typeof Cls !== "function") {
-    throw new Error(`Voice provider Cls is not a function/class for: "${name}".`);
-  }
-
   return new Cls({ orgId: agent?.org_id, agent, config: integrationConfig });
 }
 

@@ -12,7 +12,6 @@ type KnowledgeSource = {
   title: string;
   uri: string | null;
   status: "processing" | "ready" | "error" | "syncing" | "pending";
-  meta?: any;
   created_at: string;
   updated_at: string;
 };
@@ -65,18 +64,6 @@ export default function Knowledge() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Polling mechanism as a fallback for async syncing
-  useEffect(() => {
-    const hasPending = sources?.some((s) => ["syncing", "processing", "pending"].includes(s.status));
-    if (!hasPending) return;
-
-    const intervalId = setInterval(() => {
-      load();
-    }, 3000);
-
-    return () => clearInterval(intervalId);
-  }, [sources]);
-
   async function deleteSource(id: string) {
     setDeletingId(id);
     try {
@@ -90,12 +77,10 @@ export default function Knowledge() {
 
   async function resync(id: string) {
     try {
-      const res = await api.post<{ ok: boolean }>(`/v1/knowledge/sources/${id}/resync`);
-      if (res && res.ok) {
-        setSources((prev) =>
-          prev?.map((s) => (s.id === id ? { ...s, status: "syncing" } : s)) ?? null
-        );
-      }
+      await api.post(`/v1/knowledge/sources/${id}/resync`);
+      setSources((prev) =>
+        prev?.map((s) => (s.id === id ? { ...s, status: "syncing" } : s)) ?? null
+      );
     } catch {}
   }
 
@@ -156,11 +141,6 @@ export default function Knowledge() {
                         {STATUS_LABEL[s.status]}
                       </span>
                     </div>
-                    {s.status === "error" && s.meta?.error && (
-                      <div className="mt-1 text-xs text-danger">
-                        Failed: {s.meta.error}
-                      </div>
-                    )}
                     {s.uri && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <LinkIcon className="w-3 h-3 text-text-muted shrink-0" />

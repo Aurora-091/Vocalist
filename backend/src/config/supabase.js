@@ -26,10 +26,7 @@ function clientForToken(jwt) {
   });
 }
 
-let mockAdminClient = null;
-
 function requireAdmin() {
-  if (mockAdminClient) return mockAdminClient;
   if (!adminClient) {
     throw new Error(
       "Service role operation attempted without SUPABASE_SERVICE_ROLE_KEY configured."
@@ -38,8 +35,4 @@ function requireAdmin() {
   return adminClient;
 }
 
-function setMockAdminClient(client) {
-  mockAdminClient = client;
-}
-
-module.exports = { adminClient, anonClient, clientForToken, requireAdmin, setMockAdminClient };
+module.exports = { adminClient, anonClient, clientForToken, requireAdmin };

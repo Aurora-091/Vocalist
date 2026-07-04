@@ -1,27 +1,10 @@
 const express = require("express");
-const { z } = require("zod");
 const asyncHandler = require("../../utils/asyncHandler");
-const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
-const { validate } = require("../../middleware/validation.middleware");
+const { requireAuth, requireOrg } = require("../../middleware/auth.middleware");
 const { BadRequest } = require("../../utils/errors");
 
 const router = express.Router();
 router.use(requireAuth, requireOrg);
-
-const filterSchema = z.object({
-  tags: z.array(z.string().max(80)).optional(),
-  source: z.string().max(80).optional(),
-}).strict();
-
-const createSchema = z.object({
-  name: z.string().min(1).max(120),
-  filter: filterSchema.optional(),
-});
-
-const previewSchema = z.object({
-  filter: filterSchema.optional(),
-  segment_id: z.string().uuid().optional(),
-});
 
 router.get(
   "/",
@@ -38,10 +21,9 @@ router.get(
 
 router.post(
   "/",
-  requireRole("owner", "admin"),
-  validate({ body: createSchema }),
   asyncHandler(async (req, res) => {
     const { name, filter = {} } = req.body || {};
+    if (!name) throw BadRequest("name required");
     const { data, error } = await req.supabase
       .from("segments")
       .insert({ org_id: req.auth.orgId, name, filter })
@@ -54,8 +36,6 @@ router.post(
 
 router.delete(
   "/:id",
-  requireRole("owner", "admin"),
-  validate({ params: z.object({ id: z.string().uuid() }) }),
   asyncHandler(async (req, res) => {
     const { error } = await req.supabase
       .from("segments")
@@ -69,7 +49,6 @@ router.delete(
 
 router.post(
   "/preview",
-  validate({ body: previewSchema }),
   asyncHandler(async (req, res) => {
     const { filter = {}, segment_id } = req.body || {};
     let activeFilter = filter;

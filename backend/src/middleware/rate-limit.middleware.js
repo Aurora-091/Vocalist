@@ -27,7 +27,7 @@ const webhookLimiter = rateLimit({
 // Strict limiter for unauthenticated, abuse-prone endpoints
 // (login, signup, password reset, waitlist join). Keyed by IP.
 const authLimiter = rateLimit({
-  windowMs: 15 * 60_000,
+  windowMs: 60_000,
   max: 10,
   standardHeaders: "draft-7",
   legacyHeaders: false,

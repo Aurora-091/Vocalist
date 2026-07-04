@@ -4,7 +4,7 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
 const { requireAdmin } = require("../../config/supabase");
-const { Conflict, NotFound, BadRequest, Internal } = require("../../utils/errors");
+const { Conflict, NotFound, BadRequest } = require("../../utils/errors");
 
 const router = express.Router();
 
@@ -25,7 +25,6 @@ router.get(
     const { data, error } = await req.supabase
       .from("users")
       .select("id, email, role, created_at")
-      .eq("org_id", req.auth.orgId)
       .order("created_at", { ascending: true });
     if (error) throw error;
     res.json({ users: data || [] });
@@ -45,7 +44,7 @@ router.post(
     });
     if (createErr) {
       if (createErr.message?.toLowerCase().includes("already")) throw Conflict("User already exists");
-      throw Internal(createErr.message);
+      throw new Error(createErr.message);
     }
 
     const userId = created.user.id;
@@ -56,7 +55,7 @@ router.post(
     const { error: linkErr } = await admin
       .from("users")
       .upsert({ id: userId, org_id: req.auth.orgId, email, role });
-    if (linkErr) throw Internal(linkErr.message);
+    if (linkErr) throw new Error(linkErr.message);
 
     res.status(201).json({ user: { id: userId, email, role, org_id: req.auth.orgId } });
   })
@@ -77,7 +76,6 @@ router.patch(
       .from("users")
       .select("id, org_id")
       .eq("id", id)
-      .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (getErr) throw getErr;
     if (!existing) throw NotFound("User not found");
@@ -90,7 +88,6 @@ router.patch(
       .from("users")
       .update({ role: req.body.role })
       .eq("id", id)
-      .eq("org_id", req.auth.orgId)
       .select("id, email, role")
       .single();
     if (error) throw error;
@@ -106,19 +103,9 @@ router.delete(
     if (req.params.id === req.auth.userId) {
       throw BadRequest("Cannot remove yourself");
     }
-
-    const { data: existing, error: getErr } = await req.supabase
-      .from("users")
-      .select("id")
-      .eq("id", req.params.id)
-      .eq("org_id", req.auth.orgId)
-      .maybeSingle();
-    if (getErr) throw getErr;
-    if (!existing) throw NotFound("User not found in organization");
-
     const admin = requireAdmin();
     const { error } = await admin.auth.admin.deleteUser(req.params.id);
-    if (error) throw Internal(error.message);
+    if (error) throw new Error(error.message);
     res.status(204).end();
   })
 );

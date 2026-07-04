@@ -3,7 +3,6 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
 const { BadRequest } = require("../../utils/errors");
 const { toE164 } = require("../../utils/phone");
-const logger = require("../../config/logger");
 
 const router = express.Router();
 router.use(requireAuth, requireOrg);
@@ -35,8 +34,7 @@ router.post(
     });
     if (error) throw error;
 
-    logger.info({ event: "gdpr_erasure", org_id: req.auth.orgId, e164, user_id: req.auth.userId }, "GDPR erasure completed");
-    res.json({ ok: true });
+    res.json({ ok: true, e164 });
   })
 );
 

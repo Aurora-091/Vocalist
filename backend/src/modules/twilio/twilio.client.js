@@ -1,7 +1,6 @@
 const twilio = require("twilio");
 const env = require("../../config/env");
 const { requireAdmin } = require("../../config/supabase");
-const { writeSecret } = require("../../utils/credential.helper");
 
 const tenantClientCache = new Map();
 const CACHE_TTL_MS = 60_000;
@@ -61,37 +60,26 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
   };
   await admin.from("twilio_subaccounts").upsert(row);
 
-  try {
-    await writeSecret(row.auth_token_ref, sub.authToken);
-  } catch (e) {
-    throw new Error("Failed to store Twilio auth token securely: " + e.message);
-  }
+  await admin.rpc("vault_store", {
+    name: row.auth_token_ref,
+    secret: sub.authToken,
+  }).catch(() => {});
 
   return { ...row, _authToken: sub.authToken };
 }
 
 async function linkByoAccount(orgId, { accountSid, authToken, friendlyName }) {
-  if (!accountSid || !authToken) {
-    const { BadRequest } = require("../../utils/errors");
-    throw BadRequest("accountSid and authToken are required");
-  }
+  if (!accountSid || !authToken) throw new Error("accountSid and authToken are required");
 
   // Validate credentials by fetching the account from Twilio
   const client = twilio(accountSid, authToken);
-  const account = await client.api.v2010.accounts(accountSid).fetch().catch(() => null);
-  if (!account) {
-    const { BadRequest } = require("../../utils/errors");
-    throw BadRequest("Invalid Twilio credentials");
-  }
+  const account = await client.api.v2010.accounts(accountSid).fetch();
+  if (!account) throw new Error("Invalid Twilio credentials");
 
   const admin = requireAdmin();
   const secretRef = `vault:twilio:byo:${orgId}:auth_token`;
 
-  try {
-    await writeSecret(secretRef, authToken);
-  } catch (e) {
-    throw new Error("Failed to store Twilio BYO auth token securely: " + e.message);
-  }
+  await admin.rpc("vault_store", { name: secretRef, secret: authToken }).catch(() => {});
 
   const row = {
     org_id: orgId,
@@ -145,15 +133,11 @@ async function getTenantClient(orgId) {
     .eq("org_id", orgId)
     .maybeSingle();
   if (!sub || sub.status !== "active") {
-    const { BadRequest } = require("../../utils/errors");
-    throw BadRequest("twilio_subaccount_not_provisioned");
+    throw new Error("twilio_subaccount_not_provisioned");
   }
 
   const { data: secret } = await admin.rpc("vault_read", { name: sub.auth_token_ref });
-  if (!secret) {
-    const { Internal } = require("../../utils/errors");
-    throw Internal("twilio_secret_missing");
-  }
+  if (!secret) throw new Error("twilio_secret_missing");
 
   const client = twilio(sub.subaccount_sid, secret);
   tenantClientCache.set(orgId, { client, expiresAt: Date.now() + CACHE_TTL_MS });

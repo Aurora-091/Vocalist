@@ -4,7 +4,6 @@ import { ShoppingBag, Check, Loader as Loader2, ArrowRight, ExternalLink } from 
 import { getShopifyIntegration, getOrgId } from "../lib/db";
 import { Button } from "../components/legacy-ui/Button";
 import { Badge } from "../components/legacy-ui/Badge";
-import { toast } from "sonner";
 
 type Step = "domain" | "redirecting" | "done";
 
@@ -39,34 +38,18 @@ export default function ShopifyConnect() {
   }, [searchParams]);
 
   function normalizeDomain(input: string): string {
-    const trimmed = input.trim().toLowerCase();
-    if (!trimmed) return "";
-
-    // Strip scheme and isolate host by removing path, port, query, fragment
-    const withoutScheme = trimmed.replace(/^https?:\/\//, "");
-    const host = withoutScheme.split(/[/?#:]/)[0];
-
-    // Accept exactly "myshopify.com" or ending with ".myshopify.com"
-    if (host === "myshopify.com" || host.endsWith(".myshopify.com")) {
-      return host;
+    let d = input.trim().toLowerCase();
+    d = d.replace(/^https?:\/\//, "");
+    d = d.replace(/\/$/, "");
+    if (!d.includes(".myshopify.com") && !d.includes(".")) {
+      d = `${d}.myshopify.com`;
     }
-
-    // Bare store name: single DNS label containing only alphanumeric and hyphens
-    const isValidSingleLabel = /^[a-z0-9-]+$/.test(host);
-    if (!host.includes(".") && isValidSingleLabel) {
-      return `${host}.myshopify.com`;
-    }
-
-    return "";
+    return d;
   }
 
   async function handleConnect(e: React.FormEvent) {
     e.preventDefault();
     const normalized = normalizeDomain(domain);
-    if (!normalized) {
-      toast.error("Please enter a valid Shopify store domain.");
-      return;
-    }
     setDomain(normalized);
     setStep("redirecting");
 

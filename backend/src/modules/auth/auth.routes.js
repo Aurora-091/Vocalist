@@ -8,7 +8,6 @@ const { signupSchema, loginSchema, refreshSchema, resetSchema } = require("./aut
 
 const router = express.Router();
 
-
 router.post(
   "/signup",
   authLimiter,
@@ -34,9 +33,7 @@ router.post(
   authLimiter,
   validate({ body: refreshSchema }),
   asyncHandler(async (req, res) => {
-    const refresh_token = req.body.refresh_token;
-    if (!refresh_token) throw new Error("Missing refresh token");
-    const result = await service.refresh({ refresh_token });
+    const result = await service.refresh(req.body);
     res.json(result);
   })
 );

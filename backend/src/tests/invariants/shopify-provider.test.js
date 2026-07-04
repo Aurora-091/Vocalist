@@ -8,7 +8,7 @@ test("syncContacts maps Shopify customer to correct schema", () => {
     first_name: "Sarah",
     last_name: "Chen",
     email: "sarah@example.com",
-    email_marketing_consent: { state: "subscribed" },
+    marketing_consent: { state: "subscribed" },
     tags: "vip,returning",
     orders_count: 5,
   };
@@ -31,7 +31,7 @@ test("syncContacts skips customers without phone", () => {
     first_name: "NoPhone",
     last_name: "User",
     email: "no@example.com",
-    email_marketing_consent: null,
+    marketing_consent: null,
   };
   const contact = mapCustomerToContact("org_abc", customer);
   assert.equal(contact, null);
@@ -44,7 +44,7 @@ test("syncContacts sets consent_status to none when not subscribed", () => {
     first_name: "Jane",
     last_name: null,
     email: null,
-    email_marketing_consent: { state: "not_subscribed" },
+    marketing_consent: { state: "not_subscribed" },
     tags: "",
     orders_count: 0,
   };
@@ -60,7 +60,7 @@ test("phone number normalization strips formatting", () => {
     first_name: "Bob",
     last_name: "Smith",
     email: null,
-    email_marketing_consent: { state: "subscribed" },
+    marketing_consent: { state: "subscribed" },
     tags: null,
     orders_count: 1,
   };
@@ -77,7 +77,7 @@ function mapCustomerToContact(orgId, customer) {
     email: customer.email || null,
     crm_ref: `shopify_${customer.id}`,
     source: "shopify",
-    consent_status: customer.email_marketing_consent?.state === "subscribed" ? "granted" : "none",
+    consent_status: customer.marketing_consent?.state === "subscribed" ? "granted" : "none",
     fields: { shopify_id: customer.id, tags: customer.tags, orders_count: customer.orders_count },
   };
 }

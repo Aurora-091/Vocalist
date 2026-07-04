@@ -7,7 +7,6 @@ import { Button } from "../components/legacy-ui/Button";
 import { toast } from "sonner";
 import { VerticalProvider, useVertical } from "../lib/VerticalContext";
 import type { VerticalKey } from "../config/verticals";
-import { SetupNumber } from "./SetupNumber";
 
 type Preset = {
   id: string;
@@ -37,7 +36,6 @@ const STEPS = [
   "business",
   "voice",
   "tools",
-  "number",
   "test_call",
   "go_live",
 ] as const;
@@ -49,7 +47,6 @@ const STEP_LABELS: Record<StepKey, string> = {
   business: "Business details",
   voice: "Pick a voice",
   tools: "Connect tools",
-  number: "Phone number",
   test_call: "Test your agent",
   go_live: "Go live",
 };
@@ -145,16 +142,9 @@ function OnboardingInner() {
 
   async function placeTestCall() {
     if (!createdAgentId || !testNumber.trim()) return;
-    
-    const cleanedNumber = testNumber.replace(/\s+/g, "");
-    if (!/^\+[1-9]\d{1,14}$/.test(cleanedNumber)) {
-      toast.error("Please enter a valid E.164 phone number (e.g., +14155552671).");
-      return;
-    }
-
     setCalling(true);
     try {
-      await api.post(`/v1/agents/${createdAgentId}/test-call`, { to_number: cleanedNumber });
+      await api.post(`/v1/agents/${createdAgentId}/test-call`, { to_number: testNumber.trim() });
       toast.success("Call initiated — your phone should ring shortly.");
       setCallPlaced(true);
     } catch (e: any) {
@@ -361,19 +351,6 @@ function OnboardingInner() {
               </div>
             )}
 
-            {currentKey === "number" && (
-              <div className="space-y-4">
-                <SetupNumber
-                  embedded={true}
-                  onComplete={(num) => {
-                    setTestNumber(num.e164);
-                    next();
-                  }}
-                  onSkip={next}
-                />
-              </div>
-            )}
-
             {currentKey === "test_call" && (
               <div className="space-y-4">
                 <p className="text-sm text-text-muted">
@@ -456,7 +433,7 @@ function OnboardingInner() {
                   (currentKey === "business" && !businessName.trim())
                 }
               >
-                {currentKey === "test_call" ? "Skip test" : currentKey === "number" ? "Skip step" : "Next"}
+                {currentKey === "test_call" ? "Skip test" : "Next"}
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             )}

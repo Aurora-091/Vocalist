@@ -109,14 +109,10 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     logger.error({ err: err.message, agentProvider: agent.provider }, "Provider startCall failed");
 
     // Release the reserved spend since the call never happened
-    try {
-      await admin.rpc("release_spend", {
-        p_org: campaign.org_id,
-        p_amount_usd: projectedCost,
-      });
-    } catch (e) {
-      logger.warn({ err: e.message, orgId: campaign.org_id }, "release_spend failed");
-    }
+    await admin.rpc("release_spend", {
+      p_org: campaign.org_id,
+      p_amount_usd: projectedCost,
+    }).catch((e) => logger.warn({ err: e.message, orgId: campaign.org_id }, "release_spend failed"));
 
     await transition(admin, {
       targetId: target.target_id,
@@ -139,19 +135,15 @@ async function dispatchOne(admin, { campaign, agent, target }) {
       status: providerCall.status === "in_progress" ? "in_progress" : "queued",
       provider: agent.provider,
       provider_call_id: providerCall.provider_call_id,
-      from_number: agent.inbound_number,
-      to_number: contact.e164,
     })
     .select("id")
     .single();
   if (callErr) {
     logger.error({ err: callErr.message }, "Failed to insert call row after dispatch");
-    try {
-      await admin.rpc("release_spend", {
-        p_org: campaign.org_id,
-        p_amount_usd: projectedCost,
-      });
-    } catch (e) {}
+    await admin.rpc("release_spend", {
+      p_org: campaign.org_id,
+      p_amount_usd: projectedCost,
+    }).catch(() => {});
     return { failed: true, reason: "call_insert_failed" };
   }
 

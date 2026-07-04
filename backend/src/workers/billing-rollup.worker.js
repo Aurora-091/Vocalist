@@ -110,17 +110,13 @@ async function runOnce() {
         ? `You have used 100% of your included minutes (${used}/${included}) for this month.`
         : `You have used ${threshold}% of your included voice minutes (${used}/${included}).`;
 
-      try {
-        await admin.from("notifications").insert({
-          org_id: orgId,
-          kind: "usage_alert",
-          title: threshold >= 100 ? "Minute limit reached" : `${threshold}% of minutes used`,
-          body: msg,
-          metadata: { threshold_pct: threshold, used_minutes: used, included_minutes: included, period: month },
-        });
-      } catch (e) {
-        logger.warn({ err: e.message, orgId }, "Failed to insert usage notification");
-      }
+      await admin.from("notifications").insert({
+        org_id: orgId,
+        kind: "usage_alert",
+        title: threshold >= 100 ? "Minute limit reached" : `${threshold}% of minutes used`,
+        body: msg,
+        metadata: { threshold_pct: threshold, used_minutes: used, included_minutes: included, period: month },
+      }).catch((e) => logger.warn({ err: e.message, orgId }, "Failed to insert usage notification"));
     }
 
     if (sub?.stripe_usage_item_id && env.STRIPE_SECRET_KEY) {

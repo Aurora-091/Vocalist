@@ -315,7 +315,7 @@ export async function getOverview() {
     .from("consent_events")
     .select("*", { count: "exact", head: true })
     .eq("org_id", orgId)
-    .eq("kind", "revoke")
+    .eq("new_status", "revoked")
     .gte("created_at", thirtyDaysAgo);
 
   return {
@@ -745,26 +745,6 @@ export async function unlinkPhoneNumberAgent(id: string) {
     .update({ agent_id: null })
     .eq("id", id);
   if (error) throw error;
-}
-
-export async function unassignPhoneNumberAgent(numberId: string, agentId: string) {
-  const { error: err1 } = await supabase
-    .from("phone_numbers")
-    .update({ agent_id: null })
-    .eq("id", numberId);
-  if (err1) throw err1;
-
-  const { error: err2 } = await supabase
-    .from("agents")
-    .update({ inbound_number: null })
-    .eq("id", agentId);
-  if (err2) throw err2;
-
-  const { error: err3 } = await supabase
-    .from("organization_agents")
-    .update({ phone_number_id: null })
-    .eq("agent_id", agentId);
-  if (err3) throw err3;
 }
 
 export async function deletePhoneNumber(id: string) {

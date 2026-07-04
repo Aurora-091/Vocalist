@@ -1,49 +1,81 @@
-# Weeber — Specification & Documentation Directory 📚
+# Weeber — Specification Documents
 
-Welcome to the Weeber platform documentation directory. This folder houses all technical specifications, onboarding guides, architecture specs, deployment manifests, and compliance records.
+Welcome to the Weeber platform documentation directory. This folder houses all technical specifications, architecture decisions, deployment manifests, testing configurations, and compliance documents.
 
 ---
 
-## 1. Getting Started & Onboarding
+## 1. Active Developer Reference
 
 | Document | Purpose |
 |---|---|
-| [`1-WELCOME.md`](./1-WELCOME.md) | **Onboarding Welcome**: Introduction to tech stack, system capabilities, and dev quickstart. |
-| [`2-JOURNEY_AND_HISTORY.md`](./2-JOURNEY_AND_HISTORY.md) | **Journey Narrative**: Narrative of product evolution and rebranding timeline from Aurora to Weeber. |
-| [`POC-Checklist.md`](./POC-Checklist.md) | **Definition of Done**: Criteria detailing core deliverables required for validation demos. |
+| [`Weeber-Cursor-Rules.md`](./Weeber-Cursor-Rules.md) | Standard system parameters, environment constraints, codebase structures, and tech stack bindings for Cursor or other AI coding agents. |
+| [`agent.md`](./agent.md) | System profile, rule binding, and playbook for AI coding assistants (like Antigravity) working on the codebase. |
+| [`CHANGELOG.md`](./CHANGELOG.md) | Audit trail of all shipped features, patches, dependencies fixes, and tests configurations. |
+| [`DECISIONS.md`](./DECISIONS.md) | Living log tracking architectural decisions, pivots, integrations constraints, and system boundaries. |
+| [`DEPLOYMENT.md`](./DEPLOYMENT.md) | Pipeline workflows, server host requirements, Supabase Vault sync, and environment variables list. |
+| [`POC-Checklist.md`](./POC-Checklist.md) | "Definition of Done" criteria detailing the 5 core deliverables required for validation demos. |
+| [`../AUDIT.md`](../AUDIT.md) | Security and architecture audit — covers backend, edge functions, frontend data patterns, and RLS posture. |
 
 ---
 
-## 2. Developer Guides & Playbooks
+## 2. Platform Core Architecture Specs
 
 | Document | Purpose |
 |---|---|
-| [`guides/developer-rules.md`](./guides/developer-rules.md) | **Master Rules**: Living source of truth for technical bindings, rules (the 13 Non-Negotiables), and agent playbooks. |
-| [`guides/vault-setup.md`](./guides/vault-setup.md) | **Supabase Vault Setup**: SQL and code setup guide for encrypted credential vaulting. |
-| [`guides/custom-tools.md`](./guides/custom-tools.md) | **Custom Tools Guide**: Documentation on routing and creating integration tools for voice agents. |
-| [`guides/deployment.md`](./guides/deployment.md) | **Deployment Manifest**: Pipelines, environments variables, and hosting setup instructions. |
+| [`Weeber-Platform-Blackbook.md`](./Weeber-Platform-Blackbook.md) | Technical architecture overview — database patterns, spend boundaries, multi-tenancy schemas, and security design. |
+| [`Weeber-Agents-Reference.md`](./Weeber-Agents-Reference.md) | Complete directory of voice agent structures, prompts layout, and integration mappings. |
+| [`database-guide.md`](./database-guide.md) | Technical schema catalog detailing Supabase migrations (42 files), triggers, column indexes, partitioning, and 40+ tables. |
+| [`uiux.md`](./uiux.md) | UI/UX specification including vertical-tenant architecture, config-driven sidebar, and dashboard design. |
 
 ---
 
-## 3. Platform Core Architecture & Specifications
+## 3. Active Implementation Plans
 
 | Document | Purpose |
 |---|---|
-| [`architecture/platform-blackbook.md`](./architecture/platform-blackbook.md) | **Technical Architecture**: Database patterns, multi-tenancy, and security bounds. |
-| [`architecture/database-guide.md`](./architecture/database-guide.md) | **Database Guide**: Catalog of triggers, RLS policies, indexing, and tables partitioning. |
-| [`architecture/security-audit.md`](./architecture/security-audit.md) | **Security Audit**: Security posture assessment across backend, client-side, and RLS gates. |
-| [`architecture/api-audit.md`](./architecture/api-audit.md) | **API Audit**: Express backend endpoints, input validations, and multi-tenant security gates. |
-| [`DECISIONS.md`](./DECISIONS.md) | **Decisions Log**: Living log of architectural decisions records (ADR). |
-| [`INTEGRATION_GAPS.md`](./INTEGRATION_GAPS.md) | **Integration Audit Report**: Priority queue of all integration and tool proxy gap statuses. |
-| [`CHANGELOG.md`](./CHANGELOG.md) | **Changelog**: Release trails of all features, fixes, and dependencies versions. |
+| [`implementation-plan-phase-3-india.md`](./implementation-plan-phase-3-india.md) | Telephony integration specifications for Indian markets (Plivo, Exotel, TRAI compliance, and INR billing flows). |
 
 ---
 
-## 4. Specification Archives
+## 4. Frontend Architecture (as of 2026-06-18)
 
-Historical Aurora-branded documents are preserved in the `architecture/archive/` folder for reference, audit tracks, and compliance verification:
-*   [`architecture/archive/Aurora-v1-Scope-and-Build-Contract.md`](./architecture/archive/Aurora-v1-Scope-and-Build-Contract.md) — Scope contracts.
-*   [`architecture/archive/Aurora-BlackBook.md`](./architecture/archive/Aurora-BlackBook.md) — Original technical blueprints.
-*   [`architecture/archive/Aurora-UIUX-Spec.md`](./architecture/archive/Aurora-UIUX-Spec.md) — Frontend layout mocks.
-*   [`architecture/archive/implementation-plan-phase-1.md`](./architecture/archive/implementation-plan-phase-1.md) — Phase 1 build contract milestones.
-*   [`architecture/archive/AURORA_CURSOR_PROMPT.md`](./architecture/archive/AURORA_CURSOR_PROMPT.md) — Outdated rules catalog.
+```
+src/
+├── config/
+│   ├── verticals/          ← Vertical registry (one file per vertical)
+│   │   ├── index.ts        ← Types, VERTICAL_REGISTRY, utility functions
+│   │   ├── shopify.ts      ← Ecommerce vertical definition
+│   │   ├── clinic.ts       ← Healthcare vertical definition
+│   │   └── hotel.ts        ← Hospitality vertical (preview, disabled)
+│   └── marketing.ts        ← Public site content
+├── lib/
+│   ├── VerticalContext.tsx  ← React context provider + t() glossary helper
+│   ├── db.ts               ← Supabase data access layer (30+ functions)
+│   ├── api.ts              ← Backend HTTP client with auth retry
+│   ├── admin-api.ts        ← Admin panel API client
+│   ├── tracking.ts         ← Supabase tracking profiles & settings data access layer
+│   └── supabase.ts         ← Supabase client initialization
+├── components/
+│   ├── layout/             ← AppShell (config-driven sidebar), AdminShell
+│   ├── ui/                 ← shadcn/ui components
+│   ├── marketing/          ← Public site components
+│   └── AnalyticsLoader.tsx ← Dynamic Google & Facebook analytics script loader
+├── pages/                  ← Route-level page components (39 pages)
+└── apps/
+    ├── admin/              ← Admin panel sub-app
+    └── customer/           ← Customer-facing sub-app
+```
+
+**Key Principle:** Zero `if (vertical === ...)` conditionals. All vertical-specific behavior is driven by the registry config.
+
+---
+
+## 5. Specification Archives
+
+Historical Aurora-branded documents are preserved in the `archive/` folder for reference, audit tracks, and compliance verification:
+
+- [`archive/Aurora-v1-Scope-and-Build-Contract.md`](./archive/Aurora-v1-Scope-and-Build-Contract.md) — Scope contracts.
+- [`archive/Aurora-BlackBook.md`](./archive/Aurora-BlackBook.md) — Original technical blueprints.
+- [`archive/Aurora-UIUX-Spec.md`](./archive/Aurora-UIUX-Spec.md) — Frontend layout mocks.
+- [`archive/implementation-plan-phase-1.md`](./archive/implementation-plan-phase-1.md) — Phase 1 build contract milestones.
+- [`archive/AURORA_CURSOR_PROMPT.md`](./archive/AURORA_CURSOR_PROMPT.md) — Outdated rules catalog.

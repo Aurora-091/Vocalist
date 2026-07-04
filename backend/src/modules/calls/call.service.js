@@ -1,5 +1,4 @@
 const { buildVoiceProvider } = require("../../providers/voice/factory");
-const { NotFound, BadRequest } = require("../../utils/errors");
 const logger = require("../../config/logger");
 
 class CallService {
@@ -11,8 +10,8 @@ class CallService {
       .eq("org_id", orgId)
       .single();
 
-    if (agentErr || !agent) throw NotFound("Agent not found");
-    if (!agent.provider_ref) throw BadRequest("Agent missing provider_ref, cannot place call");
+    if (agentErr || !agent) throw new Error("Agent not found");
+    if (!agent.provider_ref) throw new Error("Agent missing provider_ref, cannot place call");
 
     const { data: intRow } = await supabase
       .from("integrations")

@@ -30,12 +30,7 @@ async function handle(params) {
   }
 
   const update = {};
-  if (status) {
-    update.status = status;
-    if (["completed", "failed", "busy", "no_answer", "canceled"].includes(status)) {
-      update.ended_at = new Date().toISOString();
-    }
-  }
+  if (status) update.status = status;
   if (params.CallDuration) update.duration_sec = parseInt(params.CallDuration, 10);
   if (params.RecordingUrl) update.recording_url = params.RecordingUrl;
 

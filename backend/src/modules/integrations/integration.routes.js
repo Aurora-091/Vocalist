@@ -14,47 +14,7 @@ router.post("/shopify/connected", verifyInternalSecret, asyncHandler(handleConne
 router.post("/shopify/uninstalled", verifyInternalSecret, asyncHandler(handleUninstalled));
 router.delete("/shopify/disconnect", requireAuth, requireOrg, asyncHandler(handleDisconnect));
 
-router.post("/shopify/webhooks/checkouts", verifyInternalSecret, asyncHandler(async (req, res) => {
-  const { shop, topic, body } = req.body;
-  if (!shop || !topic) return res.status(400).json({ error: "Missing shop or topic" });
-
-  const admin = require("../../config/supabase").requireAdmin();
-  const { data: integration } = await admin
-    .from("integrations")
-    .select("org_id, config")
-    .eq("type", "shopify")
-    .eq("config->>shop_domain", shop)
-    .maybeSingle();
-
-  if (!integration) {
-    return res.status(404).json({ error: "Integration not found" });
-  }
-
-  const provider = buildProvider("shopify", integration.org_id, integration.config);
-  await provider.webhook({ topic, body });
-  
-  res.json({ ok: true });
-}));
-
 router.use(requireAuth, requireOrg);
-
-router.get("/shopify/install", asyncHandler(async (req, res) => {
-  const shop = req.query.shop;
-  if (!shop) return res.status(400).json({ error: "Missing shop parameter" });
-  
-  // Basic validation for myshopify.com domain
-  const shopRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
-  if (!shopRegex.test(shop)) {
-    return res.status(400).json({ error: "Invalid shop domain. Must end with .myshopify.com" });
-  }
-
-  const env = require("../../config/env");
-  const installUrl = new URL(env.WEEBERSH_INSTALL_URL);
-  installUrl.searchParams.set("shop", shop);
-  installUrl.searchParams.set("org_id", req.auth.orgId);
-  
-  res.json({ url: installUrl.toString() });
-}));
 
 const upsertSchema = z.object({
   type: z.enum(["shopify", "calcom", "google_cal", "outlook_cal", "crm", "zapier", "twilio"]),
@@ -79,21 +39,18 @@ router.get(
   })
 );
 
-const { vaultifyConfig } = require("../../utils/credential.helper");
-
 router.put(
   "/",
   requireRole("owner", "admin"),
   validate({ body: upsertSchema }),
   asyncHandler(async (req, res) => {
-    const safeConfig = await vaultifyConfig(req.body.type, req.body.config, req.auth.orgId);
     const { data, error } = await req.supabase
       .from("integrations")
       .upsert(
         {
           org_id: req.auth.orgId,
           type: req.body.type,
-          config: safeConfig,
+          config: req.body.config,
           secret_ref: req.body.secret_ref,
           status: req.body.status,
         },
@@ -115,7 +72,6 @@ router.post(
       .from("integrations")
       .select("type, config")
       .eq("type", req.params.type)
-      .eq("org_id", req.auth.orgId)
       .maybeSingle();
     if (error) throw error;
     if (!row) throw NotFound("Integration not configured");
@@ -133,8 +89,7 @@ router.delete(
     const { error } = await req.supabase
       .from("integrations")
       .delete()
-      .eq("type", req.params.type)
-      .eq("org_id", req.auth.orgId);
+      .eq("type", req.params.type);
     if (error) throw error;
     res.status(204).end();
   })

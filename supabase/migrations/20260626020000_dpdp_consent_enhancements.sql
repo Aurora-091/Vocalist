@@ -9,7 +9,6 @@ ALTER TABLE consent_events ADD COLUMN IF NOT EXISTS retention_days INTEGER;
 ALTER TABLE consent_events ADD COLUMN IF NOT EXISTS data_principal_name TEXT;
 
 -- Constrain legal_basis to DPDP-recognised values
-ALTER TABLE consent_events DROP CONSTRAINT IF EXISTS chk_consent_legal_basis;
 ALTER TABLE consent_events
   ADD CONSTRAINT chk_consent_legal_basis
   CHECK (legal_basis IS NULL OR legal_basis IN (

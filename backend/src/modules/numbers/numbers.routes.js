@@ -3,7 +3,6 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { requireAuth, requireOrg } = require("../../middleware/auth.middleware");
 const { BadRequest, NotFound } = require("../../utils/errors");
 const { toE164 } = require("../../utils/phone");
-const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
 
 const router = express.Router();
 router.use(requireAuth, requireOrg);
@@ -43,6 +42,7 @@ router.post(
       .maybeSingle();
     if (error) throw error;
 
+    const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
     await updateOnboardingStep(req.supabase, req.auth.orgId, "get_number");
 
     res.status(201).json(data);
@@ -71,6 +71,7 @@ router.post(
       .maybeSingle();
     if (error) throw error;
 
+    const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
     await updateOnboardingStep(req.supabase, req.auth.orgId, "get_number");
 
     res.status(201).json(data);

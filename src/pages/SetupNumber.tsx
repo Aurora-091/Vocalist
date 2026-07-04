@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Phone, ShieldCheck, CircleAlert as AlertCircle, Link2, Server, Loader as Loader2, Search, PlusCircle } from "lucide-react";
+import { Phone, ShieldCheck, CircleAlert as AlertCircle, Link2, Server, Loader as Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { listPhoneNumbers } from "../lib/db";
 import { api } from "../lib/api";
@@ -34,32 +34,17 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
   const [account, setAccount] = useState<TwilioAccount | null | undefined>(undefined);
   const [loadingAccount, setLoadingAccount] = useState(true);
 
-  async function loadData() {
-    try {
+  useEffect(() => {
+    (async () => {
       const [n, status] = await Promise.all([
         listPhoneNumbers(),
         api.get<{ account: TwilioAccount | null }>("/v1/twilio/account-status").catch(() => ({ account: null })),
       ]);
       setNumbers(n || []);
       setAccount(status.account);
-    } catch (e: any) {
-      toast.error("Failed to load setup state: " + e.message);
-    } finally {
       setLoadingAccount(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
+    })();
   }, []);
-
-  async function handleNumberAcquired(newNum: any) {
-    const n = await listPhoneNumbers();
-    setNumbers(n || []);
-    if (onComplete) {
-      onComplete(newNum);
-    }
-  }
 
   if (loadingAccount) {
     return (
@@ -110,23 +95,12 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
       )}
 
       {account ? (
-        <>
-          <AccountLinked
-            account={account}
-            onUnlink={async () => {
-              if (account.account_type !== "byo_linked") return;
-              await api.delete("/v1/twilio/link-account");
-              setAccount(null);
-              toast.success("BYO account unlinked");
-            }}
-          />
-
-          {account.account_type === "aurora_managed" ? (
-            <NumberSearchAndPurchase onNumberAcquired={handleNumberAcquired} />
-          ) : (
-            <ByoNumberSelector onNumberAcquired={handleNumberAcquired} />
-          )}
-        </>
+        <AccountLinked account={account} onUnlink={async () => {
+          if (account.account_type !== "byo_linked") return;
+          await api.delete("/v1/twilio/link-account");
+          setAccount(null);
+          toast.success("BYO account unlinked");
+        }} />
       ) : (
         <TwilioSetupChoice
           onAuroraManaged={async () => {
@@ -150,208 +124,6 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
         </div>
       )}
     </div>
-  );
-}
-
-function NumberSearchAndPurchase({ onNumberAcquired }: { onNumberAcquired: (num: any) => void }) {
-  const [areaCode, setAreaCode] = useState("");
-  const [kind, setKind] = useState<"local" | "tollfree">("local");
-  const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
-  const [purchasingSid, setPurchasingSid] = useState<string | null>(null);
-
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSearching(true);
-    try {
-      const q = new URLSearchParams({
-        country: "US",
-        kind,
-        ...(areaCode.trim() ? { area_code: areaCode.trim() } : {}),
-      });
-      const res = await api.get<{ results: any[] }>(`/v1/twilio/numbers/search?${q.toString()}`);
-      setResults(res.results || []);
-      if (res.results.length === 0) {
-        toast.info("No numbers found matching criteria.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to search numbers");
-    } finally {
-      setSearching(false);
-    }
-  }
-
-  async function handlePurchase(phoneNumber: string) {
-    setPurchasingSid(phoneNumber);
-    try {
-      const res = await api.post<{ number: any }>("/v1/twilio/numbers/purchase", {
-        phone_number: phoneNumber,
-      });
-      toast.success(`Purchased number ${phoneNumber} successfully!`);
-      onNumberAcquired(res.number);
-      setResults((prev) => prev.filter((r) => r.phoneNumber !== phoneNumber));
-    } catch (err: any) {
-      toast.error(err.message || "Failed to purchase number");
-    } finally {
-      setPurchasingSid(null);
-    }
-  }
-
-  return (
-    <Card className="mt-4">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Search className="w-4 h-4 text-primary" />
-          <span className="font-medium">Search and Purchase Numbers</span>
-        </div>
-      </CardHeader>
-      <CardBody className="space-y-4">
-        <form
-          onSubmit={handleSearch}
-          className="flex flex-col sm:flex-row items-end gap-3 bg-surface-2 p-3 rounded-lg border border-border"
-        >
-          <div className="flex-1 w-full">
-            <label className="block text-xs font-medium text-text-muted mb-1">Area Code (Optional)</label>
-            <input
-              type="text"
-              maxLength={3}
-              placeholder="e.g. 415"
-              className="w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-              value={areaCode}
-              onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, ""))}
-            />
-          </div>
-          <div className="w-full sm:w-40">
-            <label className="block text-xs font-medium text-text-muted mb-1">Type</label>
-            <select
-              className="w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as any)}
-            >
-              <option value="local">Local</option>
-              <option value="tollfree">Toll-Free</option>
-            </select>
-          </div>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={searching}
-            className="w-full sm:w-auto px-4 py-1.5 h-[34px] flex items-center justify-center"
-          >
-            {searching ? "Searching…" : "Search"}
-          </Button>
-        </form>
-
-        {results.length > 0 && (
-          <div className="border border-border rounded-lg divide-y divide-border overflow-hidden bg-surface max-h-60 overflow-y-auto">
-            {results.map((r) => (
-              <div key={r.phoneNumber} className="p-3 flex items-center justify-between hover:bg-surface-2 transition-colors">
-                <div>
-                  <div className="font-mono text-sm font-semibold text-text">{r.friendlyName || r.phoneNumber}</div>
-                  <div className="text-xs text-text-muted">
-                    {r.locality ? `${r.locality}, ${r.region}` : r.isoCountry} · {kind === "tollfree" ? "$2.00/mo" : "$1.15/mo"}
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  disabled={purchasingSid !== null}
-                  onClick={() => handlePurchase(r.phoneNumber)}
-                >
-                  {purchasingSid === r.phoneNumber ? "Buying…" : "Buy"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardBody>
-    </Card>
-  );
-}
-
-function ByoNumberSelector({ onNumberAcquired }: { onNumberAcquired: (num: any) => void }) {
-  const [existingNumbers, setExistingNumbers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [linkingNumber, setLinkingNumber] = useState<string | null>(null);
-
-  async function loadExisting() {
-    setLoading(true);
-    try {
-      const res = await api.get<{ numbers: any[] }>("/v1/twilio/numbers/existing");
-      setExistingNumbers(res.numbers || []);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load numbers from your Twilio account");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadExisting();
-  }, []);
-
-  async function handleLink(numberInfo: any) {
-    const phoneNumber = numberInfo.phoneNumber;
-    setLinkingNumber(phoneNumber);
-    try {
-      const res = await api.post<{ number: any }>("/v1/twilio/numbers/byo", {
-        phone_number: phoneNumber,
-        twilio_sid: numberInfo.sid,
-      });
-      toast.success(`Linked number ${phoneNumber} successfully!`);
-      onNumberAcquired(res.number);
-      setExistingNumbers((prev) => prev.filter((n) => n.phoneNumber !== phoneNumber));
-    } catch (err: any) {
-      toast.error(err.message || "Failed to link number");
-    } finally {
-      setLinkingNumber(null);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-text-muted text-sm py-4">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        Loading available numbers from your Twilio account…
-      </div>
-    );
-  }
-
-  return (
-    <Card className="mt-4">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Link2 className="w-4 h-4 text-primary" />
-          <span className="font-medium">Link Available BYO Numbers</span>
-        </div>
-      </CardHeader>
-      <CardBody className="space-y-4">
-        {existingNumbers.length === 0 ? (
-          <p className="text-sm text-text-muted">
-            No unlinked phone numbers found in your linked Twilio account.
-          </p>
-        ) : (
-          <div className="border border-border rounded-lg divide-y divide-border overflow-hidden bg-surface max-h-60 overflow-y-auto">
-            {existingNumbers.map((n) => (
-              <div key={n.phoneNumber} className="p-3 flex items-center justify-between hover:bg-surface-2 transition-colors">
-                <div>
-                  <div className="font-mono text-sm font-semibold text-text">{n.friendlyName || n.phoneNumber}</div>
-                  <div className="text-xs text-text-muted font-mono">{n.sid}</div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  disabled={linkingNumber !== null}
-                  onClick={() => handleLink(n)}
-                >
-                  {linkingNumber === n.phoneNumber ? "Linking…" : "Link"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardBody>
-    </Card>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Bot, Trash2, Copy } from "lucide-react";
-import { listAgents, deleteAgent as deleteAgentDb, listPhoneNumbers } from "../lib/db";
+import { listAgents, deleteAgent as deleteAgentDb } from "../lib/db";
 import { api } from "../lib/api";
 import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
@@ -37,17 +37,10 @@ export default function AgentsList() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [cloningId, setCloningId] = useState<string | null>(null);
-  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
-  const [selectedNumberId, setSelectedNumberId] = useState<string>("none");
 
   async function load() {
     try {
-      const [ags, nums] = await Promise.all([
-        listAgents(),
-        listPhoneNumbers(),
-      ]);
-      setAgents(ags);
-      setPhoneNumbers(nums || []);
+      setAgents(await listAgents());
     } catch {
       setAgents([]);
     }
@@ -63,21 +56,15 @@ export default function AgentsList() {
     setVoiceStep(false);
     setPendingVoiceId("");
     setPendingVoiceName("");
-    setSelectedNumberId("none");
   }
 
   async function submitCreate(voiceId?: string) {
-    const res = await api.post<{ agent: any }>("/v1/agents", {
+    await api.post("/v1/agents", {
       name,
       persona: { direction, objective: "" },
       voice_id: voiceId || undefined,
       consent_required: direction !== "inbound",
     });
-    if (res?.agent?.id && selectedNumberId !== "none") {
-      await api.post(`/v1/agents/${res.agent.id}/assign-number`, {
-        phone_number_id: selectedNumberId,
-      });
-    }
     cancelCreate();
     load();
   }
@@ -189,30 +176,6 @@ export default function AgentsList() {
                       Outbound agents require consent on file. This is locked on and cannot be turned off.
                     </p>
                   )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-muted mb-1">Phone number (optional)</label>
-                  <select
-                    value={selectedNumberId}
-                    onChange={(e) => setSelectedNumberId(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
-                  >
-                    <option value="none">None / Unassigned</option>
-                    {phoneNumbers.map((n) => {
-                      const otherAgent = agents?.find((a) => a.id === n.agent_id);
-                      let label = n.e164;
-                      if (otherAgent) {
-                        label += ` (Assigned to ${otherAgent.name})`;
-                      } else {
-                        label += " (Unassigned)";
-                      }
-                      return (
-                        <option key={n.id} value={n.id}>
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </select>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" type="button" onClick={cancelCreate}>Cancel</Button>
