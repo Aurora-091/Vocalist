@@ -192,13 +192,18 @@ class ElevenLabsProvider extends VoiceProvider {
       };
       
       if (resolved.type === "webhook") {
+        let url = tool.url || "";
+        const baseUrl = process.env.BACKEND_URL || "https://api.weeber.ai";
+        const calendarProxyUrl = process.env.CALENDAR_PROXY_URL || `${baseUrl}/v1/tools/calcom`;
+        url = url.replace(/{{\s*BASE_URL\s*}}/g, baseUrl);
+        url = url.replace(/{{\s*calendar_proxy_url\s*}}/g, calendarProxyUrl);
+
         resolved.api_schema = {
-          url: tool.url || "",
+          url: url,
           method: tool.method || "POST",
         };
         const headers = { ...(tool.headers || {}) };
         if (tool.authentication) {
-          // Pass authentication if present, otherwise just keep it in headers if it's there
           if (tool.authentication.type === "bearer" && tool.authentication.token) {
             headers["Authorization"] = `Bearer ${tool.authentication.token}`;
           }
@@ -208,7 +213,30 @@ class ElevenLabsProvider extends VoiceProvider {
         }
         const bodySchema = tool.body_parameters || tool.parameters;
         if (bodySchema) {
-          resolved.api_schema.request_body_schema = bodySchema;
+          if (Array.isArray(bodySchema)) {
+            const properties = {};
+            const required = [];
+            for (const param of bodySchema) {
+              const name = param.identifier || param.name;
+              if (!name) continue;
+              properties[name] = {
+                type: param.data_type || param.type || "string",
+                description: param.description || "",
+              };
+              if (param.required || param.value_type === "llm_prompt" || param.value_type === "static") {
+                required.push(name);
+              }
+            }
+            resolved.api_schema.request_body_schema = {
+              type: "object",
+              properties,
+            };
+            if (required.length > 0) {
+              resolved.api_schema.request_body_schema.required = required;
+            }
+          } else {
+            resolved.api_schema.request_body_schema = bodySchema;
+          }
         }
       }
       

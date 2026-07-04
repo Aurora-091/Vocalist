@@ -316,7 +316,16 @@ test("remediation: elevenlabs provider complies with agent payload structure req
       {
         name: "book_appointment",
         description: "Schedule clinical appointment",
-        url: "https://api.weeber.ai/v1/tools/calcom/book",
+        url: "{{BASE_URL}}/v1/tools/calcom/book",
+      },
+      {
+        name: "get_visit_details",
+        description: "Fetch visit info",
+        url: "{{calendar_proxy_url}}/patients/search",
+        body_parameters: [
+          { identifier: "patient_id", data_type: "string", description: "Patient ID", value_type: "static" },
+          { identifier: "severity", data_type: "string", description: "Severity level", value_type: "llm_prompt" }
+        ]
       }
     ],
   };
@@ -341,5 +350,16 @@ test("remediation: elevenlabs provider complies with agent payload structure req
   assert.equal(payload.conversation_config.agent.prompt.tools[0].name, "book_appointment");
   assert.ok(payload.conversation_config.agent.prompt.tools[0].api_schema);
   assert.equal(payload.conversation_config.agent.prompt.tools[0].api_schema.url, "https://api.weeber.ai/v1/tools/calcom/book");
+
+  // Verify second tool placeholders and body parameter translation to JSON Schema
+  assert.equal(payload.conversation_config.agent.prompt.tools[1].name, "get_visit_details");
+  assert.equal(payload.conversation_config.agent.prompt.tools[1].api_schema.url, "https://api.weeber.ai/v1/tools/calcom/patients/search");
+  
+  const schema = payload.conversation_config.agent.prompt.tools[1].api_schema.request_body_schema;
+  assert.ok(schema);
+  assert.equal(schema.type, "object");
+  assert.deepEqual(schema.properties.patient_id, { type: "string", description: "Patient ID" });
+  assert.deepEqual(schema.properties.severity, { type: "string", description: "Severity level" });
+  assert.deepEqual(schema.required, ["patient_id", "severity"]);
 });
 
