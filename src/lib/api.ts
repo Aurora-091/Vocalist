@@ -94,11 +94,14 @@ export const api = {
 
 export { ApiError };
 
-export async function joinWaitlist(data: { name: string; email: string; phone?: string }): Promise<{ success: boolean; duplicate?: boolean; referral_code?: string; error?: string }> {
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+export async function joinWaitlist(data: { name: string; email: string; phone?: string; ref?: string }): Promise<{ success: boolean; duplicate?: boolean; referral_code?: string; error?: string }> {
   try {
-    const res = await fetch(`${BASE_URL}/v1/waitlist/join`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/waitlist-join`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
       body: JSON.stringify({ ...data, source: "website" }),
     });
     if (res.ok) {

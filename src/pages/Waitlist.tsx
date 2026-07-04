@@ -281,8 +281,13 @@ function HeroForm() {
     if (!phoneValid || !phone.trim() || !submittedEmail) return;
     setPhoneSaving(true);
     try {
-      const { default: api } = await import("../lib/api");
-      await api.patch("/v1/waitlist/phone", { email: submittedEmail, phone: phone.trim() });
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+      await fetch(`${supabaseUrl}/functions/v1/waitlist-phone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": supabaseAnonKey },
+        body: JSON.stringify({ email: submittedEmail, phone: phone.trim() }),
+      });
       setPhoneSaved(true);
     } catch {
       // non-critical — silently ignore

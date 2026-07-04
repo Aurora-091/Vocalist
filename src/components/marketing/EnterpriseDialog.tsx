@@ -7,8 +7,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { api } from "@/lib/api";
 import { toast } from "sonner";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 interface FormData {
   businessType: string;
@@ -194,15 +196,23 @@ export function EnterpriseDialog({ open, onOpenChange }: Props) {
   async function handleSubmit() {
     setSubmitting(true);
     try {
-      await api.post("/v1/enterprise/inquire", {
-        name: formData.name,
-        email: formData.email,
-        businessType: formData.businessType,
-        callVolume: formData.callVolume,
-        painPoint: formData.painPoint,
-        timeline: formData.timeline,
-        extraInfo: formData.extraInfo,
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/enterprise-inquire`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          businessType: formData.businessType,
+          callVolume: formData.callVolume,
+          painPoint: formData.painPoint,
+          timeline: formData.timeline,
+          extraInfo: formData.extraInfo,
+        }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || "Submission failed");
+      }
       setSubmitted(true);
     } catch {
       toast.error("Failed to submit inquiry. Please try again or reach out to enterprise@weeber.ai.");
