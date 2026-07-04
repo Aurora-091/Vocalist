@@ -198,10 +198,38 @@ class ElevenLabsProvider extends VoiceProvider {
         url = url.replace(/{{\s*BASE_URL\s*}}/g, baseUrl);
         url = url.replace(/{{\s*calendar_proxy_url\s*}}/g, calendarProxyUrl);
 
+        // Find remaining path params that are in double braces
+        const paramNames = [];
+        const regex = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
+        let match;
+        while ((match = regex.exec(url)) !== null) {
+          const paramName = match[1];
+          if (paramName !== "BASE_URL" && paramName !== "calendar_proxy_url") {
+            paramNames.push(paramName);
+          }
+        }
+
+        // Convert the double-braced parameters to single-braced ones for ElevenLabs compatibility
+        for (const name of paramNames) {
+          const r = new RegExp(`{{\\s*${name}\\s*}}`, 'g');
+          url = url.replace(r, `{${name}}`);
+        }
+
         resolved.api_schema = {
           url: url,
           method: tool.method || "POST",
         };
+
+        if (paramNames.length > 0) {
+          resolved.api_schema.path_params_schema = {};
+          for (const name of paramNames) {
+            resolved.api_schema.path_params_schema[name] = {
+              type: "string",
+              dynamic_variable: name,
+            };
+          }
+        }
+
         const headers = { ...(tool.headers || {}) };
         if (tool.authentication) {
           if (tool.authentication.type === "bearer" && tool.authentication.token) {
@@ -327,9 +355,20 @@ class ElevenLabsProvider extends VoiceProvider {
       from_number: fromE164,
     };
 
-    if (dynamicVars && Object.keys(dynamicVars).length > 0) {
-      conversationData.dynamic_variables = dynamicVars;
+    const finalDynamicVars = {
+      ...(dynamicVars || {}),
+      CALL_ID: metadata.call_id || metadata.target_id || "",
+    };
+
+    if (metadata.patient_id) {
+      finalDynamicVars.patient_id = metadata.patient_id;
+    } else if (dynamicVars && dynamicVars.patient_id) {
+      finalDynamicVars.patient_id = dynamicVars.patient_id;
+    } else if (dynamicVars && dynamicVars.customer_id) {
+      finalDynamicVars.patient_id = dynamicVars.customer_id;
     }
+
+    conversationData.dynamic_variables = finalDynamicVars;
 
     const payload = {
       agent_id: agentId,
