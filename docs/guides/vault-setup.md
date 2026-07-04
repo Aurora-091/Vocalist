@@ -19,24 +19,24 @@ To configure the database functions and RPC mappings, run the following SQL comm
 
 ```sql
 -- Create custom vault helper schema functions if not already present
-CREATE OR REPLACE FUNCTION vault_store(name text, secret text)
+CREATE OR REPLACE FUNCTION vault_store(p_name text, p_secret text)
 RETURNS void SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   -- Insert or update secrets in vault table
   INSERT INTO vault.decrypted_secrets (name, secret, description)
-  VALUES (name, secret, 'Weeber encrypted integration credential')
+  VALUES (p_name, p_secret, 'Weeber encrypted integration credential')
   ON CONFLICT (name) DO UPDATE SET secret = EXCLUDED.secret;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION vault_read(name text)
+CREATE OR REPLACE FUNCTION vault_read(p_name text)
 RETURNS text SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   v_secret text;
 BEGIN
   SELECT secret INTO v_secret
   FROM vault.decrypted_secrets
-  WHERE decrypted_secrets.name = vault_read.name;
+  WHERE decrypted_secrets.name = vault_read.p_name;
   
   RETURN v_secret;
 END;

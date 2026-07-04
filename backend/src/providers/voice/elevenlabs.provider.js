@@ -148,7 +148,7 @@ class ElevenLabsProvider extends VoiceProvider {
 
     if (agent.knowledge_base_ids && Array.isArray(agent.knowledge_base_ids)) {
       promptConfig.knowledge_base = agent.knowledge_base_ids.map((id) =>
-        typeof id === "string" ? { type: "id", id } : id
+        typeof id === "string" ? { type: "file", id } : id
       );
     }
 
@@ -190,14 +190,28 @@ class ElevenLabsProvider extends VoiceProvider {
         name: tool.name,
         description: tool.description || "",
       };
-      if (tool.method) resolved.method = tool.method;
-      if (tool.url) resolved.url = tool.url;
-      if (tool.authentication) resolved.authentication = tool.authentication;
-      if (tool.body_parameters) resolved.body_parameters = tool.body_parameters;
-      if (tool.parameters) resolved.parameters = tool.parameters;
-      if (tool.path_parameters) resolved.path_parameters = tool.path_parameters;
-      if (tool.query_parameters) resolved.query_parameters = tool.query_parameters;
-      if (tool.headers) resolved.headers = tool.headers;
+      
+      if (resolved.type === "webhook") {
+        resolved.api_schema = {
+          url: tool.url || "",
+          method: tool.method || "POST",
+        };
+        const headers = { ...(tool.headers || {}) };
+        if (tool.authentication) {
+          // Pass authentication if present, otherwise just keep it in headers if it's there
+          if (tool.authentication.type === "bearer" && tool.authentication.token) {
+            headers["Authorization"] = `Bearer ${tool.authentication.token}`;
+          }
+        }
+        if (Object.keys(headers).length > 0) {
+          resolved.api_schema.request_headers = headers;
+        }
+        const bodySchema = tool.body_parameters || tool.parameters;
+        if (bodySchema) {
+          resolved.api_schema.request_body_schema = bodySchema;
+        }
+      }
+      
       tools.push(resolved);
     }
     return tools;
