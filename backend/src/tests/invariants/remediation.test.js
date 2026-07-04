@@ -325,20 +325,21 @@ test("remediation: elevenlabs provider complies with agent payload structure req
   assert.ok(payload);
   assert.equal(payload.name, "Standard Booking Assistant");
 
-  // EL-001 & EL-004: verify interaction_budget nesting and async normalization
-  assert.ok(payload.conversation_config?.agent?.interaction_budget);
-  assert.equal(payload.conversation_config.agent.interaction_budget.total_budget, "10_minutes");
+  // EL-001 & EL-004: interaction_budget was removed from payload to prevent 422 errors
+  assert.equal(payload.conversation_config?.agent?.interaction_budget, undefined);
 
   // EL-002: verify knowledge base objects formatting
   assert.ok(payload.conversation_config.agent.prompt.knowledge_base);
   assert.deepEqual(payload.conversation_config.agent.prompt.knowledge_base, [
-    { type: "id", id: "kb-123" },
-    { type: "id", id: "kb-456" }
+    { type: "file", id: "kb-123" },
+    { type: "file", id: "kb-456" }
   ]);
 
   // EL-003: verify tools type parameter
   assert.ok(payload.conversation_config.agent.prompt.tools);
   assert.equal(payload.conversation_config.agent.prompt.tools[0].type, "webhook");
   assert.equal(payload.conversation_config.agent.prompt.tools[0].name, "book_appointment");
+  assert.ok(payload.conversation_config.agent.prompt.tools[0].api_schema);
+  assert.equal(payload.conversation_config.agent.prompt.tools[0].api_schema.url, "https://api.weeber.ai/v1/tools/calcom/book");
 });
 
