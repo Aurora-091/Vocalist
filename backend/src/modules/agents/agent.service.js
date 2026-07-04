@@ -334,15 +334,15 @@ class AgentService {
     const providerInstance = buildVoiceProvider({ agent, integrationConfig });
     await providerInstance.assignPhoneNumber({
       provider_ref: agent.provider_ref,
-      phone_number: phone.number
+      phone_number: phone.e164
     });
 
     // 4. Save relationship (both on agent, phone_number, and organization_agents)
     await supabase.from("phone_numbers").update({ agent_id: agentId }).eq("id", phoneNumberId);
-    
+
     const { data: updatedAgent, error: updateErr } = await supabase
       .from("agents")
-      .update({ inbound_number: phone.number, updated_at: new Date().toISOString() })
+      .update({ inbound_number: phone.e164, updated_at: new Date().toISOString() })
       .eq("id", agentId)
       .select("*")
       .single();

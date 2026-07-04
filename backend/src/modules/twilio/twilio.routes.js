@@ -278,17 +278,21 @@ router.post(
       .maybeSingle();
     if (error) throw error;
 
+    let assignmentError = null;
     if (req.body.agent_id && row) {
       const agentService = require("../agents/agent.service");
-      await agentService.assignNumber(req.supabase, req.auth.orgId, req.body.agent_id, row.id).catch(err => {
+      try {
+        await agentService.assignNumber(req.supabase, req.auth.orgId, req.body.agent_id, row.id);
+      } catch (err) {
         logger.error({ err: err.message }, "Failed to auto-assign phone number to provider agent");
-      });
+        assignmentError = err.message;
+      }
     }
 
     const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
     await updateOnboardingStep(req.supabase, req.auth.orgId, "get_number");
 
-    res.status(201).json({ number: row, sandbox: isSandbox() });
+    res.status(201).json({ number: row, sandbox: isSandbox(), assignment_error: assignmentError || undefined });
   })
 );
 
@@ -358,17 +362,21 @@ router.post(
       .maybeSingle();
     if (error) throw error;
 
+    let assignmentError = null;
     if (req.body.agent_id && row) {
       const agentService = require("../agents/agent.service");
-      await agentService.assignNumber(req.supabase, req.auth.orgId, req.body.agent_id, row.id).catch(err => {
+      try {
+        await agentService.assignNumber(req.supabase, req.auth.orgId, req.body.agent_id, row.id);
+      } catch (err) {
         logger.error({ err: err.message }, "Failed to auto-assign BYO phone number to provider agent");
-      });
+        assignmentError = err.message;
+      }
     }
 
     const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
     await updateOnboardingStep(req.supabase, req.auth.orgId, "get_number");
 
-    res.status(201).json({ number: row, sandbox: isSandbox() });
+    res.status(201).json({ number: row, sandbox: isSandbox(), assignment_error: assignmentError || undefined });
   })
 );
 

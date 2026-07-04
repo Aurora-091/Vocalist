@@ -6,15 +6,14 @@ const tenantClientCache = new Map();
 const CACHE_TTL_MS = 60_000;
 
 function isSandbox() {
-  return (
-    env.TWILIO_SANDBOX_MODE === true ||
-    !env.TWILIO_ACCOUNT_SID ||
-    !env.TWILIO_AUTH_TOKEN
-  );
+  return env.TWILIO_SANDBOX_MODE === true;
 }
 
 function masterClient() {
   if (isSandbox()) return null;
+  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN) {
+    throw new Error("TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN are required when sandbox mode is off");
+  }
   return twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 }
 
@@ -60,10 +59,11 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
   };
   await admin.from("twilio_subaccounts").upsert(row);
 
-  await admin.rpc("vault_store", {
+  const { error: vaultErr } = await admin.rpc("vault_store", {
     name: row.auth_token_ref,
     secret: sub.authToken,
-  }).catch(() => {});
+  });
+  if (vaultErr) throw new Error(`Failed to store subaccount credentials: ${vaultErr.message}`);
 
   return { ...row, _authToken: sub.authToken };
 }
@@ -79,7 +79,8 @@ async function linkByoAccount(orgId, { accountSid, authToken, friendlyName }) {
   const admin = requireAdmin();
   const secretRef = `vault:twilio:byo:${orgId}:auth_token`;
 
-  await admin.rpc("vault_store", { name: secretRef, secret: authToken }).catch(() => {});
+  const { error: vaultErr } = await admin.rpc("vault_store", { name: secretRef, secret: authToken });
+  if (vaultErr) throw new Error(`Failed to store credentials: ${vaultErr.message}`);
 
   const row = {
     org_id: orgId,
