@@ -9,6 +9,7 @@ All notable changes to the Weeber platform will be documented in this file. This
 ### Fixed
 - **ElevenLabs Provisioning Payload Error**: Fixed the ElevenLabs 422 API error (`PGRST202` / `Unprocessable Entity`) during agent creation. Mapped `knowledge_base_ids` correctly to `{ type: "file", id }` and restructured webhook definitions inside the `api_schema` property according to ElevenLabs specifications in `elevenlabs.provider.js`.
 - **Vault Function Ambiguity Error**: Resolved Postgres `42702` error ("column reference 'name' is ambiguous") by renaming the `name` parameter to `p_name` in both `vault_store` and `vault_read` SQL functions. The fix is now officially tracked in migration `20260704000001_vault_store_fix.sql`.
+- **Stale Payload Tests**: Fixed false-positive CI failures in `remediation.test.js` by updating the ElevenLabs payload assertions to match the newly corrected `knowledge_base` and `tools` schema structures, removing the defunct `interaction_budget` assertions.
 
 ---
 
