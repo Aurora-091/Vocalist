@@ -197,7 +197,7 @@ export default function Contacts() {
                             No
                           </Button>
                           <Button
-                            variant="danger"
+                            variant="destructive"
                             size="sm"
                             onClick={() => deleteContact(c.id)}
                             disabled={deletingId === c.id}
