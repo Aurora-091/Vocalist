@@ -59,7 +59,7 @@ Whenever you edit or review code in this repository, you **must** strictly enfor
 ### 2. Invariant Verification
 Before ending any turn, you **must** verify compilation and tests:
 - **Frontend Type Checking**: Run `npx tsc --noEmit` in the workspace root. Confirm 0 errors.
-- **Backend Tests**: Run `npm test` inside the `backend/` directory. Confirm all 60 tests pass.
+- **Backend Tests**: Run `npm test` inside the `backend/` directory. Confirm all tests pass.
 - **Backend Lint**: Ensure CommonJS conventions match and code formatting is correct.
 
 ### 3. Documentation Synchronicity

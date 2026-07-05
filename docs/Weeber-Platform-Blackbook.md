@@ -57,7 +57,7 @@ Caller / Browser
        │
    Twilio DID
        │
-  Hono Admission Gate  ← rate check + spend guard (always runs before CAI)
+  Express Admission Gate  ← rate check + spend guard (always runs before CAI)
        │
 ElevenLabs CAI  ←──── VoiceProvider abstraction
        │
@@ -69,7 +69,7 @@ ElevenLabs CAI  ←──── VoiceProvider abstraction
 **Non-negotiable architectural constraints:**
 
 1. Every outbound dial must pass `can_dial()` at dial time — enforced in the dialer worker, not the UI
-2. Inbound calls always route through the Hono admission gate before reaching ElevenLabs. Native CAI number binding is explicitly banned (it would bypass spend/rate limits)
+2. Inbound calls always route through the Express admission gate before reaching ElevenLabs. Native CAI number binding is explicitly banned (it would bypass spend/rate limits)
 3. Consent and DNC ledgers are append-only — no UPDATE/DELETE permitted by DB trigger
 4. RLS is enabled on every tenant table — no cross-org data read is possible
 5. Secrets live in Vault/KMS references, never in plaintext columns
@@ -630,9 +630,11 @@ TelephonyProvider interface:
 **Implemented adapters:**
 - `twilio.adapter.js` — Twilio REST API v2
 - `plivo.adapter.js` — Plivo REST API v1
+- `exotel.adapter.js` — Exotel (Indian cloud telephony)
+- `vobiz.adapter.js` — VoBiz (Indian VoIP)
 
 **Factory:**  
-`getTelephonyAdapter(providerKey, { orgId, credentials })` returns the correct adapter instance. Adding a new provider (Exotel, Vobiz) is one file.
+`getTelephonyAdapter(providerKey, { orgId, credentials })` returns the correct adapter instance.
 
 ---
 
@@ -675,6 +677,9 @@ The admin API is behind `RequireAdmin` middleware (`backend/src/middleware/admin
 | `oauth-exchange` | Generic OAuth token exchange for Cal.com, HubSpot |
 | `google-sheets-export` | Export call/campaign data to Google Sheets |
 | `whatsapp-webhook` | Inbound WhatsApp messages handler |
+| `waitlist-join` | Waitlist signup with email deduplication |
+| `waitlist-phone` | Phone-number-based waitlist entries |
+| `enterprise-inquire` | Enterprise inquiry submission |
 
 All edge functions enforce CORS headers on every response, including preflight.
 

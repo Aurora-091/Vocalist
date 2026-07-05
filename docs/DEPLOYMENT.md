@@ -26,7 +26,7 @@ graph TD
   - Environment variables must be set at build time (`VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
 
 ### Backend (Express API)
-* **Platform**: Render / Vercel Serverless / AWS Elastic Beanstalk
+* **Platform**: Railway (see `backend/railway.json` and `backend/Procfile`)
 * **Configuration**:
   - Run command: `npm start` (defined in `backend/package.json`).
   - CommonJS runtime bindings.
@@ -60,6 +60,9 @@ Ensure the following properties are configured in the environment profile:
 * `STRIPE_WEBHOOK_SECRET`: Secure webhook challenge signature validation token.
 * `SHOPIFY_API_KEY`: Developer key for Shopify Partners OAuth integration.
 * `SHOPIFY_API_SECRET`: Developer secret for HMAC parameter check verification.
+* `WEEBERSH_INSTALL_URL`: Shopify app install redirect URL (default: `https://weebersh.com/api/auth`).
+* `WEEBER_INTERNAL_SECRET`: Guards internal Shopify route endpoints (`/api/integrations/shopify/*`).
+* `RESEND_API_KEY`: Resend email service API key for transactional emails.
 
 ---
 

@@ -1,8 +1,8 @@
 # Weeber — Database Design Guide
 
-**Stack:** Supabase (Postgres 15) · RLS-enforced multi-tenancy · SQL migrations (42 files)
+**Stack:** Supabase (Postgres 15) · RLS-enforced multi-tenancy · SQL migrations (56 files)
 **Scope:** Schema + ERD, RLS, consent/DNC + audit, dialer state machine, billing/metering, migrations, indexes/partitioning, backups/PITR/GDPR, webhook ledger, call-record storage.
-**Last updated:** 2026-06-18
+**Last updated:** 2026-07-05
 **Audience:** the 2 engineers. Design-doc depth with copy-ready DDL for the load-bearing pieces.
 
 > **Legal-critical reminder:** the consent/DNC tables, the dialer state machine, the metering ledger, and RLS are **Tier-1**. Human-authored. Agents may write tests and review only. Everything in this doc that touches those is written to be the *most-tested code in the system*.
@@ -114,6 +114,9 @@ create type notification_kind   as enum ('missed_call','voicemail','campaign_don
 | `platform_settings` | Global admin configuration | `20260616050318` |
 | `spend_guards` | Daily/monthly spending limits per org/agent/campaign | `20260604090200` |
 | `spend_counters` | Rolling spent + reserved tracking | `20260604090200` |
+| `playbooks` | Per-org named call flow configurations (cart_recovery, cod_confirm, feedback) | `20260705100647` |
+
+> `scheduled_calls` extended with v2 columns: `checkout_token`, `order_id`, `attempt`, `outcome`, `recovered_order_id`, `recovered_value`, `recovered_currency`, `cancelled_reason`, `playbook_key` (migration `20260705100422`).
 
 > Enums over `text + check`: they're self-documenting, index-friendly, and the agent CI lint (`sdk-import-lint`) can assert no raw string states leak into the dialer code.
 
@@ -207,7 +210,7 @@ create table integrations (
 
 ## 3.1 Onboarding, Verticals, Knowledge, Numbers & standard features
 
-> Backs the [User-Flow & Knowledge spec](Aurora-UserFlow-and-Knowledge.md). Every table carries `org_id` and RLS **except** `vertical_configs` (global config, read-only to tenants). Multi-tenant principle: **a vertical is a config row, never hardcoded.**
+> Backs the vertical and onboarding spec. Every table carries `org_id` and RLS **except** `vertical_configs` (global config, read-only to tenants). Multi-tenant principle: **a vertical is a config row, never hardcoded.**
 
 ### Vertical config registry (global)
 ```sql

@@ -99,13 +99,12 @@ This document tracks all major product, architecture, and technology decisions m
 
 ## DEC-010: Server-Side PostHog Analytics Proxy and Node 22 CI Upgrade
 * **Date**: Saturday, 2026-06-27 01:40 IST
-* **Status**: Accepted
-* **Context**: We need to display product and marketing analytics to platform administrators directly within our custom admin panel, without requiring them to navigate to the external PostHog dashboard. However, querying PostHog's API directly from the client would expose the PostHog Personal API Key, violating security policies. Furthermore, running local tests in GitHub Actions was failing because Node.js 20 lacks native WebSocket support (which the Supabase client depends on).
+* **Status**: Accepted → Backend proxy subsequently removed (see Unreleased in CHANGELOG)
+* **Context**: We needed to display product and marketing analytics to platform administrators within our custom admin panel, without requiring them to navigate to the external PostHog dashboard. Querying PostHog's API directly from the client would expose the PostHog Personal API Key. Additionally, running local tests in GitHub Actions was failing because Node.js 20 lacks native WebSocket support.
 * **Decision**: We resolved this with two actions:
-  1. Built a secure server-side PostHog HogQL query proxy in the Node/Express backend (`posthog.service.js` and `/v1/admin/posthog/*` routes) gated by super-admin authorization. The frontend client (`admin-api.ts`) communicates only with this proxy.
+  1. Built a secure server-side PostHog HogQL query proxy in the Node/Express backend, gated by super-admin authorization. **Note: `posthog.service.js` and the `/v1/admin/posthog/*` routes were subsequently removed when the backend PostHog dependency was dropped. Analytics dashboards now rely on the frontend-only PostHog JS SDK.**
   2. Upgraded the CI workflow (`.github/workflows/ci.yml`) runner version to Node.js 22 to natively support WebSockets, fixing the testing regressions.
 * **Key Files**:
-  - `backend/src/services/posthog.service.js` — HogQL query service
   - `backend/src/modules/admin/admin.routes.js` — Admin routing and controller logic
   - `src/lib/admin-api.ts` — Client-side API mapping
   - `src/pages/admin/analytics/ProductAnalytics.tsx` — Product analytics dashboard

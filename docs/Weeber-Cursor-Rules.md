@@ -52,7 +52,7 @@ Vocalist/
 │   │   │   ├── campaigns/      campaigns.routes.js · state-machine.js
 │   │   │   ├── consent/        consent-gate.js · consent.routes.js
 │   │   │   ├── contacts/       contacts.routes.js · contacts.validator.js
-│   │   │   ├── integrations/   integration.service.js · providers/shopify · hubspot
+│   │   │   ├── integrations/   integration.service.js · providers/ (12 providers: shopify, hubspot, calcom, cliniko, drchrono, freshsales, jane_app, pipedrive, salesforce, whatsapp, zoho_crm + shopify.internal.routes.js)
 │   │   │   ├── knowledge/      knowledge.routes.js
 │   │   │   ├── notifications/  notifications.routes.js
 │   │   │   ├── numbers/        numbers.routes.js
@@ -73,14 +73,15 @@ Vocalist/
 │   │   │   ├── retell.provider.js      ← compiled, NOT registered
 │   │   │   └── mock.provider.js        ← tests only
 │   │   ├── services/           persona.service.js · twilio-stream.service.js
-│   │   ├── tests/invariants/   12 test files covering critical invariants
-│   │   ├── utils/              asyncHandler · errors · idempotency · phone · promptBuilder
+│   │   ├── tests/invariants/   19 test files covering critical invariants
+│   │   ├── utils/              asyncHandler · errors · idempotency · phone · credential.helper
 │   │   └── workers/            ← dialer worker must be built here
 │   └── package.json
 │
 ├── src/                        Vite + React frontend (TypeScript + Tailwind v4)
 │   ├── pages/                  Page routing & views
-│   ├── components/             UI & layouts (standard shadcn/ui components)
+│   ├── components/             UI, layouts, WebTestCallModal, VariablesPanel, CommandPalette
+│   ├── config/                 agent-variables.ts · verticals/ · marketing.ts
 │   └── lib/                    api.ts (custom client) · db.ts · supabase.ts · admin-api.ts
 │
 └── supabase/
@@ -148,9 +149,10 @@ Make sure environment variables are declared in server config. Core variables:
 | Admin Panel v2 (expanded charts & filters) | ✅ Implemented |
 | Testing Infrastructure (Vitest) | ✅ Implemented |
 | Zod Form Schemas & Helmet headers | ✅ Implemented |
-| **Dialer Worker** | ❌ MISSING (P0) |
-| **Inbound TwiML Admission Gate** | ❌ MISSING (P0) |
-| **Shopify OAuth App Callback** | ❌ MISSING (P0) |
-| **Shopify Agent Tools** | ❌ MISSING (P1) |
-| **Abandoned Cart Webhook Trigger** | ❌ MISSING (P1) |
+| Dialer Worker | ✅ Implemented |
+| Inbound TwiML Admission Gate | ✅ Implemented |
+| Shopify OAuth App Callback | ✅ Implemented |
+| Shopify v2 (Playbooks + Scheduled Calls) | ✅ Implemented |
+| Web Test Call (in-browser via ElevenLabs) | ✅ Implemented |
+| Indian Telephony (Exotel, VoBiz) | ✅ Implemented |
 | **Stripe Subscriptions Webhook Sync** | ❌ MISSING (P1) |

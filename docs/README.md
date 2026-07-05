@@ -23,17 +23,13 @@ Welcome to the Weeber platform documentation directory. This folder houses all t
 | Document | Purpose |
 |---|---|
 | [`Weeber-Platform-Blackbook.md`](./Weeber-Platform-Blackbook.md) | Technical architecture overview — database patterns, spend boundaries, multi-tenancy schemas, and security design. |
-| [`Weeber-Agents-Reference.md`](./Weeber-Agents-Reference.md) | Complete directory of voice agent structures, prompts layout, and integration mappings. |
-| [`database-guide.md`](./database-guide.md) | Technical schema catalog detailing Supabase migrations (42 files), triggers, column indexes, partitioning, and 40+ tables. |
-| [`uiux.md`](./uiux.md) | UI/UX specification including vertical-tenant architecture, config-driven sidebar, and dashboard design. |
+| [`database-guide.md`](./database-guide.md) | Technical schema catalog detailing Supabase migrations, triggers, column indexes, partitioning, and 40+ tables. |
 
 ---
 
 ## 3. Active Implementation Plans
 
-| Document | Purpose |
-|---|---|
-| [`implementation-plan-phase-3-india.md`](./implementation-plan-phase-3-india.md) | Telephony integration specifications for Indian markets (Plivo, Exotel, TRAI compliance, and INR billing flows). |
+_No active phase plans. Historical plans are in `archive/`._
 
 ---
 
@@ -53,7 +49,6 @@ src/
 │   ├── db.ts               ← Supabase data access layer (30+ functions)
 │   ├── api.ts              ← Backend HTTP client with auth retry
 │   ├── admin-api.ts        ← Admin panel API client
-│   ├── tracking.ts         ← Supabase tracking profiles & settings data access layer
 │   └── supabase.ts         ← Supabase client initialization
 ├── components/
 │   ├── layout/             ← AppShell (config-driven sidebar), AdminShell
