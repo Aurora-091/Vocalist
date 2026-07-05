@@ -17,7 +17,13 @@ router.delete("/shopify/disconnect", requireAuth, requireOrg, asyncHandler(handl
 router.use(requireAuth, requireOrg);
 
 const upsertSchema = z.object({
-  type: z.enum(["shopify", "calcom", "google_cal", "outlook_cal", "crm", "zapier", "twilio"]),
+  type: z.enum([
+    "shopify", "hubspot", "pipedrive", "freshsales", "cliniko", "jane_app",
+    "calcom", "google_cal", "google_sheets", "whatsapp",
+    "zoho_crm", "salesforce", "drchrono",
+    "twilio", "plivo", "exotel", "vobiz",
+    "outlook_cal", "zapier",
+  ]),
   config: z.record(z.string(), z.any()).default({}),
   secret_ref: z.string().optional(),
   status: z.enum(["active", "disabled"]).default("active"),
