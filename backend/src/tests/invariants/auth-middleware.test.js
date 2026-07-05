@@ -1,4 +1,4 @@
-﻿/**
+/**
  * auth-middleware.test.js
  *
  * Unit tests for the decodeBearer token-extraction logic in auth.middleware.js.
