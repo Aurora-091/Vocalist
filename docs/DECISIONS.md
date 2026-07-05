@@ -83,7 +83,7 @@ This document tracks all major product, architecture, and technology decisions m
 * **Key Files**:
   - `src/components/AnalyticsLoader.tsx` — Main analytics script loader and pageview dispatcher.
   - `src/pages/admin/AdminSettings.tsx` — Dashboard configuration card displaying validation status.
-  - `supabase/migrations/20260619073425_20260619124100_gtm_container_settings.sql` — SQL migration creating singleton settings.
+  - `supabase/migrations/20260619073425_gtm_container_settings.sql` — SQL migration creating singleton settings.
 
 ---
 

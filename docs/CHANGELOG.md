@@ -66,6 +66,23 @@ Nine new integration provider modules under `backend/src/modules/integrations/pr
 - **`stub.provider.js`**: Placeholder integration stub removed.
 - **Docs cleanup**: Removed `docs/guides/custom-tools.md`, `docs/guides/developer-rules.md`, `docs/guides/vault-setup.md`, `docs/1-WELCOME.md`, `docs/2-JOURNEY_AND_HISTORY.md`, `backend/.../SHOPIFY_INTEGRATION.md`. `docs/architecture/security-audit.md` → relocated to `AUDIT.md` at repo root.
 
+### Database Cleanup — Saturday, 2026-07-05 12:00 IST
+
+#### Migration Deduplication
+- **Deleted** `20260619110000_tracking_management_system.sql` — exact duplicate of `20260619054629_tracking_management_system.sql`. Would cause "table already exists" errors if both applied sequentially.
+- **Deleted** `20260619124100_gtm_container_settings.sql` — exact duplicate of the double-timestamp-named canonical file.
+- **Renamed** `20260619073425_20260619124100_gtm_container_settings.sql` → `20260619073425_gtm_container_settings.sql` to follow standard single-timestamp naming convention.
+
+#### Dead Table Removal
+- **Dropped** `audit_log` — created in `20260611041907`, zero references in any backend, frontend, or edge function code.
+- **Dropped** `consent_notices` — created in `20260629000000`, DPDP compliance placeholder never integrated.
+- **Dropped** `dpdp_requests` — created in `20260629000000`, data subject request tracker never integrated.
+- **Dropped** `tracking_profiles` — superseded by GTM-based `site_settings` approach; safety cleanup for ambiguous migration ordering.
+- **Dropped** `activate_tracking_profile()` function — belonged to the removed `tracking_profiles` table.
+
+#### Documentation
+- **`database-guide.md`**: Added section 8.1 (Webhook Architecture — 3 tables, 3 purposes), section 8.2 (call_events vs usage_ledger rationale), section 8.3 (Partition Retention Policy). Updated migration count from 56 to 54.
+
 ---
 
 ## [1.6.0] — 2026-07-04

@@ -1,6 +1,6 @@
 # Weeber — Database Design Guide
 
-**Stack:** Supabase (Postgres 15) · RLS-enforced multi-tenancy · SQL migrations (56 files)
+**Stack:** Supabase (Postgres 15) · RLS-enforced multi-tenancy · SQL migrations (54 files)
 **Scope:** Schema + ERD, RLS, consent/DNC + audit, dialer state machine, billing/metering, migrations, indexes/partitioning, backups/PITR/GDPR, webhook ledger, call-record storage.
 **Last updated:** 2026-07-05
 **Audience:** the 2 engineers. Design-doc depth with copy-ready DDL for the load-bearing pieces.
@@ -662,6 +662,42 @@ Handler contract (Edge Function):
 4. For voice-status webhooks, validate the `lease_token` against `campaign_targets` before applying any dialer transition (§5.1).
 
 > This single chokepoint gives at-least-once delivery + exactly-once effect, and a replayable audit of everything that ever hit the system.
+
+### 8.1 Webhook Architecture (3 Tables, 3 Purposes)
+
+The system has three webhook-related tables that serve distinct, non-overlapping purposes:
+
+| Table | Role | Partitioned | Retention |
+|-------|------|-------------|-----------|
+| `webhook_events` | **Inbound audit ledger** — every webhook received from external providers (ElevenLabs, Stripe, Twilio, Shopify) is logged here before processing. Append-only, deduped on `(source, external_id)`. | Yes (monthly by `received_at`) | 6 months |
+| `webhook_endpoints` | **Outbound delivery config** — stores tenant-configured URLs where Weeber fires call outcomes, campaign events, etc. (Zapier-style). Not high-volume; just configuration rows. | No | Indefinite |
+| `webhook_dlq` | **Dead letter queue** — failed webhook processing attempts land here for investigation and replay. Used by `elevenlabs.handler.js` and `twilio-stream.service.js` to capture failures without blocking the main webhook pipeline. | No | 90 days (manual purge) |
+
+This is NOT redundancy. Each table has a different write pattern, different consumers, and different lifecycle:
+- `webhook_events` is written by inbound webhook handlers, read by the admin logs UI.
+- `webhook_endpoints` is written by merchants in Settings, read by the `webhooks-out` worker.
+- `webhook_dlq` is written by error paths in handlers, read by admin support for debugging.
+
+### 8.2 call_events vs usage_ledger (Why Both Exist)
+
+| Table | Role | Write frequency | Consumers |
+|-------|------|-----------------|-----------|
+| `call_events` | **Operational event stream** — every in-call event (barge-in, function calls, DTMF, silence detection, transcript chunks). High cardinality: 10–50 events per call. | Very high | Call detail pages, real-time monitoring, debugging |
+| `usage_ledger` | **Billing-critical immutable record** — one row per completed call with `cost_usd`, `duration_seconds`, `meter_kind`. Drives billing rollups and spend guard checks. | Low (1 per call) | Billing service, spend guards, invoicing |
+
+Merging these would either bloat billing queries with operational noise or lose the granular event stream needed for debugging. They share `call_id` as a join key but serve fundamentally different audiences.
+
+### 8.3 Partition Retention Policy
+
+Partitioned tables (`call_events`, `webhook_events`, `usage_ledger`) grow indefinitely without a retention strategy. Target retention:
+
+| Table | Retention | Rationale |
+|-------|-----------|-----------|
+| `call_events` | 12 months | Operational debugging; rarely needed beyond recent calls |
+| `webhook_events` | 6 months | Audit trail; replayable from provider if older events needed |
+| `usage_ledger` | **Indefinite** | Billing records required for legal/tax compliance |
+
+Partition creation is automated via `ensure_monthly_partitions()` called by pg_cron. Old partitions beyond retention windows should be detached and dropped monthly.
 
 ---
 
