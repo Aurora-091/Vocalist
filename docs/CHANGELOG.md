@@ -77,6 +77,17 @@ Nine new integration provider modules under `backend/src/modules/integrations/pr
 - **M5 Webhook error logging** (`webhook.service.js`): `markProcessed` now logs `P0001` exceptions with a warning instead of silently swallowing them.
 - **M7 trust proxy** (`app.js`): `trust proxy` is now only set in production, not unconditionally in all environments.
 
+### Database Linter Security Remediation — 2026-07-05
+
+- **Function permissions** (`20260705200000_linter_security_remediation.sql`): Explicitly revoked `EXECUTE` on five SECURITY DEFINER functions from `anon` and `authenticated` roles, and granted exclusively to `service_role`:
+  - `vault_read(text)` and `vault_store(text, text)` — prior migration only revoked from `public`; named roles needed explicit revocation.
+  - `enforce_max_sessions()` — trigger function invoked internally; no RPC access needed.
+  - `ensure_monthly_partitions(integer)` — DBA utility; no application-role access needed.
+  - `auth_org()` — only `anon` revoked; `authenticated` must retain access because every RLS policy expression calls it.
+- **Partition RLS policies**: Added explicit `CREATE POLICY` statements on all 57 existing monthly partitions (`call_events_*`, `usage_ledger_*`, `webhook_events_*`). The Supabase linter does not recognise policy inheritance from parent to partition tables; explicit policies silence the warning and provide defense-in-depth.
+- **`ensure_monthly_partitions()` rewrite**: Updated the function to create matching policies on newly created partitions at the same time as enabling RLS, so future monthly partitions are never born without policies.
+- **Leaked Password Protection**: Manual step — enable in Supabase Dashboard under Authentication > Providers > Email > "Leaked Password Protection". Cannot be set via SQL migration. See `docs/DEPLOYMENT.md` for the checklist item.
+
 ### Database Cleanup — Saturday, 2026-07-05 12:00 IST
 
 #### Migration Deduplication

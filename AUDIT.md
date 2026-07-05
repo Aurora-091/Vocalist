@@ -16,8 +16,17 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 | High | 8 (8 fixed) |
 | Medium | 14 (12 fixed, 2 open: M1, M2) |
 | Low / Informational | 9 |
+| DB Linter | 3 categories (2 fixed via migration, 1 manual dashboard step) |
 
-**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction. The July 5 remediation pass addressed CSP, code-splitting, Twilio lifecycle, rate limiting, and remaining medium findings (M3–M8 resolved or verified safe).
+**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction. The July 5 remediation pass addressed CSP, code-splitting, Twilio lifecycle, rate limiting, remaining medium findings (M3–M8 resolved or verified safe), and Supabase database linter warnings (function permissions, partition RLS policies).
+
+### DB Linter Findings (2026-07-05)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| SECURITY DEFINER functions callable by anon/authenticated | Fixed | `20260705200000_linter_security_remediation.sql` — explicit REVOKE from anon+authenticated, GRANT to service_role. `auth_org()` keeps authenticated access (required for RLS). |
+| 57 partition tables with RLS enabled but no policies | Fixed | Same migration — DO block creates matching policies on all existing partitions; `ensure_monthly_partitions()` rewritten to create policies on future partitions at creation time. |
+| Leaked password protection disabled | Open (manual) | Dashboard-only setting — cannot be set via SQL. Enable in Supabase Dashboard: Authentication > Providers > Email > "Leaked Password Protection". |
 
 ---
 
