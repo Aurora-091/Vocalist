@@ -53,16 +53,16 @@ Nine new integration provider modules under `backend/src/modules/integrations/pr
 - **`oauth-exchange` edge function**: Multi-provider state handling with CSRF verification.
 - **Calls routes**: Added filtering by `status`, `agent_id`, `from`/`to` date range on the calls list endpoint.
 - **Segment routes**: Added filter/search to contact segment list endpoint.
-- **`index.html`**: Updated CSP headers; added `@11labs` WebSocket domains to `connect-src`.
+- **`index.html`**: Updated CSP headers (tracking domains, Supabase, PostHog).
 - **Dependencies**: Added `@11labs/react` (in-browser ElevenLabs SDK). Removed `posthog-node` backend dependency.
+- **`credential.helper.js`**: Refactored — legacy `vaultifyConfig` approach replaced with Vault RPC-based `readSecret`/`writeSecret`. File retained; still used by integration routes.
+- **Test files**: `integrations.test.js`, `remediation.test.js`, `auth-middleware.test.js` retained but may reference deprecated patterns. Active tests: `shopify-v2.test.js`, `shopify-provider.test.js`, `billing.test.js`, `elevenlabs.test.js`.
 
 ### Removed
 
 - **`tools/` module** (`backend/src/modules/tools/`): Entire tools layer removed — routes, middleware, and all four handler files (`calcom`, `calendar`, `shopify`, `twilio`). Tool execution now lives inside integration providers and webhook handlers.
 - **`custom.orchestrator.js`**: Custom voice orchestration removed. ElevenLabs CAI is the sole active runtime.
 - **`posthog.service.js`**: Backend PostHog service removed. Analytics is frontend-only.
-- **`credential.helper.js`**: Legacy vaultify helper removed. Credential handling integrated per-provider.
-- **Stale test files**: `integrations.test.js`, `remediation.test.js`, `auth-middleware.test.js` removed from remote (depended on removed modules). Active tests: `shopify-v2.test.js`, `shopify-provider.test.js`, `billing.test.js`, `elevenlabs.test.js`.
 - **`stub.provider.js`**: Placeholder integration stub removed.
 - **Docs cleanup**: Removed `docs/guides/custom-tools.md`, `docs/guides/developer-rules.md`, `docs/guides/vault-setup.md`, `docs/1-WELCOME.md`, `docs/2-JOURNEY_AND_HISTORY.md`, `backend/.../SHOPIFY_INTEGRATION.md`. `docs/architecture/security-audit.md` → relocated to `AUDIT.md` at repo root.
 
