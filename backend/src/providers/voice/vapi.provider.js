@@ -9,7 +9,8 @@ class VapiProvider extends VoiceProvider {
   async _call(method, path, body) {
     const apiKey = this.config.api_key;
     if (!apiKey) {
-      throw new Error("Vapi provider requires config.api_key");
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Vapi provider requires config.api_key");
     }
     const res = await fetch(`${VAPI_BASE}${path}`, {
       method,
@@ -21,7 +22,11 @@ class VapiProvider extends VoiceProvider {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(`Vapi ${method} ${path} failed: ${res.status} ${text.slice(0, 200)}`);
+      const { BadGateway, BadRequest } = require("../../utils/errors");
+      if (res.status >= 400 && res.status < 500) {
+        throw BadRequest(`Vapi ${method} ${path} failed: ${res.status}`, { details: text.slice(0, 500) });
+      }
+      throw BadGateway(`Vapi ${method} ${path} failed: ${res.status}`, { details: text.slice(0, 500) });
     }
     return res.status === 204 ? null : res.json();
   }
@@ -29,7 +34,10 @@ class VapiProvider extends VoiceProvider {
   async startCall({ toE164, fromE164, leaseToken, metadata = {} }) {
     const assistantId = this.agent?.provider_ref;
     const phoneNumberId = this.config.phone_number_id;
-    if (!assistantId) throw new Error("agent.provider_ref (Vapi assistantId) is required");
+    if (!assistantId) {
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("agent.provider_ref (Vapi assistantId) is required");
+    }
 
     const body = {
       assistantId,

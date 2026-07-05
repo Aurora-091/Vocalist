@@ -7,7 +7,8 @@ const crypto = require("crypto");
 const env = require("./config/env");
 const logger = require("./config/logger");
 const { notFound, errorHandler } = require("./middleware/error.middleware");
-const { apiLimiter } = require("./middleware/rate-limit.middleware");
+const { apiLimiter, authLimiter } = require("./middleware/rate-limit.middleware");
+const asyncHandler = require("./utils/asyncHandler");
 
 const authRoutes = require("./modules/auth/auth.routes");
 const orgRoutes = require("./modules/organizations/organizations.routes");
@@ -35,6 +36,7 @@ const waitlistRoutes = require("./modules/waitlist/waitlist.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
 const skillRoutes = require("./modules/skills/skills.routes");
 const enterpriseRoutes = require("./modules/enterprise/enterprise.routes");
+const toolRoutes = require("./modules/tools/tools.routes");
 const shopifyInternalRoutes = require("./modules/integrations/shopify.internal.routes");
 
 function buildCorsOptions() {
@@ -94,19 +96,18 @@ function createApp() {
 
   app.use("/webhooks", webhookRoutes);
 
-  app.use(express.json({ limit: "1mb" }));
-  app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+  app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
   app.get("/", (_req, res) => res.json({ service: "aurora-api", status: "ok" }));
   app.get("/health", (_req, res) =>
     res.json({ status: "UP", uptime: process.uptime(), timestamp: new Date().toISOString() })
   );
 
-  // S2S internal routes from weebersh (before JSON parser is fine — it has its own)
   app.use("/api/integrations/shopify", shopifyInternalRoutes);
 
-  app.use("/v1/auth", authRoutes);
-  app.use("/v1/waitlist", waitlistRoutes);
+  app.use("/v1/auth", authLimiter, authRoutes);
+  app.use("/v1/waitlist", authLimiter, waitlistRoutes);
   app.use("/v1/enterprise", enterpriseRoutes);
 
   app.use("/v1", apiLimiter);
@@ -133,6 +134,7 @@ function createApp() {
   app.use("/v1/twilio", twilioRoutes);
   app.use("/v1/admin", adminRoutes);
   app.use("/v1/skills", skillRoutes);
+  app.use("/v1/tools", toolRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

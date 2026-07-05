@@ -3,13 +3,25 @@ const logger = require("../../config/logger");
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io";
 
+function replacePlaceholders(text, variables) {
+  if (typeof text !== "string" || !variables || typeof variables !== "object") return text;
+  let result = text;
+  for (const [key, val] of Object.entries(variables)) {
+    if (val === undefined || val === null) continue;
+    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+    result = result.replace(regex, String(val));
+  }
+  return result;
+}
+
 class ElevenLabsProvider extends VoiceProvider {
   static get name() { return "elevenlabs"; }
 
   async _call(method, path, body, isMultipart = false) {
     const apiKey = this.config.api_key || process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
-      throw new Error("ElevenLabs provider requires config.api_key or ELEVENLABS_API_KEY env var");
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("ElevenLabs provider requires config.api_key or ELEVENLABS_API_KEY env var");
     }
 
     const headers = {
@@ -32,10 +44,12 @@ class ElevenLabsProvider extends VoiceProvider {
       } catch {
         detail = await res.text().catch(() => "");
       }
-      const err = new Error(`ElevenLabs ${method} ${path} failed: ${res.status}`);
-      err.status = res.status;
-      err.detail = detail;
-      throw err;
+      const { BadGateway, BadRequest } = require("../../utils/errors");
+      if (res.status >= 400 && res.status < 500) {
+        logger.error({ detail, status: res.status, method, path, payload: body }, "ElevenLabs 4xx error");
+        throw BadRequest(`ElevenLabs ${method} ${path} failed: ${res.status}`, detail);
+      }
+      throw BadGateway(`ElevenLabs ${method} ${path} failed: ${res.status}`, detail);
     }
 
     if (res.status === 204) return null;
@@ -69,29 +83,35 @@ class ElevenLabsProvider extends VoiceProvider {
     const accountSid = sub?.subaccount_sid || process.env.TWILIO_ACCOUNT_SID;
 
     if (!accountSid || !authToken) {
-      throw new Error("Twilio credentials unavailable - cannot proceed with telephony operation");
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Twilio credentials unavailable - cannot proceed with telephony operation");
     }
 
     return { accountSid, authToken };
   }
 
   async _getOrImportPhoneNumberId(phone_number) {
+    const credentials = await this._getTwilioCredentials();
+    if (credentials.accountSid && credentials.accountSid.startsWith("ACsandbox")) {
+      return "sandbox-phone-number-id";
+    }
+
     const res = await this._call("GET", "/v1/convai/phone-numbers");
     const matched = res.phone_numbers?.find((p) => p.phone_number === phone_number);
     if (matched) return matched.phone_number_id;
 
     // Import it
-    const credentials = await this._getTwilioCredentials();
     if (!credentials.accountSid || !credentials.authToken) {
-      throw new Error("Twilio credentials missing, cannot import number to ElevenLabs");
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Twilio credentials missing, cannot import number to ElevenLabs");
     }
 
     const importRes = await this._call("POST", "/v1/convai/phone-numbers", {
       phone_number: phone_number,
       label: `Imported ${phone_number}`,
       provider: "twilio",
-      twilio_account_sid: credentials.accountSid,
-      twilio_auth_token: credentials.authToken,
+      sid: credentials.accountSid,
+      token: credentials.authToken,
     });
 
     return importRes.phone_number_id;
@@ -108,12 +128,19 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   _buildAgentPayload(agent, systemPrompt) {
-    const firstMessage = agent.first_message || agent.persona?.first_message || agent.persona?.opening_message || "Hello!";
+    const variables = {
+      ...(agent.persona?.variable_values || {}),
+      ...(agent.variable_values || {}),
+    };
+    const rawFirstMessage = agent.first_message || agent.persona?.first_message || agent.persona?.opening_message || "Hello!";
+    const firstMessage = replacePlaceholders(rawFirstMessage, variables);
+    const resolvedPrompt = replacePlaceholders(systemPrompt, variables);
+
     const language = agent.language || (agent.languages && agent.languages[0]) || "en";
     const voiceId = agent.voice_id || "21m00Tcm4TlvDq8ikWAM";
 
     const promptConfig = {
-      prompt: systemPrompt,
+      prompt: resolvedPrompt,
       llm: "gemini-2.5-flash",
       temperature: 0.5,
     };
@@ -124,8 +151,16 @@ class ElevenLabsProvider extends VoiceProvider {
     }
 
     if (agent.knowledge_base_ids && Array.isArray(agent.knowledge_base_ids)) {
-      promptConfig.knowledge_base = agent.knowledge_base_ids;
+      promptConfig.knowledge_base = agent.knowledge_base_ids.map((id) =>
+        typeof id === "string" ? { type: "file", id } : id
+      );
     }
+
+    const budget = agent.interaction_budget || agent.persona?.interaction_budget || agent.conversation_config?.agent?.interaction_budget;
+    const oldBudget = agent.safety?.interaction_budget || agent.persona?.safety?.interaction_budget;
+    const totalBudget = oldBudget?.total_budget || budget?.total_budget || "10_minutes";
+    let normalizedBudget = totalBudget;
+    if (normalizedBudget === "async") normalizedBudget = "10_minutes";
 
     const payload = {
       name: agent.name,
@@ -137,13 +172,6 @@ class ElevenLabsProvider extends VoiceProvider {
         },
         tts: {
           voice_id: voiceId,
-        },
-        safety: {
-          // Valid ElevenLabs InteractionBudget enum: '5_minutes' | '10_minutes' | '1_hour'
-          // Do NOT use 'async' (deprecated) or 'thirty_minutes' (invalid).
-          interaction_budget: {
-            total_budget: "1_hour",
-          },
         },
       },
     };
@@ -162,17 +190,88 @@ class ElevenLabsProvider extends VoiceProvider {
     for (const tool of rawTools) {
       if (!tool || !tool.name) continue;
       const resolved = {
+        type: tool.type || "webhook",
         name: tool.name,
         description: tool.description || "",
       };
-      if (tool.method) resolved.method = tool.method;
-      if (tool.url) resolved.url = tool.url;
-      if (tool.authentication) resolved.authentication = tool.authentication;
-      if (tool.body_parameters) resolved.body_parameters = tool.body_parameters;
-      if (tool.parameters) resolved.parameters = tool.parameters;
-      if (tool.path_parameters) resolved.path_parameters = tool.path_parameters;
-      if (tool.query_parameters) resolved.query_parameters = tool.query_parameters;
-      if (tool.headers) resolved.headers = tool.headers;
+      
+      if (resolved.type === "webhook") {
+        let url = tool.url || "";
+        const baseUrl = process.env.BACKEND_URL || "https://api.weeber.ai";
+        const calendarProxyUrl = process.env.CALENDAR_PROXY_URL || `${baseUrl}/v1/tools/calcom`;
+        url = url.replace(/{{\s*BASE_URL\s*}}/g, baseUrl);
+        url = url.replace(/{{\s*calendar_proxy_url\s*}}/g, calendarProxyUrl);
+
+        // Find remaining path params that are in double braces
+        const paramNames = [];
+        const regex = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
+        let match;
+        while ((match = regex.exec(url)) !== null) {
+          const paramName = match[1];
+          if (paramName !== "BASE_URL" && paramName !== "calendar_proxy_url") {
+            paramNames.push(paramName);
+          }
+        }
+
+        // Convert the double-braced parameters to single-braced ones for ElevenLabs compatibility
+        for (const name of paramNames) {
+          const r = new RegExp(`{{\\s*${name}\\s*}}`, 'g');
+          url = url.replace(r, `{${name}}`);
+        }
+
+        resolved.api_schema = {
+          url: url,
+          method: tool.method || "POST",
+        };
+
+        if (paramNames.length > 0) {
+          resolved.api_schema.path_params_schema = {};
+          for (const name of paramNames) {
+            resolved.api_schema.path_params_schema[name] = {
+              type: "string",
+              dynamic_variable: name,
+            };
+          }
+        }
+
+        const headers = { ...(tool.headers || {}) };
+        if (tool.authentication) {
+          if (tool.authentication.type === "bearer" && tool.authentication.token) {
+            headers["Authorization"] = `Bearer ${tool.authentication.token}`;
+          }
+        }
+        if (Object.keys(headers).length > 0) {
+          resolved.api_schema.request_headers = headers;
+        }
+        const bodySchema = tool.body_parameters || tool.parameters;
+        if (bodySchema) {
+          if (Array.isArray(bodySchema)) {
+            const properties = {};
+            const required = [];
+            for (const param of bodySchema) {
+              const name = param.identifier || param.name;
+              if (!name) continue;
+              properties[name] = {
+                type: param.data_type || param.type || "string",
+                description: param.description || "",
+              };
+              if (param.required || param.value_type === "llm_prompt" || param.value_type === "static") {
+                required.push(name);
+              }
+            }
+            resolved.api_schema.request_body_schema = {
+              type: "object",
+              properties,
+            };
+            if (required.length > 0) {
+              resolved.api_schema.request_body_schema.required = required;
+            }
+          } else {
+            resolved.api_schema.request_body_schema = bodySchema;
+          }
+        }
+      }
+      
       tools.push(resolved);
     }
     return tools;
@@ -203,7 +302,10 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   async updateAgent(providerRef, agent, systemPrompt) {
-    if (!providerRef) throw new Error("Missing providerRef");
+    if (!providerRef) {
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Missing providerRef");
+    }
     const payload = this._buildAgentPayload(agent, systemPrompt);
     const result = await this._call("PATCH", `/v1/convai/agents/${providerRef}`, payload);
     return { provider_ref: providerRef, provider_meta: result };
@@ -238,9 +340,22 @@ class ElevenLabsProvider extends VoiceProvider {
   async startCall({ toE164, fromE164, leaseToken, metadata = {}, dynamicVars }) {
     const agentId = this.agent?.provider_ref;
     if (!agentId) throw new Error("agent.provider_ref (ElevenLabs agent_id) is required");
+    if (!fromE164) {
+      const { BadRequest } = require("../../utils/errors");
+      throw BadRequest("Agent must have an inbound number assigned to make outbound test calls.");
+    }
 
     // Pre-flight: verify credentials before initiating the call
     const credentials = await this._getTwilioCredentials();
+    if (credentials.accountSid && credentials.accountSid.startsWith("ACsandbox")) {
+      logger.info({ orgId: this.orgId, agentId, toE164 }, "Sandbox mode: Bypassing real ElevenLabs outbound call");
+      const crypto = require("crypto");
+      return {
+        provider_call_id: `sandbox-${crypto.randomUUID()}`,
+        status: "queued",
+      };
+    }
+
     logger.info({ orgId: this.orgId, agentId, toE164 }, "Starting ElevenLabs outbound call");
 
     const agentPhoneNumberId = await this._getOrImportPhoneNumberId(fromE164);
@@ -253,9 +368,20 @@ class ElevenLabsProvider extends VoiceProvider {
       from_number: fromE164,
     };
 
-    if (dynamicVars && Object.keys(dynamicVars).length > 0) {
-      conversationData.dynamic_variables = dynamicVars;
+    const finalDynamicVars = {
+      ...(dynamicVars || {}),
+      CALL_ID: metadata.call_id || metadata.target_id || "",
+    };
+
+    if (metadata.patient_id) {
+      finalDynamicVars.patient_id = metadata.patient_id;
+    } else if (dynamicVars && dynamicVars.patient_id) {
+      finalDynamicVars.patient_id = dynamicVars.patient_id;
+    } else if (dynamicVars && dynamicVars.customer_id) {
+      finalDynamicVars.patient_id = dynamicVars.customer_id;
     }
+
+    conversationData.dynamic_variables = finalDynamicVars;
 
     const payload = {
       agent_id: agentId,
@@ -273,6 +399,11 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   async endCall(providerCallId) {
+    if (providerCallId && providerCallId.startsWith("sandbox-")) {
+      logger.info({ providerCallId }, "Sandbox mode: Bypassing real Twilio endCall");
+      return { ok: true };
+    }
+
     try {
       const credentials = await this._getTwilioCredentials();
       const client = require("twilio")(credentials.accountSid, credentials.authToken);
@@ -282,17 +413,6 @@ class ElevenLabsProvider extends VoiceProvider {
       logger.error({ err: err.message, providerCallId }, "Failed to end call via Twilio");
       return { ok: false, error: err.message };
     }
-  }
-
-  async getSignedUrl({ agentId, metadata = {} } = {}) {
-    const providerRef = agentId || this.agent?.provider_ref;
-    if (!providerRef) throw new Error("agent.provider_ref is required for signed URL");
-
-    const result = await this._call("GET", `/v1/convai/conversation/get-signed-url?agent_id=${providerRef}`);
-    return {
-      signed_url: result.signed_url,
-      agent_id: providerRef,
-    };
   }
 
   async dropVoicemail({ providerCallId, audioUrl }) {

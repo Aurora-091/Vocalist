@@ -1,4 +1,6 @@
 const personaService = require("../../services/persona.service");
+const crypto = require("crypto");
+const { BadRequest, NotFound } = require("../../utils/errors");
 const { buildVoiceProvider } = require("../../providers/voice/factory");
 
 class AgentService {
@@ -36,12 +38,12 @@ class AgentService {
 
   async createAgent(supabase, orgId, agentData) {
     const { provider = "elevenlabs", persona = {}, name } = agentData;
-    if (!name) throw new Error("Agent name is required");
+    if (!name) throw BadRequest("Agent name is required");
 
     // 0. Search for duplicate agent in the organization
     const { data: existingAgents, error: checkErr } = await supabase
       .from("agents")
-      .select("*")
+      .select("id, name")
       .eq("org_id", orgId)
       .is("deleted_at", null);
     
@@ -51,44 +53,50 @@ class AgentService {
       (a) => a.name.toLowerCase() === name.toLowerCase()
     );
     if (duplicate) {
-      // Return existing agent. Do not create new provider agent.
-      return duplicate;
+      throw BadRequest("An agent with this name already exists in the organization");
     }
     
-    // 1. Generate system prompt
-    const systemPrompt = personaService.generateSystemPrompt(persona);
+    // Destructure properties to only save database columns directly
+    const { prompt, model, hyper_parameters, tools, ...dbAgentData } = agentData;
 
-    // 2. Setup Provider
-    const integrationConfig = await this.getIntegrationConfig(supabase, orgId);
-    const providerInstance = buildVoiceProvider({
-      agent: { provider, org_id: orgId, ...agentData },
-      integrationConfig
-    });
+    // Merge prompt, model, hyper-parameters into persona
+    const localPersona = {
+      ...persona,
+      prompt: prompt || persona.prompt || persona.system_prompt || "",
+      model: model || persona.model || "gemini-2.5-flash",
+      hyper_parameters: hyper_parameters || persona.hyper_parameters || {}
+    };
 
-    // 3. Create Assistant in Provider (tools + analysis_config pass through agentData)
-    const { provider_ref, provider_meta } = await providerInstance.createAgent(
-      { ...agentData, persona },
-      systemPrompt
-    );
+    const voice_id = agentData.voice_id || "21m00Tcm4TlvDq8ikWAM";
+    let provider_ref = agentData.provider_ref;
 
-    // Get voice and config IDs from returned meta if available
-    const voice_id = agentData.voice_id || provider_meta?.conversation_config?.tts?.voice_id || null;
-    const conversation_config_id = provider_meta?.conversation_config_id || null;
+    // Call Voice Provider to provision agent if not provided
+    if (!provider_ref) {
+      const systemPrompt = personaService.generateSystemPrompt(localPersona);
+      const agentPayload = { ...dbAgentData, org_id: orgId, persona: localPersona, provider, voice_id };
+      const voiceProvider = buildVoiceProvider({ agent: agentPayload });
+      
+      try {
+        const createRes = await voiceProvider.createAgent(agentPayload, systemPrompt);
+        provider_ref = createRes.provider_ref;
+      } catch (err) {
+        throw BadRequest("Failed to provision agent on voice provider: " + err.message);
+      }
+    }
 
     // 4. Save to Database
     const { data: agent, error } = await supabase
       .from("agents")
       .insert({
+        ...dbAgentData,
         org_id: orgId,
-        ...agentData,
         provider,
         provider_ref,
         provider_agent_id: provider_ref,
         voice_id,
-        conversation_config_id,
         sync_status: "synced",
         last_synced_at: new Date().toISOString(),
-        persona
+        persona: localPersona
       })
       .select("*")
       .single();
@@ -102,7 +110,6 @@ class AgentService {
       provider,
       provider_agent_id: provider_ref,
       voice_id,
-      conversation_config_id,
       sync_status: "synced"
     });
 
@@ -119,47 +126,31 @@ class AgentService {
       .is("deleted_at", null)
       .single();
     
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
 
-    const newPersona = updateData.persona || existing.persona;
-    const systemPrompt = personaService.generateSystemPrompt(newPersona);
+    const { prompt, model, hyper_parameters, tools, persona = {}, ...dbUpdateData } = updateData;
 
-    const mergedAgent = { ...existing, ...updateData, persona: newPersona };
+    const mergedPersona = {
+      ...(existing.persona || {}),
+      ...persona,
+    };
+    if (prompt !== undefined) mergedPersona.prompt = prompt;
+    if (model !== undefined) mergedPersona.model = model;
+    if (hyper_parameters !== undefined) mergedPersona.hyper_parameters = hyper_parameters;
 
-    // 2. Update Provider Assistant
-    const integrationConfig = await this.getIntegrationConfig(supabase, orgId);
-    const providerInstance = buildVoiceProvider({ agent: mergedAgent, integrationConfig });
-    let newProviderMeta = existing.provider_meta;
-    let syncStatus = "synced";
-    let syncError = null;
-
-    if (mergedAgent.provider_ref) {
-      try {
-        const updateResult = await providerInstance.updateAgent(mergedAgent.provider_ref, mergedAgent, systemPrompt);
-        if (updateResult && updateResult.provider_meta) {
-          newProviderMeta = updateResult.provider_meta;
-        }
-      } catch (err) {
-        console.error("Provider update failed, setting sync_status=failed:", err.message);
-        syncStatus = "failed";
-        syncError = err.message || "Unknown provider error";
-      }
-    }
-
-    const voice_id = mergedAgent.voice_id || newProviderMeta?.conversation_config?.tts?.voice_id || null;
-    const conversation_config_id = newProviderMeta?.conversation_config_id || mergedAgent.conversation_config_id || null;
+    const voice_id = dbUpdateData.voice_id || existing.voice_id || null;
 
     // 3. Update Database
     const { data: updatedAgent, error: updateErr } = await supabase
       .from("agents")
       .update({
-        ...updateData,
+        ...dbUpdateData,
         voice_id,
-        conversation_config_id,
-        sync_status: syncStatus,
-        sync_error: syncStatus === "failed" ? syncError : null,
+        sync_status: "synced",
+        sync_error: null,
         last_synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        persona: mergedPersona
       })
       .eq("id", agentId)
       .select("*")
@@ -173,11 +164,10 @@ class AgentService {
       .upsert({
         org_id: orgId,
         agent_id: agentId,
-        provider: mergedAgent.provider,
-        provider_agent_id: mergedAgent.provider_ref,
+        provider: existing.provider || "elevenlabs",
+        provider_agent_id: existing.provider_ref,
         voice_id,
-        conversation_config_id,
-        sync_status: syncStatus,
+        sync_status: "synced",
         updated_at: new Date().toISOString()
       }, { onConflict: "org_id,agent_id" });
 
@@ -194,27 +184,16 @@ class AgentService {
       .is("deleted_at", null)
       .single();
     
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
 
-    // 2. Delete Provider Assistant
-    if (existing.provider_ref) {
-      try {
-        const integrationConfig = await this.getIntegrationConfig(supabase, orgId);
-        const providerInstance = buildVoiceProvider({ agent: existing, integrationConfig });
-        await providerInstance.deleteAgent(existing.provider_ref);
-      } catch (err) {
-        console.error("Provider delete failed:", err.message);
-      }
-    }
-
-    // 3. Delete from organization_agents registry
+    // 2. Delete from organization_agents registry
     await supabase
       .from("organization_agents")
       .delete()
       .eq("agent_id", agentId)
       .eq("org_id", orgId);
 
-    // 3.5 Clear agent_id mapping from phone_numbers table
+    // 3. Clear agent_id mapping from phone_numbers table
     await supabase
       .from("phone_numbers")
       .update({ agent_id: null })
@@ -239,21 +218,7 @@ class AgentService {
       .eq("org_id", orgId)
       .is("deleted_at", null)
       .single();
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
-
-    const { tools: skillTools, promptModules } = await this.resolveSkills(supabase, agentId);
-    const persona = existing.persona || {};
-
-    const allTools = [...(existing.tools || []), ...skillTools];
-    const systemPrompt = personaService.generateSystemPrompt(persona)
-      + (promptModules.length > 0 ? "\n\n# ACTIVE SKILLS\n" + promptModules.join("\n\n") : "");
-
-    const integrationConfig = await this.getIntegrationConfig(supabase, orgId);
-    const providerInstance = buildVoiceProvider({ agent: existing, integrationConfig });
-
-    if (!existing.provider_ref) throw new Error("Agent has no provider reference to sync");
-
-    await providerInstance.updateAgent(existing.provider_ref, { ...existing, tools: allTools }, systemPrompt);
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
 
     const { data: updated, error: updateErr } = await supabase
       .from("agents")
@@ -278,7 +243,7 @@ class AgentService {
       .eq("org_id", orgId)
       .is("deleted_at", null)
       .single();
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
 
     const cloneData = {
       name: `${existing.name} (Copy)`,
@@ -303,7 +268,7 @@ class AgentService {
       .eq("org_id", orgId)
       .is("deleted_at", null)
       .single();
-    if (fetchErr || !existing) throw new Error("Agent not found or access denied");
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
     return personaService.generateSystemPrompt(existing.persona || {});
   }
 
@@ -317,7 +282,7 @@ class AgentService {
       .is("deleted_at", null)
       .single();
 
-    if (agentErr || !agent) throw new Error("Agent not found");
+    if (agentErr || !agent) throw NotFound("Agent not found");
 
     // 2. Verify phone number belongs to org
     const { data: phone, error: phoneErr } = await supabase
@@ -327,19 +292,11 @@ class AgentService {
       .eq("org_id", orgId)
       .single();
 
-    if (phoneErr || !phone) throw new Error("Phone number not found or does not belong to organization");
+    if (phoneErr || !phone) throw NotFound("Phone number not found or does not belong to organization");
 
-    // 3. Update Provider Phone Number
-    const integrationConfig = await this.getIntegrationConfig(supabase, orgId);
-    const providerInstance = buildVoiceProvider({ agent, integrationConfig });
-    await providerInstance.assignPhoneNumber({
-      provider_ref: agent.provider_ref,
-      phone_number: phone.e164
-    });
-
-    // 4. Save relationship (both on agent, phone_number, and organization_agents)
+    // 3. Save relationship (both on agent, phone_number, and organization_agents)
     await supabase.from("phone_numbers").update({ agent_id: agentId }).eq("id", phoneNumberId);
-
+    
     const { data: updatedAgent, error: updateErr } = await supabase
       .from("agents")
       .update({ inbound_number: phone.e164, updated_at: new Date().toISOString() })
@@ -361,3 +318,4 @@ class AgentService {
 }
 
 module.exports = new AgentService();
+

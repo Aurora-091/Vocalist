@@ -18,17 +18,22 @@ router.post(
     }
 
     const admin = requireAdmin();
+    const { vaultifyConfig } = require("../../utils/credential.helper");
+    let safeConfig;
+    try {
+      safeConfig = await vaultifyConfig("shopify", { access_token, shop_domain, scopes: scopes || "" }, org_id);
+      safeConfig.installed_at = new Date().toISOString();
+    } catch (err) {
+      logger.error({ err: err.message, org_id }, "Failed to vaultify Shopify connection token in shopify.internal.routes.js");
+      return res.status(500).json({ error: "Vault integration failed" });
+    }
+
     const { error } = await admin.from("integrations").upsert(
       {
         org_id,
         type: "shopify",
         status: "active",
-        config: {
-          shop_domain,
-          access_token,
-          scopes: scopes || "",
-          installed_at: new Date().toISOString(),
-        },
+        config: safeConfig,
       },
       { onConflict: "org_id,type" }
     );

@@ -3,12 +3,16 @@ const { requireAdmin, clientForToken } = require("../config/supabase");
 const asyncHandler = require("../utils/asyncHandler");
 
 function decodeBearer(req) {
+  // Session is managed exclusively by the Supabase JS SDK on the frontend,
+  // which sends a fresh Bearer token on every request via the Authorization
+  // header (see DEC-015 in DECISIONS.md). Cookies are no longer set or read.
   const header = req.headers.authorization || req.headers.Authorization;
   if (!header || typeof header !== "string") return null;
   const [scheme, token] = header.split(" ");
   if (scheme !== "Bearer" || !token) return null;
   return token;
 }
+
 
 const requireAuth = asyncHandler(async (req, _res, next) => {
   const token = decodeBearer(req);

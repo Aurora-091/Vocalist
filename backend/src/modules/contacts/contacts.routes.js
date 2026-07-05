@@ -3,7 +3,6 @@ const { z } = require("zod");
 const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg } = require("../../middleware/auth.middleware");
-const { expensiveOpsLimiter } = require("../../middleware/rate-limit.middleware");
 const { toE164, tryE164 } = require("../../utils/phone");
 const { NotFound, Conflict } = require("../../utils/errors");
 const {
@@ -48,6 +47,7 @@ router.get(
       .from("contacts")
       .select("*")
       .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
       .is("deleted_at", null)
       .maybeSingle();
     if (error) throw error;
@@ -129,6 +129,7 @@ router.patch(
       .from("contacts")
       .update({ ...req.body, updated_at: new Date().toISOString() })
       .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
       .is("deleted_at", null)
       .select("*")
       .maybeSingle();
@@ -145,52 +146,88 @@ router.delete(
     const { error } = await req.supabase
       .from("contacts")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", req.params.id);
+      .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId);
     if (error) throw error;
     res.status(204).end();
   })
 );
 
 const dncSchema = z.object({
-  phones: z.array(z.string().min(5)).min(1).max(5000),
+  phones: z.array(z.string().min(5)).min(1).max(10000),
   default_country: z.string().min(2).max(4).default("US"),
 });
 
 router.post(
   "/dnc-upload",
-  expensiveOpsLimiter,
   validate({ body: dncSchema }),
   asyncHandler(async (req, res) => {
     const country = req.body.default_country || "US";
-    const rows = [];
+    const validE164s = [];
     let invalid = 0;
 
     for (const phone of req.body.phones) {
       const e164 = tryE164(phone, country);
       if (!e164) {
         invalid++;
-        continue;
+      } else {
+        validE164s.push(e164);
       }
-      rows.push({
+    }
+
+    if (validE164s.length === 0) {
+      return res.json({ updated: 0, created: 0, invalid, total_blocked: 0 });
+    }
+
+    const uniqueE164s = [...new Set(validE164s)];
+
+    // Fetch existing contacts in a single query
+    const { data: existingContacts, error: fetchErr } = await req.supabase
+      .from("contacts")
+      .select("id, e164")
+      .eq("org_id", req.auth.orgId)
+      .is("deleted_at", null)
+      .in("e164", uniqueE164s);
+
+    if (fetchErr) throw fetchErr;
+
+    const existingMap = new Map(existingContacts.map((c) => [c.e164, c.id]));
+    const existingIds = existingContacts.map((c) => c.id);
+    const toInsertE164s = uniqueE164s.filter((e164) => !existingMap.has(e164));
+
+    let updated = 0;
+    let created = 0;
+
+    // Batch update existing contacts
+    if (existingIds.length > 0) {
+      const { error: updateErr } = await req.supabase
+        .from("contacts")
+        .update({ consent_status: "dnc", updated_at: new Date().toISOString() })
+        .in("id", existingIds);
+      if (updateErr) throw updateErr;
+      updated = existingIds.length;
+    }
+
+    // Batch insert missing contacts
+    if (toInsertE164s.length > 0) {
+      const insertRows = toInsertE164s.map((e164) => ({
         org_id: req.auth.orgId,
         e164,
         consent_status: "dnc",
         source: "dnc_upload",
-      });
+        tags: ["dnc"],
+        fields: {},
+      }));
+
+      const { data: inserted, error: insertErr } = await req.supabase
+        .from("contacts")
+        .insert(insertRows)
+        .select("id");
+      if (insertErr) throw insertErr;
+      created = inserted?.length || 0;
     }
 
-    if (rows.length === 0) {
-      return res.json({ updated: 0, created: 0, invalid, total_blocked: 0 });
-    }
-
-    const { data, error } = await req.supabase
-      .from("contacts")
-      .upsert(rows, { onConflict: "org_id,e164" })
-      .select("id");
-    if (error) throw error;
-
-    const total = data?.length || 0;
-    res.json({ total_blocked: total, invalid });
+    res.json({ updated, created, invalid, total_blocked: updated + created });
   })
 );
 

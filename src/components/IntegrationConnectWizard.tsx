@@ -214,7 +214,7 @@ export function IntegrationConnectWizard({
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </Button>
               )}
-              <Button variant={adminUrl ? "secondary" : "primary"} onClick={() => setCurrentStep(1)}>
+              <Button variant={adminUrl ? "secondary" : "default"} onClick={() => setCurrentStep(1)}>
                 I have my credentials
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
