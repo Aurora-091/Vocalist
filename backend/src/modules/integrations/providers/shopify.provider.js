@@ -1,6 +1,7 @@
 const { IntegrationProvider } = require("./interface");
 const { requireAdmin } = require("../../../config/supabase");
 const logger = require("../../../config/logger");
+const { tryE164 } = require("../../../utils/phone");
 
 const API_VERSION = "2025-01";
 
@@ -52,18 +53,24 @@ class ShopifyProvider extends IntegrationProvider {
     }
 
     const admin = requireAdmin();
+    const cc = this.config.country_code || "IN";
     const contacts = customers
-      .filter((c) => c.phone)
-      .map((c) => ({
-        org_id: this.orgId,
-        e164: c.phone.replace(/[^\d+]/g, ""),
-        name: [c.first_name, c.last_name].filter(Boolean).join(" ") || null,
-        email: c.email || null,
-        crm_ref: `shopify_${c.id}`,
-        source: "shopify",
-        consent_status: c.marketing_consent?.state === "subscribed" ? "granted" : "none",
-        fields: { shopify_id: c.id, tags: c.tags, orders_count: c.orders_count },
-      }));
+      .map((c) => {
+        if (!c.phone) return null;
+        const e164 = tryE164(c.phone, cc);
+        if (!e164) return null;
+        return {
+          org_id: this.orgId,
+          e164,
+          name: [c.first_name, c.last_name].filter(Boolean).join(" ") || null,
+          email: c.email || null,
+          crm_ref: `shopify_${c.id}`,
+          source: "shopify",
+          consent_status: c.marketing_consent?.state === "subscribed" ? "granted" : "none",
+          fields: { shopify_id: c.id, tags: c.tags, orders_count: c.orders_count },
+        };
+      })
+      .filter(Boolean);
 
     if (contacts.length === 0) {
       return { synced: 0, note: "No customers with phone numbers" };
@@ -216,19 +223,23 @@ class ShopifyProvider extends IntegrationProvider {
   async _handleCustomerEvent(payload) {
     const customer = payload.body || payload;
     if (customer.phone) {
-      const admin = requireAdmin();
-      await admin.from("contacts").upsert(
-        {
-          org_id: this.orgId,
-          e164: customer.phone.replace(/[^\d+]/g, ""),
-          name: [customer.first_name, customer.last_name].filter(Boolean).join(" ") || null,
-          email: customer.email || null,
-          crm_ref: `shopify_${customer.id}`,
-          source: "shopify",
-          fields: { shopify_id: customer.id, tags: customer.tags },
-        },
-        { onConflict: "org_id,e164" }
-      );
+      const cc = this.config.country_code || "IN";
+      const e164 = tryE164(customer.phone, cc);
+      if (e164) {
+        const admin = requireAdmin();
+        await admin.from("contacts").upsert(
+          {
+            org_id: this.orgId,
+            e164,
+            name: [customer.first_name, customer.last_name].filter(Boolean).join(" ") || null,
+            email: customer.email || null,
+            crm_ref: `shopify_${customer.id}`,
+            source: "shopify",
+            fields: { shopify_id: customer.id, tags: customer.tags },
+          },
+          { onConflict: "org_id,e164" }
+        );
+      }
     }
     return { received: true, topic: "customer", customer_id: customer.id, handled: true };
   }
@@ -237,6 +248,7 @@ class ShopifyProvider extends IntegrationProvider {
     const checkout = payload.body || payload;
     const checkoutId = String(checkout.id);
     const admin = requireAdmin();
+    const cc = this.config.country_code || "IN";
 
     const phone = checkout.phone || checkout.billing_address?.phone;
     const email = checkout.email;
@@ -253,10 +265,18 @@ class ShopifyProvider extends IntegrationProvider {
       return { received: true, topic: "checkout", checkout_id: checkoutId, handled: false, reason: "no_phone" };
     }
 
+    const e164 = tryE164(phone, cc);
+    if (!e164) {
+      logger.info({ checkout_id: checkoutId, phone, cc }, "Shopify checkout: invalid phone");
+      return { received: true, topic: "checkout", checkout_id: checkoutId, handled: false, reason: "invalid_phone" };
+    }
+
     const { data: existing } = await admin
       .from("scheduled_calls")
       .select("id")
       .eq("checkout_id", checkoutId)
+      .eq("org_id", this.orgId)
+      .in("status", ["pending", "processing", "dispatched"])
       .maybeSingle();
 
     if (existing) {
@@ -280,7 +300,7 @@ class ShopifyProvider extends IntegrationProvider {
     }
 
     await admin.from("contacts").upsert(
-      { org_id: this.orgId, e164: phone.replace(/[^\d+]/g, ""), email, name: customerName, source: "shopify" },
+      { org_id: this.orgId, e164, email, name: customerName, source: "shopify" },
       { onConflict: "org_id,e164", ignoreDuplicates: false }
     );
 
@@ -288,16 +308,19 @@ class ShopifyProvider extends IntegrationProvider {
     const { error: insertErr } = await admin.from("scheduled_calls").insert({
       org_id: this.orgId,
       agent_id: agentId,
-      phone: phone.replace(/[^\d+]/g, ""),
+      phone: e164,
       checkout_id: checkoutId,
+      checkout_token: checkout.token || null,
       scheduled_at: scheduledAt,
       status: "pending",
+      attempt: 1,
       metadata: {
         customer_name: customerName,
         cart_total: cartTotal,
         cart_items: cartItems,
         recovery_url: abandonedUrl,
         email,
+        country_code: cc,
       },
     });
 
@@ -306,7 +329,7 @@ class ShopifyProvider extends IntegrationProvider {
       throw insertErr;
     }
 
-    logger.info({ checkout_id: checkoutId, phone, scheduled_at: scheduledAt }, "Scheduled cart recovery call");
+    logger.info({ checkout_id: checkoutId, phone: e164, scheduled_at: scheduledAt }, "Scheduled cart recovery call");
     return { received: true, topic: "checkout", checkout_id: checkoutId, handled: true, scheduled_at: scheduledAt };
   }
 }

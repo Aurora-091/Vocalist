@@ -3,6 +3,7 @@ const logger = require("../../../config/logger");
 const { transition, STATES } = require("../../campaigns/state-machine");
 const { buildIdempotencyKey } = require("../../../utils/idempotency");
 const { DEFAULT_COST_PER_MINUTE_USD } = require("../../billing/billing.constants");
+const { canRetry, computeRetryAt } = require("../../../utils/scheduling");
 
 const ELEVENLABS_TO_CALL_STATUS = {
   "conversation.started": "in_progress",
@@ -20,6 +21,16 @@ const TARGET_STATE_FOR_CALL = {
   "call.failed": STATES.FAILED,
 };
 
+function deriveOutcome(data, eventType) {
+  if (eventType === "call.failed") return "failed";
+  const duration = data?.call_duration_secs || data?.duration_sec || 0;
+  if (duration < 5) return "no_answer";
+  const analysis = data?.analysis;
+  if (analysis?.voicemail_detected || analysis?.outcome === "voicemail") return "voicemail";
+  if (analysis?.outcome === "declined" || analysis?.outcome === "not_interested") return "declined";
+  return "answered";
+}
+
 async function handle(payload) {
   const admin = requireAdmin();
   const eventType = payload?.type || payload?.event;
@@ -33,7 +44,9 @@ async function handle(payload) {
   }
 
   // Find the call row by provider_call_id, conversation_id, or local call ID (if passed in metadata)
-  const metaCallId = data?.conversation_initiation_client_data?.call_id || payload?.metadata?.call_id;
+  const clientData = data?.conversation_initiation_client_data || {};
+  const metaCallId = clientData.call_id || payload?.metadata?.call_id;
+  const scheduledCallId = clientData.scheduled_call_id || payload?.metadata?.scheduled_call_id;
   
   let callRow = null;
   if (metaCallId) {
@@ -179,6 +192,41 @@ async function handle(payload) {
           .update({ status: "ready", updated_at: new Date().toISOString() })
           .eq("id", mapping.knowledge_source_id);
       }
+    }
+  }
+
+  // Handle scheduled_call status + retry ladder
+  if (scheduledCallId && (eventType === "conversation.ended" || eventType === "call.completed" || eventType === "call.failed")) {
+    const outcome = deriveOutcome(data, eventType);
+
+    const { data: scRow } = await admin
+      .from("scheduled_calls")
+      .select("id, attempt, org_id, agent_id, phone, metadata, playbook_key")
+      .eq("id", scheduledCallId)
+      .maybeSingle();
+
+    if (scRow) {
+      const scUpdate = { outcome, status: "completed" };
+
+      if ((outcome === "no_answer" || outcome === "voicemail") && canRetry(scRow.attempt)) {
+        const retryAt = computeRetryAt(new Date(), scRow.attempt);
+        await admin.from("scheduled_calls").insert({
+          org_id: scRow.org_id,
+          agent_id: scRow.agent_id,
+          phone: scRow.phone,
+          checkout_id: scRow.metadata?.checkout_id || null,
+          checkout_token: scRow.metadata?.checkout_token || null,
+          order_id: scRow.metadata?.order_id || null,
+          scheduled_at: retryAt.toISOString(),
+          status: "pending",
+          attempt: scRow.attempt + 1,
+          playbook_key: scRow.playbook_key,
+          metadata: { ...scRow.metadata, retry_of: scRow.id },
+        });
+        logger.info({ scheduled_call_id: scRow.id, attempt: scRow.attempt + 1, retry_at: retryAt }, "Retry scheduled");
+      }
+
+      await admin.from("scheduled_calls").update(scUpdate).eq("id", scRow.id);
     }
   }
 

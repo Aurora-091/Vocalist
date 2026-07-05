@@ -8,7 +8,6 @@ const env = require("./config/env");
 const logger = require("./config/logger");
 const { notFound, errorHandler } = require("./middleware/error.middleware");
 const { apiLimiter } = require("./middleware/rate-limit.middleware");
-const asyncHandler = require("./utils/asyncHandler");
 
 const authRoutes = require("./modules/auth/auth.routes");
 const orgRoutes = require("./modules/organizations/organizations.routes");
@@ -36,6 +35,7 @@ const waitlistRoutes = require("./modules/waitlist/waitlist.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
 const skillRoutes = require("./modules/skills/skills.routes");
 const enterpriseRoutes = require("./modules/enterprise/enterprise.routes");
+const shopifyInternalRoutes = require("./modules/integrations/shopify.internal.routes");
 
 function buildCorsOptions() {
   const allowed = (process.env.CORS_ALLOWED_ORIGINS || "")
@@ -102,49 +102,8 @@ function createApp() {
     res.json({ status: "UP", uptime: process.uptime(), timestamp: new Date().toISOString() })
   );
 
-  app.post(
-    "/api/integrations/shopify/connected",
-    asyncHandler(async (req, res) => {
-      const secret = req.headers["x-weeber-secret"];
-      if (!secret || secret !== process.env.WEEBER_INTERNAL_SECRET) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const { shop, access_token, scopes, org_id } = req.body;
-      if (!shop || !access_token || !org_id) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      const { requireAdmin } = require("./config/supabase");
-      const admin = requireAdmin();
-
-      const { data, error } = await admin
-        .from("integrations")
-        .upsert(
-          {
-            org_id,
-            type: "shopify",
-            status: "active",
-            config: {
-              shop_domain: shop,
-              access_token,
-              scopes,
-              installed_at: new Date().toISOString(),
-            },
-          },
-          { onConflict: "org_id,type" }
-        )
-        .select("*")
-        .single();
-
-      if (error) {
-        logger.error({ err: error }, "Failed to upsert shopify integration");
-        throw error;
-      }
-
-      res.status(200).json({ ok: true });
-    })
-  );
+  // S2S internal routes from weebersh (before JSON parser is fine — it has its own)
+  app.use("/api/integrations/shopify", shopifyInternalRoutes);
 
   app.use("/v1/auth", authRoutes);
   app.use("/v1/waitlist", waitlistRoutes);

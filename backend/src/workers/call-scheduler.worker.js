@@ -2,6 +2,7 @@ const { requireAdmin } = require("../config/supabase");
 const logger = require("../config/logger");
 const callService = require("../modules/calls/call.service");
 const { buildVoiceProvider } = require("../providers/voice/factory");
+const { isWithinQuietHours, nextBusinessWindow } = require("../utils/scheduling");
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 const BATCH_SIZE = 10;
@@ -35,6 +36,20 @@ async function processDueCalls() {
 
     if (claimErr) {
       logger.warn({ callId: call.id, err: claimErr.message }, "[CallScheduler] Failed to claim call");
+      continue;
+    }
+
+    // Quiet hours check: defer if outside calling window
+    const timezone = call.metadata?.timezone || "Asia/Kolkata";
+    const startHour = call.metadata?.call_hours_start ?? 9;
+    const endHour = call.metadata?.call_hours_end ?? 21;
+    if (isWithinQuietHours(new Date(), startHour, endHour, timezone)) {
+      const nextWindow = nextBusinessWindow(new Date(), startHour, timezone);
+      await admin
+        .from("scheduled_calls")
+        .update({ status: "pending", scheduled_at: nextWindow.toISOString() })
+        .eq("id", call.id);
+      logger.info({ callId: call.id, deferred_to: nextWindow }, "[CallScheduler] Deferred to next business window");
       continue;
     }
 

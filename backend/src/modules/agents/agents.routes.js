@@ -346,5 +346,38 @@ router.post(
   })
 );
 
+router.post(
+  "/:id/web-session",
+  requireRole("owner", "admin"),
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+  }),
+  asyncHandler(async (req, res) => {
+    const { data: agent, error: agentErr } = await req.supabase
+      .from("agents")
+      .select("id, name, provider, provider_ref, persona")
+      .eq("id", req.params.id)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (agentErr) throw agentErr;
+    if (!agent) throw NotFound("Agent not found");
+    if (!agent.provider_ref) throw BadRequest("Agent not provisioned. Save the agent first.");
+    if (agent.provider !== "elevenlabs") throw BadRequest("Web test sessions are only supported for ElevenLabs agents.");
+
+    const { buildVoiceProvider } = require("../../providers/voice/factory");
+    const provider = buildVoiceProvider({ agent, integrationConfig: {} });
+
+    const { signed_url, agent_id } = await provider.getSignedUrl({
+      agentId: agent.provider_ref,
+    });
+
+    res.json({
+      signed_url,
+      agent_id,
+      agent_name: agent.name,
+    });
+  })
+);
+
 module.exports = router;
 

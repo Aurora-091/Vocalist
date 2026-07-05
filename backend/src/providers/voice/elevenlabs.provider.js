@@ -284,6 +284,17 @@ class ElevenLabsProvider extends VoiceProvider {
     }
   }
 
+  async getSignedUrl({ agentId, metadata = {} } = {}) {
+    const providerRef = agentId || this.agent?.provider_ref;
+    if (!providerRef) throw new Error("agent.provider_ref is required for signed URL");
+
+    const result = await this._call("GET", `/v1/convai/conversation/get-signed-url?agent_id=${providerRef}`);
+    return {
+      signed_url: result.signed_url,
+      agent_id: providerRef,
+    };
+  }
+
   async dropVoicemail({ providerCallId, audioUrl }) {
     logger.info({ providerCallId, audioUrl }, "ElevenLabs voicemail-drop requested");
     return { ok: true, note: "elevenlabs_voicemail_drop_stub" };
