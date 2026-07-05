@@ -36,7 +36,6 @@ const waitlistRoutes = require("./modules/waitlist/waitlist.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
 const skillRoutes = require("./modules/skills/skills.routes");
 const enterpriseRoutes = require("./modules/enterprise/enterprise.routes");
-const toolRoutes = require("./modules/tools/tools.routes");
 const shopifyInternalRoutes = require("./modules/integrations/shopify.internal.routes");
 
 function buildCorsOptions() {
@@ -136,8 +135,6 @@ function createApp() {
   app.use("/v1/twilio", twilioRoutes);
   app.use("/v1/admin", adminRoutes);
   app.use("/v1/skills", skillRoutes);
-  app.use("/v1/tools", toolRoutes);
-
   app.use(notFound);
   app.use(errorHandler);
 
