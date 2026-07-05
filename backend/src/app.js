@@ -77,7 +77,9 @@ function buildCorsOptions() {
 function createApp() {
   const app = express();
 
-  app.set("trust proxy", 1);
+  if (env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
 
   app.use((req, res, next) => {
     req.id = req.headers["x-request-id"] || crypto.randomUUID();
@@ -107,7 +109,7 @@ function createApp() {
   app.use("/api/integrations/shopify", shopifyInternalRoutes);
 
   app.use("/v1/auth", authLimiter, authRoutes);
-  app.use("/v1/waitlist", authLimiter, waitlistRoutes);
+  app.use("/v1/waitlist", waitlistRoutes);
   app.use("/v1/enterprise", enterpriseRoutes);
 
   app.use("/v1", apiLimiter);

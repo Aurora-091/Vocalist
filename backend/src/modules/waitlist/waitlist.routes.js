@@ -2,7 +2,7 @@ const { Router } = require("express");
 const { z } = require("zod");
 const { requireAdmin } = require("../../config/supabase");
 const logger = require("../../config/logger");
-const { authLimiter } = require("../../middleware/rate-limit.middleware");
+const { waitlistLimiter } = require("../../middleware/rate-limit.middleware");
 const { sendWaitlistWelcome } = require("../../services/email.service");
 const asyncHandler = require("../../utils/asyncHandler");
 
@@ -18,7 +18,7 @@ const joinSchema = z.object({
 
 const OFFSET = 43;
 
-router.post("/join", authLimiter, asyncHandler(async (req, res) => {
+router.post("/join", waitlistLimiter, asyncHandler(async (req, res) => {
   const parsed = joinSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: { code: "validation_error", message: "Please provide a valid name and email" } });

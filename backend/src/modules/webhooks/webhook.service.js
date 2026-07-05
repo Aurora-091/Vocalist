@@ -32,7 +32,13 @@ async function markProcessed({ id, receivedAt }) {
     .update({ processed_at: new Date().toISOString() })
     .eq("id", id)
     .eq("received_at", receivedAt);
-  if (error && error.code !== "P0001") throw error;
+  if (error) {
+    if (error.code === "P0001") {
+      logger.warn({ id, code: error.code, message: error.message }, "markProcessed raised exception");
+      return;
+    }
+    throw error;
+  }
 }
 
 module.exports = { logWebhookEvent, markProcessed };

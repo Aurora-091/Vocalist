@@ -7,7 +7,7 @@ const { BadRequest, NotFound, Conflict } = require("../../utils/errors");
 const { toE164 } = require("../../utils/phone");
 const logger = require("../../config/logger");
 const env = require("../../config/env");
-const { isSandbox, getOrCreateSubaccount, getTenantClient, linkByoAccount, listByoNumbers } = require("./twilio.client");
+const { isSandbox, getOrCreateSubaccount, getTenantClient, linkByoAccount, listByoNumbers, suspendSubaccount } = require("./twilio.client");
 
 const router = express.Router();
 router.use(requireAuth, requireOrg);
@@ -276,7 +276,14 @@ router.post(
       })
       .select("*")
       .maybeSingle();
-    if (error) throw error;
+    if (error) {
+      if (!isSandbox() && twilioRow.sid) {
+        await client.incomingPhoneNumbers(twilioRow.sid).remove().catch((releaseErr) => {
+          logger.error({ err: releaseErr.message, sid: twilioRow.sid }, "Failed to release number after DB insert failure");
+        });
+      }
+      throw error;
+    }
 
     let assignmentError = null;
     if (req.body.agent_id && row) {

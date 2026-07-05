@@ -1,6 +1,7 @@
 const twilio = require("twilio");
 const env = require("../../config/env");
 const { requireAdmin } = require("../../config/supabase");
+const logger = require("../../config/logger");
 
 const tenantClientCache = new Map();
 const CACHE_TTL_MS = 60_000;
@@ -71,10 +72,16 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
 async function linkByoAccount(orgId, { accountSid, authToken, friendlyName }) {
   if (!accountSid || !authToken) throw new Error("accountSid and authToken are required");
 
-  // Validate credentials by fetching the account from Twilio
   const client = twilio(accountSid, authToken);
-  const account = await client.api.v2010.accounts(accountSid).fetch();
-  if (!account) throw new Error("Invalid Twilio credentials");
+  let account;
+  try {
+    account = await client.api.v2010.accounts(accountSid).fetch();
+  } catch (err) {
+    const code = err.code || err.status || "unknown";
+    const msg = err.message || "Twilio API error";
+    throw new Error(`Twilio verification failed (${code}): ${msg}`);
+  }
+  if (!account) throw new Error("Invalid Twilio credentials — no account returned");
 
   const admin = requireAdmin();
   const secretRef = `vault:twilio:byo:${orgId}:auth_token`;
@@ -200,6 +207,38 @@ function sandboxSearch(country, areaCode, kind, limit) {
   return out;
 }
 
+async function suspendSubaccount(orgId) {
+  const admin = requireAdmin();
+  const { data: sub } = await admin
+    .from("twilio_subaccounts")
+    .select("subaccount_sid, account_type, status")
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  if (!sub || sub.status === "suspended") return;
+
+  if (!isSandbox() && sub.account_type === "aurora_managed") {
+    try {
+      const master = masterClient();
+      const client = await getTenantClient(orgId);
+      const numbers = await client.incomingPhoneNumbers.list({ limit: 200 });
+      for (const num of numbers) {
+        await client.incomingPhoneNumbers(num.sid).remove();
+      }
+      await master.api.v2010.accounts(sub.subaccount_sid).update({ status: "suspended" });
+    } catch (err) {
+      logger.error({ err: err.message, orgId }, "Twilio offboarding partial failure");
+    }
+  }
+
+  await admin
+    .from("twilio_subaccounts")
+    .update({ status: "suspended" })
+    .eq("org_id", orgId);
+
+  tenantClientCache.delete(orgId);
+}
+
 module.exports = {
   isSandbox,
   masterClient,
@@ -207,4 +246,5 @@ module.exports = {
   getTenantClient,
   linkByoAccount,
   listByoNumbers,
+  suspendSubaccount,
 };
