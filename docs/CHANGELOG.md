@@ -66,6 +66,17 @@ Nine new integration provider modules under `backend/src/modules/integrations/pr
 - **`stub.provider.js`**: Placeholder integration stub removed.
 - **Docs cleanup**: Removed `docs/guides/custom-tools.md`, `docs/guides/developer-rules.md`, `docs/guides/vault-setup.md`, `docs/1-WELCOME.md`, `docs/2-JOURNEY_AND_HISTORY.md`, `backend/.../SHOPIFY_INTEGRATION.md`. `docs/architecture/security-audit.md` → relocated to `AUDIT.md` at repo root.
 
+### Security & Reliability — Audit Remediation (2026-07-05)
+
+- **S-2 CSP hardening** (`index.html`): Removed `'unsafe-inline'` from `script-src` and `script-src-elem` directives. Replaced inline `onload` font loading hack with a standard `<link rel="stylesheet">` tag, eliminating the need for inline script execution.
+- **S-4 Waitlist rate limiter** (`waitlist.routes.js`, `app.js`): Switched from `authLimiter` (10 req/min) to the dedicated `waitlistLimiter` (80 req/min) so legitimate signups aren't throttled during launch spikes. Also removed redundant `authLimiter` wrapping at the app-level mount.
+- **S-8 Code-splitting** (`vite.config.ts`): Replaced monolithic `manualChunks` that forced all lazy-loaded pages into one 524KB `app` chunk. New strategy splits `react-dom`, `supabase`, `posthog`, `zod`, `agent-detail`, and `admin` into separate chunks; remaining pages use Vite's automatic splitting with React.lazy.
+- **T-2 Twilio offboarding** (`twilio.client.js`): Added `suspendSubaccount(orgId)` — releases all numbers, suspends the sub-account on Twilio, marks DB row as suspended, and clears the tenant client cache. Ready for org deletion flows.
+- **T-4 Surface real Twilio errors** (`twilio.client.js`): `linkByoAccount` now wraps the Twilio API verification call in try/catch and propagates the actual error code and message instead of a generic failure.
+- **T-6 Number purchase rollback** (`twilio.routes.js`): Added compensating transaction — if the DB insert fails after a successful Twilio purchase, the number is released back to Twilio to prevent orphaned charges.
+- **M5 Webhook error logging** (`webhook.service.js`): `markProcessed` now logs `P0001` exceptions with a warning instead of silently swallowing them.
+- **M7 trust proxy** (`app.js`): `trust proxy` is now only set in production, not unconditionally in all environments.
+
 ### Database Cleanup — Saturday, 2026-07-05 12:00 IST
 
 #### Migration Deduplication

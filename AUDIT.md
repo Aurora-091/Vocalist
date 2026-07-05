@@ -1,8 +1,8 @@
 # Weeber — Full Codebase Audit
 
-_Last updated: 2026-06-18_
+_Last updated: 2026-07-05_
 _Scope: Security, code quality, architecture, dependencies & configuration_
-_Stack: React + Vite + Tailwind v4 + shadcn/ui (frontend) · Node/Express 5 (backend) · Supabase (Postgres + Auth + Edge Functions + 7 Edge Functions) · ElevenLabs + Twilio + Stripe_
+_Stack: React + Vite + Tailwind v4 + shadcn/ui (frontend) · Node/Express 5 (backend) · Supabase (Postgres + Auth + Edge Functions + 10 Edge Functions) · ElevenLabs + Twilio + Stripe_
 
 This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase migrations and Edge Functions (`supabase/`), and project configuration. Findings are grouped by severity.
 
@@ -14,10 +14,10 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 |----------|-------|
 | Critical | 4 (4 fixed) |
 | High | 8 (8 fixed) |
-| Medium | 14 (14 fixed) |
+| Medium | 14 (12 fixed, 2 open: M1, M2) |
 | Low / Informational | 9 |
 
-**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction.
+**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction. The July 5 remediation pass addressed CSP, code-splitting, Twilio lifecycle, rate limiting, and remaining medium findings (M3–M8 resolved or verified safe).
 
 ---
 
@@ -166,31 +166,37 @@ This creates inconsistent error handling and makes it harder to apply cross-cutt
 
 ---
 
-## Previously Identified Medium (still open)
+## Previously Identified Medium (status updated 2026-07-05)
 
-### M1 — TypeScript strictness disabled
+### M1 — TypeScript strictness disabled (open)
 **Location:** `tsconfig.json:14` — `"strict": false`
 
-### M2 — Lint is a stub; no enforced linting
+### M2 — Lint is a stub; no enforced linting (open)
 **Location:** `package.json` — `"lint": "echo 'lint stub'"`
 
-### M3 — Hardcoded demo credentials in client bundle
-**Location:** `src/pages/Login.tsx:8-9`
+### M3 — Hardcoded demo credentials in client bundle (resolved — not a real issue)
+**Location:** `src/pages/Login.tsx:13-14`
+**Status:** Credentials are read from `import.meta.env.VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` (env vars), not hardcoded. The demo UI only renders when both vars are set. No fix needed.
 
-### M4 — Error handler exposes internal details for 4xx
-**Location:** `backend/src/middleware/error.middleware.js:23-24`
+### M4 — Error handler exposes internal details for 4xx (resolved — already safe)
+**Location:** `backend/src/middleware/error.middleware.js:17`
+**Status:** `err.details` is gated behind `NODE_ENV !== "production"`. HttpError messages are developer-controlled strings, not stack traces. The catch-all returns generic "Internal server error". No fix needed.
 
-### M5 — `markProcessed` silently swallows a DB error class
-**Location:** `backend/src/modules/webhooks/webhook.service.js:38`
+### M5 — `markProcessed` silently swallows a DB error class (fixed)
+**Location:** `backend/src/modules/webhooks/webhook.service.js:35`
+**Fix:** `P0001` exceptions are now logged with `logger.warn()` instead of silently swallowed.
 
-### M6 — No `apiVersion` pinned on Stripe client
-**Location:** `backend/src/modules/webhooks/webhook.routes.js:17`
+### M6 — No `apiVersion` pinned on Stripe client (resolved — already pinned)
+**Location:** `backend/src/modules/webhooks/webhook.routes.js:19`
+**Status:** Stripe client is instantiated with `{ apiVersion: "2023-10-16" }`. No fix needed.
 
-### M7 — `trust proxy` set to `1` unconditionally
-**Location:** `backend/src/app.js:65`
+### M7 — `trust proxy` set to `1` unconditionally (fixed)
+**Location:** `backend/src/app.js:82-84`
+**Fix:** Now wrapped in `if (env.NODE_ENV === "production")` so development environments don't trust proxy headers.
 
-### M8 — Body size limit applies after webhook raw parsing only
-**Location:** `backend/src/app.js:84-85`
+### M8 — Body size limit applies after webhook raw parsing only (resolved — correct by design)
+**Location:** `backend/src/app.js:99-100`
+**Status:** `/webhooks` routes are mounted *before* `express.json()`, handling their own raw body parsing inline. The JSON body parser at line 99 correctly only applies to non-webhook routes. This is the intended Express middleware ordering pattern.
 
 ---
 
