@@ -12,6 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@11labs/react": "^0.2.0",
+    "@elevenlabs/client": "^1.14.0",
     "@fontsource-variable/geist": "^5.2.9",
     "@hookform/resolvers": "^5.4.0",
     "@supabase/supabase-js": "^2.45.0",

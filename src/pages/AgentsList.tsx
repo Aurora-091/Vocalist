@@ -328,6 +328,15 @@ export default function AgentsList() {
               )}
             </div>
           )})}
+
+          {/* New from template tile */}
+          <button
+            onClick={() => setMode("preset")}
+            className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-5 text-text-muted hover:text-text hover:border-foreground/20 hover:bg-surface-2 transition-all cursor-pointer min-h-[120px]"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="text-sm font-medium">New from template</span>
+          </button>
         </div>
       )}
     </div>

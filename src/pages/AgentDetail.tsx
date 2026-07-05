@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy, Zap } from "lucide-react";
+import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy, Zap, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { getAgent, listVoices, listAgentKnowledge, getCall } from "../lib/db";
 import { api } from "../lib/api";
@@ -20,6 +20,8 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import VoiceLibrary from "./VoiceLibrary";
+import { WebTestCallModal } from "@/components/WebTestCallModal";
+import { VariablesPanel } from "@/components/VariablesPanel";
 
 const TONE_PRESETS = [
   "warm and professional",
@@ -116,6 +118,7 @@ export default function AgentDetail() {
   const [testNumber, setTestNumber] = useState("");
   const [calling, setCalling] = useState(false);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [webTestOpen, setWebTestOpen] = useState(false);
 
   // Skills
   const [allSkills, setAllSkills] = useState<any[]>([]);
@@ -420,6 +423,11 @@ export default function AgentDetail() {
             </Field>
           </div>
 
+          {/* Variables detected in prompt fields */}
+          <div className="mt-4">
+            <VariablesPanel promptText={`${objective}\n${firstMessage}\n${identity}\n${guardrails}`} />
+          </div>
+
           {langVoiceWarning.length > 0 && (
             <div className="mt-4 flex items-center gap-2 text-xs text-warning">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -595,42 +603,61 @@ export default function AgentDetail() {
       {/* Test call card */}
       <Card className="gap-0 overflow-visible py-0 shadow-card">
         <div className="border-b px-6 py-4">
-          <div className="font-medium">Place a test call</div>
+          <div className="font-medium">Test your agent</div>
         </div>
-        <CardContent className="px-6 py-5">
-          <p className="text-sm text-text-muted mb-4">
-            Weeber will call the number below so you can hear your agent live.
-            Requires ElevenLabs provider to be configured.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Input
-              value={testNumber}
-              onChange={(e) => setTestNumber(e.target.value)}
-              disabled={!agent.provider_ref || calling}
-              placeholder="+1 415 555 0199"
-              aria-label="Test call phone number"
-              className="flex-1 min-w-[240px] font-mono"
-            />
+        <CardContent className="px-6 py-5 space-y-4">
+          {/* Browser test — primary */}
+          <div>
+            <p className="text-sm text-text-muted mb-3">
+              Talk to your agent directly in the browser. No phone needed.
+            </p>
             <Button
-              disabled={!agent.provider_ref || !testNumber.trim() || calling}
-              onClick={async () => {
-                setCalling(true);
-                setActiveCallId(null);
-                try {
-                  const res = await api.post<any>(`/v1/agents/${id}/test-call`, { to_number: testNumber.trim() });
-                  toast.success("Call initiated. Your phone should ring shortly.");
-                  if (res?.call?.id) setActiveCallId(res.call.id);
-                } catch (e: any) {
-                  toast.error(e.message || "Failed to place call.");
-                } finally {
-                  setCalling(false);
-                }
-              }}
+              disabled={!agent.provider_ref}
+              onClick={() => setWebTestOpen(true)}
+              className="w-full sm:w-auto"
             >
-              {calling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Phone className="w-4 h-4 mr-2" />}
-              {calling ? "Calling..." : "Test call"}
+              <Globe className="w-4 h-4 mr-2" />
+              Test in browser
             </Button>
           </div>
+
+          {/* Phone test — secondary */}
+          <div className="border-t pt-4">
+            <p className="text-xs text-text-muted mb-3">
+              Or call a phone number to hear your agent on a real line.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Input
+                value={testNumber}
+                onChange={(e) => setTestNumber(e.target.value)}
+                disabled={!agent.provider_ref || calling}
+                placeholder="+1 415 555 0199"
+                aria-label="Test call phone number"
+                className="flex-1 min-w-[240px] font-mono"
+              />
+              <Button
+                variant="outline"
+                disabled={!agent.provider_ref || !testNumber.trim() || calling}
+                onClick={async () => {
+                  setCalling(true);
+                  setActiveCallId(null);
+                  try {
+                    const res = await api.post<any>(`/v1/agents/${id}/test-call`, { to_number: testNumber.trim() });
+                    toast.success("Call initiated. Your phone should ring shortly.");
+                    if (res?.call?.id) setActiveCallId(res.call.id);
+                  } catch (e: any) {
+                    toast.error(e.message || "Failed to place call.");
+                  } finally {
+                    setCalling(false);
+                  }
+                }}
+              >
+                {calling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Phone className="w-4 h-4 mr-2" />}
+                {calling ? "Calling..." : "Call phone"}
+              </Button>
+            </div>
+          </div>
+
           {!agent.provider_ref && (
             <p className="mt-2 text-xs text-text-muted">
               Agent not yet provisioned with ElevenLabs. Save the agent first to trigger provisioning.
@@ -638,6 +665,15 @@ export default function AgentDetail() {
           )}
         </CardContent>
       </Card>
+
+      {webTestOpen && (
+        <WebTestCallModal
+          open={webTestOpen}
+          onOpenChange={setWebTestOpen}
+          agentId={id!}
+          agentName={agent.name}
+        />
+      )}
 
       {activeCallId && (
         <TestCallDrawer callId={activeCallId} onClose={() => setActiveCallId(null)} />
