@@ -4,7 +4,87 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [Unreleased] — 2026-07-05
+
+### Added
+
+#### Shopify v2 — Playbooks & Scheduled Calls
+- **Playbooks Table** (`20260705100647_create_playbooks_table.sql`): New `playbooks` table lets each org configure multiple named call flows (`cart_recovery`, `cod_confirm`, `feedback`). Columns: `key`, `agent_id`, `enabled`, `delay_minutes`, `max_attempts`, `call_hours_start`, `call_hours_end`, `timezone`, `config`. RLS scoped to `auth_org()`. Unique constraint on `(org_id, key)`.
+- **Scheduled Calls v2 Columns** (`20260705100422_add_scheduled_calls_v2_columns.sql`): Extended `scheduled_calls` with `checkout_token`, `order_id`, `attempt`, `outcome`, `recovered_order_id`, `recovered_value`, `recovered_currency`, `cancelled_reason`, and `playbook_key`. Adds indexes for checkout→order lookups, COD idempotency, and scheduler polling. All new columns nullable for backward compatibility.
+- **Shopify Internal Routes** (`shopify.internal.routes.js`): New router at `/api/integrations/shopify/*` guarded by `WEEBER_INTERNAL_SECRET`. Endpoints: `/connected`, `/uninstalled`, `/cart-recovery`, `/cod-confirm`, `/order-paid`, `/retry-ladder`, `/playbook/:org_id`. Replaces the ad-hoc inline handler in `app.js`.
+- **`WEEBERSH_INSTALL_URL` env variable** (`env.js`): New config key (default `https://weebersh.com/api/auth`) for the Shopify app install redirect. Validated by Zod schema on boot.
+
+#### New CRM & Vertical Integration Providers
+Nine new integration provider modules under `backend/src/modules/integrations/providers/`, all implementing `connect()`, `syncContacts()`, `disconnect()`:
+- **`calcom.provider.js`** — Cal.com scheduling; API key auth, syncs bookings as contacts.
+- **`cliniko.provider.js`** — Cliniko practice management; Basic auth, syncs patient records.
+- **`drchrono.provider.js`** — DrChrono EHR; OAuth2, syncs patient appointments.
+- **`freshsales.provider.js`** — Freshsales CRM; API key auth, syncs leads/contacts.
+- **`jane_app.provider.js`** — Jane App clinic management; API key auth, syncs patients.
+- **`pipedrive.provider.js`** — Pipedrive CRM; API token auth, syncs persons/deals.
+- **`salesforce.provider.js`** — Salesforce CRM; OAuth2 SOQL-based sync of Contacts and Leads.
+- **`whatsapp.provider.js`** — WhatsApp Business API; access token auth, lists phone numbers.
+- **`zoho_crm.provider.js`** — Zoho CRM; OAuth2, syncs Leads and Contacts modules.
+
+#### New Telephony Adapters
+- **Exotel** (`backend/src/providers/telephony/exotel.adapter.js`): Indian cloud telephony. Basic auth (`api_key:api_token`). Implements `connect()`, `makeCall()`, `listNumbers()`, `releaseNumber()`. Registered in factory as `exotel`.
+- **VoBiz** (`backend/src/providers/telephony/vobiz.adapter.js`): Indian VoIP provider. Basic auth (`api_key:api_secret`). Same interface. Registered as `vobiz`.
+
+#### New Frontend Components
+- **`WebTestCallModal`** (`src/components/WebTestCallModal.tsx`): In-browser test call UI using `@11labs/react`. Manages mic permission, WebSocket to ElevenLabs CAI, live transcript stream, mute toggle, elapsed timer, auto-stop at 5 min. Phases: `idle → requesting-mic → connecting → active → ended`.
+- **`VariablesPanel`** (`src/components/VariablesPanel.tsx`): Sidebar panel for the agent prompt editor. Parses `{{variable}}` tokens, categorizes into *Call-time*, *Settings*, and *Custom* groups, renders copy-to-clipboard badges. Sourced from `src/config/agent-variables.ts`.
+- **`agent-variables.ts`** (`src/config/agent-variables.ts`): Canonical definition of all known agent prompt variables with category, label, and description. Exports `KNOWN_VARIABLES`, `extractVariablesFromText()`, and `categorizeVariable()`.
+- **`CommandPalette`** (`src/components/layout/CommandPalette.tsx`): `⌘K`/`Ctrl+K` keyboard-driven navigation dialog. Renders all vertical nav items from `config.navigation`. Integrated into `AppShell`.
+
+#### Database & Performance
+- **Performance Indexes** (`20260704213757_add_performance_indexes.sql`): Three composite indexes added: `idx_calls_org_status` for live-calls dashboard, `idx_contacts_org_created_at` for cursor pagination, `idx_waitlist_email_created` for edge-function dedup checks.
+
+#### Supabase Edge Functions
+- **`waitlist-join/index.ts`**: New edge function for waitlist signup with deduplication and validation.
+- **`waitlist-phone/index.ts`**: New edge function for phone-number-based waitlist entries.
+- **`enterprise-inquire/index.ts`**: Enterprise inquiry submission moved to an edge function.
+
+### Changed
+
+- **`AppShell`**: Wired `CommandPalette`; `⌘K`/`Ctrl+K` opens it globally.
+- **`AgentDetail`**: Integrated `WebTestCallModal` as the web-call test trigger; `VariablesPanel` added alongside prompt editor.
+- **`IntegrationConnect`**: Shopify install now redirects to `WEEBERSH_INSTALL_URL` instead of direct Shopify OAuth.
+- **`agent-bridge` edge function**: Hardened error types, improved call-variable forwarding, consistent response shapes.
+- **`oauth-exchange` edge function**: Multi-provider state handling with CSRF verification.
+- **Calls routes**: Added filtering by `status`, `agent_id`, `from`/`to` date range on the calls list endpoint.
+- **Segment routes**: Added filter/search to contact segment list endpoint.
+- **`index.html`**: Updated CSP headers; added `@11labs` WebSocket domains to `connect-src`.
+- **Dependencies**: Added `@11labs/react` (in-browser ElevenLabs SDK). Removed `posthog-node` backend dependency.
+
+### Removed
+
+- **`tools/` module** (`backend/src/modules/tools/`): Entire tools layer removed — routes, middleware, and all four handler files (`calcom`, `calendar`, `shopify`, `twilio`). Tool execution now lives inside integration providers and webhook handlers.
+- **`custom.orchestrator.js`**: Custom voice orchestration removed. ElevenLabs CAI is the sole active runtime.
+- **`posthog.service.js`**: Backend PostHog service removed. Analytics is frontend-only.
+- **`credential.helper.js`**: Legacy vaultify helper removed. Credential handling integrated per-provider.
+- **Stale test files**: `integrations.test.js`, `remediation.test.js`, `auth-middleware.test.js` removed from remote (depended on removed modules). Active tests: `shopify-v2.test.js`, `shopify-provider.test.js`, `billing.test.js`, `elevenlabs.test.js`.
+- **`stub.provider.js`**: Placeholder integration stub removed.
+- **Docs cleanup**: Removed `docs/guides/custom-tools.md`, `docs/guides/developer-rules.md`, `docs/guides/vault-setup.md`, `docs/1-WELCOME.md`, `docs/2-JOURNEY_AND_HISTORY.md`, `backend/.../SHOPIFY_INTEGRATION.md`. `docs/architecture/security-audit.md` → relocated to `AUDIT.md` at repo root.
+
+---
+
+## [1.6.0] — 2026-07-04
+
+### Fixed
+- **Auth 401 Infinite Loop** (`auth.middleware.js`, `api.ts`): `decodeBearer()` was reading the stale `sb-access-token` httpOnly cookie before the `Authorization: Bearer` header. After Supabase SDK auto-refresh, the stale cookie shadowed the fresh token on every request → infinite retry loop. Fix: header-only, no cookie fallback. `api.ts` removes `credentials: "include"`. (See DEC-015.)
+- **`phone.e164` typo** (`agent.service.js`): `assignNumber` wrote `undefined` to `agents.inbound_number` because it referenced `phone.number` instead of `phone.e164`.
+- **`calls.updated_at` schema cache miss** (`20260704000002_add_calls_updated_at.sql`): Backend tried to update a column that didn't exist. Migration adds column + `NOTIFY pgrst, 'reload schema'`.
+- **ElevenLabs phone import field names** (`elevenlabs.provider.js`): Payload sent `twilio_account_sid`/`twilio_auth_token`; ElevenLabs expects `sid`/`token`.
+
+### Added
+- **Phone number assignment UI** (`AgentDetail.tsx`, `AgentsList.tsx`): Dropdown to select/swap phone numbers on agent forms. Backend `unassignPhoneNumberAgent()` helper clears stale references on swap.
+- **Cookie layer removed — Bearer-token-only session** (`auth.routes.js`, `auth.middleware.js`, `app.js`): `setAuthCookies()`, `clearAuthCookies()`, `cookieOptions`, all `res.cookie()`/`res.clearCookie()` calls, and `cookie-parser` middleware removed. Supabase JS SDK Bearer tokens are the sole session mechanism. (See DEC-015.)
+- **DEC-015 decision record** (`docs/DECISIONS.md`): Bearer-only session model documented with XSS/CSRF tradeoff rationale. DEC-011 corrected.
+
+---
+
 ## [1.5.2] - Thursday, 2026-06-26 02:07 IST
+
 
 ### Fixed
 - **ElevenLabs Interaction Budget Enum** (`elevenlabs.provider.js`): Corrected `interaction_budget.total_budget` from `"thirty_minutes"` (not a valid ElevenLabs enum value) to `"1_hour"`. Valid values are `5_minutes`, `10_minutes`, `1_hour` only. Added inline comment documenting the valid enum to prevent future regression.
