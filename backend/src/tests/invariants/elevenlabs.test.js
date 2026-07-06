@@ -304,6 +304,75 @@ test("Multi-tenant organization isolation", async () => {
   assert.equal(queryOrg2[0].name, "Agent 2");
 });
 
+// Task 7: _buildPlatformSettings must emit AgentPlatformSettingsRequestModel shape
+test("_buildPlatformSettings emits correct EL shape (never flat evaluation_criteria)", () => {
+  // Stub logger and pino before requiring the provider (pino not installed in test env)
+  const noop = () => {};
+  const mockLogger = { info: noop, warn: noop, error: noop, debug: noop };
+  const Module = require("module");
+  const origLoad = Module._load;
+  Module._load = function (req, parent, isMain) {
+    if (req === "pino") return () => mockLogger;
+    return origLoad.apply(this, arguments);
+  };
+
+  let provider;
+  try {
+    // Clear cached modules that depend on pino so they reload with the stub
+    delete require.cache[require.resolve("../../config/logger")];
+    delete require.cache[require.resolve("../../providers/voice/elevenlabs.provider")];
+    const ElevenLabsProvider = require("../../providers/voice/elevenlabs.provider");
+    provider = new ElevenLabsProvider({ api_key: "test" }, "org-test");
+  } finally {
+    Module._load = origLoad;
+    delete require.cache[require.resolve("../../config/logger")];
+    delete require.cache[require.resolve("../../providers/voice/elevenlabs.provider")];
+  }
+
+  const agent = {
+    analysis_config: {
+      data_collection: [
+        { identifier: "purchase_intent", data_type: "string", description: "Did the customer intend to purchase?" },
+        { identifier: "email_captured", data_type: "boolean", description: "Was an email captured?" },
+      ],
+      evaluation_criteria: [
+        { identifier: "call_successful", description: "Was the call goal achieved?" },
+        { identifier: "objection_handled", description: "Were objections handled professionally?" },
+      ],
+    },
+  };
+
+  const result = provider._buildPlatformSettings(agent);
+
+  // Must NOT have the old flat keys
+  assert.equal("evaluation_criteria" in result, false, "Old flat evaluation_criteria key must not exist");
+  assert.equal(Array.isArray(result.data_collection), false, "Old array data_collection must not exist");
+
+  // Must have evaluation.criteria (nested)
+  assert.ok(result.evaluation, "evaluation key must exist");
+  assert.ok(Array.isArray(result.evaluation.criteria), "evaluation.criteria must be an array");
+  assert.equal(result.evaluation.criteria.length, 2);
+
+  const c0 = result.evaluation.criteria[0];
+  assert.equal(c0.id, "call_successful");
+  assert.equal(c0.name, "call_successful");
+  assert.equal(c0.type, "prompt");
+  assert.equal(c0.scoring_mode, "binary");
+  assert.ok(typeof c0.conversation_goal_prompt === "string");
+
+  // Must have data_collection as keyed object
+  assert.ok(result.data_collection && typeof result.data_collection === "object");
+  assert.ok("purchase_intent" in result.data_collection);
+  assert.equal(result.data_collection.purchase_intent.type, "string");
+  assert.ok(typeof result.data_collection.purchase_intent.description === "string");
+  assert.ok("email_captured" in result.data_collection);
+  assert.equal(result.data_collection.email_captured.type, "boolean");
+
+  // null when no config
+  const nullResult = provider._buildPlatformSettings({});
+  assert.equal(nullResult, null, "Returns null when no analysis_config");
+});
+
 // Test agent deletion unbinding phone numbers and registry mapping
 test("deleteAgent unbinds phone numbers and deletes organization_agents", async () => {
   const db = makeMockDatabase();

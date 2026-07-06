@@ -81,6 +81,57 @@ router.get("/agents/:id", asyncHandler(async (req, res) => {
   res.json(data);
 }));
 
+// POST /v1/admin/agents/resync — re-push all ElevenLabs agents with fresh payload
+router.post("/agents/resync", asyncHandler(async (req, res) => {
+  const { requireAdmin } = require("../../config/supabase");
+  const personaService = require("../../services/persona.service");
+  const { buildVoiceProvider } = require("../../providers/voice/factory");
+
+  const admin = requireAdmin();
+  const { org_id } = req.body; // optional: scope to one org
+
+  let query = admin
+    .from("agents")
+    .select("*")
+    .eq("provider", "elevenlabs")
+    .is("deleted_at", null);
+
+  if (org_id) query = query.eq("org_id", org_id);
+
+  const { data: agents, error } = await query;
+  if (error) throw error;
+
+  const results = { synced: 0, skipped: 0, failed: 0, errors: [] };
+
+  for (const agent of agents || []) {
+    if (!agent.provider_ref) {
+      results.skipped++;
+      continue;
+    }
+    try {
+      const systemPrompt = personaService.generateSystemPrompt(agent.persona || {});
+      const voiceProvider = buildVoiceProvider({ agent });
+      await voiceProvider.updateAgent(agent.provider_ref, agent, systemPrompt);
+      await admin
+        .from("agents")
+        .update({ sync_status: "synced", sync_error: null, last_synced_at: new Date().toISOString() })
+        .eq("id", agent.id);
+      results.synced++;
+    } catch (err) {
+      logger.error({ agentId: agent.id, orgId: agent.org_id, err: err.message }, "resync: failed to push agent");
+      await admin
+        .from("agents")
+        .update({ sync_status: "error", sync_error: err.message })
+        .eq("id", agent.id);
+      results.failed++;
+      results.errors.push({ agent_id: agent.id, org_id: agent.org_id, error: err.message });
+    }
+  }
+
+  logger.info({ ...results, scope: org_id || "all" }, "Admin agents resync complete");
+  res.json({ ok: true, ...results });
+}));
+
 router.get("/billing", asyncHandler(async (req, res) => {
   const { page = 1, limit = 25 } = req.query;
   const result = await adminService.listBilling({ page: +page, limit: +limit });

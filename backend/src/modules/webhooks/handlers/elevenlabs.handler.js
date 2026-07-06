@@ -269,6 +269,12 @@ async function handle(payload) {
     if (scRow) {
       const scUpdate = { outcome, status: "completed" };
 
+      // Persist evaluation results from ElevenLabs post-call analysis
+      const elEvaluation = data?.analysis?.evaluation || data?.evaluation;
+      if (elEvaluation && typeof elEvaluation === "object") {
+        scUpdate.evaluation_results = elEvaluation;
+      }
+
       if ((outcome === "no_answer" || outcome === "voicemail") && canRetry(scRow.attempt)) {
         const retryAt = computeRetryAt(new Date(), scRow.attempt);
         await admin.from("scheduled_calls").insert({

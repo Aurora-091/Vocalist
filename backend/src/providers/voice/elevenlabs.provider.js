@@ -162,18 +162,61 @@ class ElevenLabsProvider extends VoiceProvider {
     let normalizedBudget = totalBudget;
     if (normalizedBudget === "async") normalizedBudget = "10_minutes";
 
+    const conversationConfig = {
+      agent: {
+        prompt: promptConfig,
+        first_message: firstMessage,
+        language,
+      },
+      tts: {
+        voice_id: voiceId,
+      },
+    };
+
+    // ASR keyword boosting: user-defined boost_keywords + shop_name as one phrase (capped at 50, deduped)
+    // TODO(G6): extend to include product titles when a product-title caching mechanism is available
+    const rawKeywords = Array.isArray(agent.persona?.boost_keywords) ? [...agent.persona.boost_keywords] : [];
+    const shopName = this.config?.shop_name || agent.integration_config?.shop_name || agent.persona?.shop_name;
+    if (shopName) rawKeywords.push(shopName);
+    const dedupedKeywords = [...new Set(rawKeywords.map((k) => String(k).trim()).filter(Boolean))].slice(0, 50);
+    if (dedupedKeywords.length > 0) {
+      conversationConfig.asr = { keywords: dedupedKeywords };
+    }
+
+    // Multi-language: build language_presets for secondary languages
+    const languages = agent.languages && Array.isArray(agent.languages) ? agent.languages : [language];
+    const langMessages = agent.persona?.language_messages || {};
+    if (languages.length > 1) {
+      const presets = {};
+      for (const lang of languages) {
+        const langOverrideMsg = langMessages[lang];
+        presets[lang] = {
+          overrides: {
+            agent: {
+              language: lang,
+              ...(langOverrideMsg ? { first_message: replacePlaceholders(langOverrideMsg, variables) } : {}),
+            },
+          },
+        };
+      }
+      conversationConfig.language_presets = presets;
+    }
+
+    // Conversation style → conversation_config.turn
+    // Amendment 3: silence_end_call_timeout of -1 is valid (means "disabled" in EL)
+    const TURN_MAP = {
+      quick:    { turn_timeout: 4,  turn_eagerness: "eager",   silence_end_call_timeout: 15 },
+      balanced: { turn_timeout: 7,  turn_eagerness: "normal",  silence_end_call_timeout: -1 },
+      patient:  { turn_timeout: 12, turn_eagerness: "patient", silence_end_call_timeout: 45 },
+    };
+    const conversationStyle = agent.persona?.conversation_style || agent.conversation_style;
+    if (conversationStyle && TURN_MAP[conversationStyle]) {
+      conversationConfig.turn = TURN_MAP[conversationStyle];
+    }
+
     const payload = {
       name: agent.name,
-      conversation_config: {
-        agent: {
-          prompt: promptConfig,
-          first_message: firstMessage,
-          language,
-        },
-        tts: {
-          voice_id: voiceId,
-        },
-      },
+      conversation_config: conversationConfig,
     };
 
     const platformSettings = this._buildPlatformSettings(agent);
@@ -279,16 +322,56 @@ class ElevenLabsProvider extends VoiceProvider {
 
   _buildPlatformSettings(agent) {
     const analysisConfig = agent.analysis_config || agent.persona?.analysis_config;
-    if (!analysisConfig) return null;
+    const privacyConfig = agent.privacy_config || agent.persona?.privacy_config;
+    if (!analysisConfig && !privacyConfig) return null;
 
     const settings = {};
 
-    if (analysisConfig.data_collection && Array.isArray(analysisConfig.data_collection)) {
-      settings.data_collection = analysisConfig.data_collection;
+    // data_collection: array [{identifier, data_type, description}] → keyed object
+    // EL schema: { [identifier]: { type, description } }
+    if (analysisConfig?.data_collection && Array.isArray(analysisConfig.data_collection)) {
+      const keyed = {};
+      for (const item of analysisConfig.data_collection) {
+        if (!item.identifier) continue;
+        keyed[item.identifier] = {
+          type: item.data_type || "string",
+          description: item.description || "",
+        };
+      }
+      if (Object.keys(keyed).length > 0) {
+        settings.data_collection = keyed;
+      }
     }
 
-    if (analysisConfig.evaluation_criteria && Array.isArray(analysisConfig.evaluation_criteria)) {
-      settings.evaluation_criteria = analysisConfig.evaluation_criteria;
+    // evaluation_criteria: array [{identifier, description}] → EL evaluation.criteria
+    // EL schema: { evaluation: { criteria: [PromptEvaluationCriteria] } }
+    if (analysisConfig?.evaluation_criteria && Array.isArray(analysisConfig.evaluation_criteria)) {
+      const criteria = analysisConfig.evaluation_criteria
+        .filter((c) => c.identifier)
+        .map((c) => ({
+          id: c.identifier,
+          name: c.identifier,
+          type: "prompt",
+          conversation_goal_prompt: c.description || "",
+          scoring_mode: "binary",
+        }));
+      if (criteria.length > 0) {
+        settings.evaluation = { criteria };
+      }
+    }
+
+    // privacy: Task 5 — persisted per-agent as privacy_config
+    if (privacyConfig) {
+      settings.privacy = {};
+      if (typeof privacyConfig.record_voice === "boolean") {
+        settings.privacy.record_voice = privacyConfig.record_voice;
+      }
+      if (typeof privacyConfig.zero_retention_mode === "boolean") {
+        settings.privacy.zero_retention_mode = privacyConfig.zero_retention_mode;
+      }
+      if (Object.keys(settings.privacy).length === 0) {
+        delete settings.privacy;
+      }
     }
 
     return Object.keys(settings).length > 0 ? settings : null;
