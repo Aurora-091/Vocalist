@@ -99,7 +99,9 @@ function ProfilePanel() {
           setDisplayName(data.display_name || "");
           setTimezone(data.timezone || "UTC");
         }
-      } catch {}
+      } catch {
+        /* ignored */
+      }
       setLoading(false);
     })();
   }, []);
@@ -183,7 +185,9 @@ function AppearancePanel() {
     if (session) {
       try {
         await updateUserTheme(session.user_id, newTheme);
-      } catch {}
+      } catch {
+        /* ignored */
+      }
     }
   }
 
@@ -220,7 +224,6 @@ function AppearancePanel() {
 function SecurityPanel() {
   const [sessions, setSessions] = useState<any[] | null>(null);
   const [changingPw, setChangingPw] = useState(false);
-  const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
 
@@ -271,7 +274,6 @@ function SecurityPanel() {
     } else {
       toast.success("Password updated");
       setChangingPw(false);
-      setCurrentPw("");
       setNewPw("");
     }
   }
@@ -751,7 +753,7 @@ function PlaybooksPanel() {
     setSaving(key);
     try {
       const pb = playbooks[key];
-      const { id, ...payload } = pb;
+      const { id: _id, ...payload } = pb;
       await api.put(`/v1/integrations/playbooks/${key}`, payload);
       toast.success(`${PLAYBOOK_META[key].label} saved`);
     } catch {

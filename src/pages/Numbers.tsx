@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Phone, Plus, Trash2, Unlink, ShieldCheck, Loader as Loader2 } from "lucide-react";
+import { Phone, Plus, Trash2, Unlink, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { listPhoneNumbers, listAgents, unlinkPhoneNumberAgent, deletePhoneNumber } from "../lib/db";
 import { Button } from "@/components/ui/button";

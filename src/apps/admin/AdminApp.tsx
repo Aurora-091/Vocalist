@@ -17,6 +17,7 @@ const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const ProductAnalytics = lazy(() => import("@/pages/admin/analytics/ProductAnalytics"));
 const MarketingAnalytics = lazy(() => import("@/pages/admin/analytics/MarketingAnalytics"));
 const RevenueAnalytics = lazy(() => import("@/pages/admin/analytics/RevenueAnalytics"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
 function PageLoader() {
   return (
@@ -121,7 +122,7 @@ export default function AdminApp() {
           <Route path="analytics/revenue" element={<RevenueAnalytics />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );

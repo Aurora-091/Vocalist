@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Globe, FileText, Trash2, RefreshCw, Link as LinkIcon, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Loader as Loader2, Inbox } from "lucide-react";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +36,7 @@ const STATUS_LABEL = {
 
 export default function Knowledge() {
   const [sources, setSources] = useState<KnowledgeSource[] | null>(null);
-  const [tab, setTab] = useState<"website" | "document">("website");
+  const [_tab, _setTab] = useState<"website" | "document">("website");
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export default function Knowledge() {
       const res = await api.get<{ sources: KnowledgeSource[] }>("/v1/knowledge/sources");
       setSources(res.sources || []);
     } catch {
+      toast.error("Failed to load knowledge sources");
       setSources([]);
     }
   }
@@ -82,7 +84,9 @@ export default function Knowledge() {
       setSources((prev) =>
         prev?.map((s) => (s.id === id ? { ...s, status: "syncing" } : s)) ?? null
       );
-    } catch {}
+    } catch {
+      toast.error("Failed to resync knowledge source");
+    }
   }
 
   return (

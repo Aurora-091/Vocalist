@@ -32,6 +32,7 @@ export default function AuthBridge() {
       }
     }
     hydrate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

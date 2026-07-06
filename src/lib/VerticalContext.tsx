@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import {
-  getOrgId,
   getOrgVerticalConfigId,
   getVerticalConfigKey,
   getVerticalConfigId,
@@ -48,7 +47,9 @@ export function VerticalProvider({ children }: { children: ReactNode }) {
           const key = await getVerticalConfigKey(verticalConfigId);
           if (key) setVerticalState(key as VerticalKey);
         }
-      } catch {}
+      } catch {
+        /* ignored */
+      }
       setLoading(false);
     })();
   }, []);
@@ -60,7 +61,9 @@ export function VerticalProvider({ children }: { children: ReactNode }) {
       if (configId) {
         await updateOrgVerticalConfig(configId);
       }
-    } catch {}
+    } catch {
+      /* ignored */
+    }
   }
 
   const config = getVerticalDefinition(vertical);

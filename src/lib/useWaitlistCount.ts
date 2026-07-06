@@ -25,7 +25,9 @@ export function useWaitlistCount() {
           if (data.type === "waitlist_count" && typeof data.count === "number") {
             setCount(data.count);
           }
-        } catch {}
+        } catch {
+          /* ignored */
+        }
       };
 
       ws.onclose = () => {

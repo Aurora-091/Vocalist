@@ -97,6 +97,7 @@ export default function VoiceLibrary({
 
   useEffect(() => {
     loadAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSelector]);
 
   const [player, setPlayer] = useState<PlayerState>({
@@ -121,11 +122,13 @@ export default function VoiceLibrary({
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gender, language]);
 
   useEffect(() => {
     const timer = setTimeout(load, 300);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   useEffect(() => {
@@ -611,7 +614,7 @@ function VoiceCard({
   selectedVoiceId,
   isSelector,
   onSelect,
-  filterLanguages,
+  _filterLanguages,
   isCompatible,
   agents,
   onAssignSuccess,

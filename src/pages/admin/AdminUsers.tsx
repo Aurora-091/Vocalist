@@ -15,7 +15,7 @@ export default function AdminUsers() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<any>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [_detailLoading, _setDetailLoading] = useState(false);
 
   const [showPlanSelect, setShowPlanSelect] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("starter");

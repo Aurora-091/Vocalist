@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -21,15 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const STATUS_TONE: Record<string, "success" | "info" | "neutral" | "warning" | "danger"> = {
-  draft: "neutral",
-  scheduled: "info",
-  running: "success",
-  paused: "warning",
-  completed: "neutral",
-  canceled: "danger",
-};
 
 type ComplianceReview = {
   total_targets: number;
@@ -70,7 +61,9 @@ export default function CampaignDetail() {
         grouped[t.state] = (grouped[t.state] || 0) + 1;
       }
       setStats(grouped);
-    } catch {}
+    } catch {
+      toast.error("Failed to load campaign");
+    }
   }
 
   async function loadReview() {
@@ -79,6 +72,7 @@ export default function CampaignDetail() {
       const res = await api.get<ComplianceReview>(`/v1/campaigns/${id}/review`);
       setReview(res);
     } catch {
+      toast.error("Failed to load compliance review");
       setReview(null);
     } finally {
       setReviewLoading(false);
@@ -88,6 +82,7 @@ export default function CampaignDetail() {
   useEffect(() => {
     load();
     loadReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -110,6 +105,7 @@ export default function CampaignDetail() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, campaign?.status]);
 
   async function setStatus(status: string) {
@@ -360,7 +356,7 @@ function AddContactsPanel({
   const [csvFile, setCsvFile] = useState<string | null>(null);
   const [csvParsing, setCsvParsing] = useState(false);
 
-  async function load(query?: string) {
+  const load = useCallback(async (query?: string) => {
     try {
       const raw = await listContacts({ q: query, limit: 200 });
       const filtered =
@@ -369,9 +365,9 @@ function AddContactsPanel({
     } catch {
       setContacts([]);
     }
-  }
+  }, [filter]);
 
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { load(); }, [filter, load]);
 
   function handleQ(val: string) {
     setQ(val);

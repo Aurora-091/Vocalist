@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { isAdminApp } from "@/lib/hostname";
 import "./index.css";
 
@@ -33,9 +34,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <ThemeProvider attribute="class" defaultTheme="system" storageKey="weeber-theme">
         <TooltipProvider delayDuration={150}>
           <AnalyticsLoader />
-          <Suspense fallback={<AppLoader />}>
-            {isAdminApp ? <AdminApp /> : <CustomerApp />}
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<AppLoader />}>
+              {isAdminApp ? <AdminApp /> : <CustomerApp />}
+            </Suspense>
+          </ErrorBoundary>
           <Toaster richColors closeButton position="top-right" />
           <SpeedInsights />
         </TooltipProvider>

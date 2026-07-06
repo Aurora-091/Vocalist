@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy, Zap, Globe, LayoutTemplate, MessageSquare, WrapText, Clock } from "lucide-react";
+import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Zap, Globe, LayoutTemplate, MessageSquare, WrapText, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { getAgent, listVoices, listAgentKnowledge, getCall } from "../lib/db";
 import { api } from "../lib/api";
@@ -229,6 +229,7 @@ export default function AgentDetail() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Load the referenced call when from_call param is present
@@ -251,7 +252,7 @@ export default function AgentDetail() {
       const unsupported = selectedLanguages.filter((l) => !voiceLangs.includes(l));
       setLangVoiceWarning(unsupported);
     })();
-  }, [selectedLanguages]);
+  }, [selectedLanguages, agent?.voice_id]);
 
   async function save() {
     if (!agent) return;

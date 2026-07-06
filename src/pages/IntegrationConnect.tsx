@@ -90,6 +90,7 @@ export default function IntegrationConnect() {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
   if (loading || !catalogEntry) {
@@ -142,7 +143,7 @@ export default function IntegrationConnect() {
       }
 
       if (provider === "whatsapp") {
-        const { data, error } = await supabase.functions.invoke("agent-bridge", {
+        const { error } = await supabase.functions.invoke("agent-bridge", {
           body: {
             provider: "whatsapp",
             action: "send_message",

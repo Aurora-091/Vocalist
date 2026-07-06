@@ -206,11 +206,15 @@ export function AppShell() {
             included: u.included_minutes,
           });
         }
-      } catch {}
+      } catch {
+        /* ignored */
+      }
       try {
         const o = await getOrg();
         setOrgName(o?.name || "");
-      } catch {}
+      } catch {
+        /* ignored */
+      }
     })();
   }, []);
 

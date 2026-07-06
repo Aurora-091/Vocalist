@@ -108,9 +108,12 @@ function OnboardingInner() {
             const defaultVoice = data.find((v: Voice) => v.voice_id === selectedPreset?.voice_id) || data[0];
             setSelectedVoice(defaultVoice.voice_id);
           }
-        } catch {}
+        } catch {
+          /* ignored */
+        }
       })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   async function createAgentFromPreset() {

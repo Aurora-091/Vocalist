@@ -15,17 +15,14 @@ import {
   Activity,
   CalendarCheck,
   Search,
-  Check,
   Plug,
   ExternalLink,
-  Filter,
 } from "lucide-react";
 import {
   listIntegrationCatalog,
   listBridgeConfigs,
 } from "../lib/db";
 import { useVertical } from "../lib/VerticalContext";
-import type { IntegrationRef } from "../config/verticals";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -78,12 +75,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   telephony: "Telephony",
 };
 
-const VERTICAL_LABELS: Record<string, string> = {
-  ecommerce: "E-Commerce",
-  retail: "Retail",
-  clinic: "Healthcare",
-  services: "Services",
-};
 
 const TABS = [
   { key: "recommended", label: "Recommended" },

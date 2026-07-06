@@ -91,7 +91,7 @@ export default function AdminLogs() {
             placeholder="Org ID"
             value={orgId}
             onChange={(e) => { setOrgId(e.target.value); setPage(1); }}
-            className="w-[180px] h-9"
+            className="w-full sm:w-[180px] h-9"
           />
         </div>
       </div>

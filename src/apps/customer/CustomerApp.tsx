@@ -35,6 +35,7 @@ const AuthBridge = lazy(() => import("@/pages/auth/AuthBridge"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const Knowledge = lazy(() => import("@/pages/Knowledge"));
 const Playbooks = lazy(() => import("@/pages/Playbooks"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
 function PageLoader() {
   return (
@@ -110,7 +111,7 @@ export default function CustomerApp() {
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     );

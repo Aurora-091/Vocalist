@@ -4,6 +4,7 @@ import { Plus, Check, Sparkles, Phone, Bot, Megaphone } from "lucide-react";
 import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls } from "../lib/db";
 import { supabase } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
+import { toast } from "sonner";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ export default function Dashboard() {
         setUsage(u);
         setSteps(s);
       } catch {
+        toast.error("Failed to load dashboard data");
         setOverview({ calls_total: 0, calls_completed: 0, opt_outs: 0, bookings: 0 });
       } finally {
         setLoading(false);
@@ -89,7 +91,9 @@ export default function Dashboard() {
       try {
         const data = await listRecentCalls(3);
         setRecentCalls(data);
-      } catch {}
+      } catch {
+        toast.error("Failed to load recent calls");
+      }
     })();
   }, []);
 
