@@ -4,6 +4,32 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.10.0] — 2026-07-06
+
+### Infrastructure Hardening
+
+#### Database — Vector Index Upgrade
+- **HNSW Index** (`20260706_upgrade_knowledge_chunks_to_hnsw.sql`): Replaced the IVFFlat cosine index on `knowledge_chunks.embedding` with an HNSW index (m=16, ef_construction=64). HNSW provides higher recall at small dataset sizes, consistent O(log n) query time, and requires zero periodic maintenance (no REINDEX, no list-count tuning). The old `knowledge_chunks_embedding_idx` is dropped; new index is `knowledge_chunks_embedding_hnsw_idx`.
+
+#### Database — Native Cron Scheduling
+- **pg_cron + pg_net** (`20260706_enable_pg_cron_scheduling.sql`): Enabled `pg_cron` and `pg_net` extensions. Two database-native cron jobs provide a reliability floor that survives API deploys and worker restarts:
+  - `reclaim-expired-leases`: Runs every minute, calls `reclaim_expired_leases(500)` to recover dial targets stuck in DIALING/RINGING state due to process crashes.
+  - `billing-reconcile-check`: Runs every 10 minutes, executes `check_billing_drift()` PL/pgSQL function to detect and correct spend counter drift (tolerance: $0.01).
+
+#### Database — Realtime Subscriptions
+- **Supabase Realtime** (`20260706_enable_realtime_campaigns_calls.sql`): Added `campaigns` and `calls` tables to the `supabase_realtime` publication. Frontend clients can now subscribe to live status transitions (campaign completion, new calls) without polling. RLS is enforced on Realtime — clients only receive changes for rows they can SELECT.
+
+#### Railway — Worker Service Splitting
+- **`worker-entry.js`** (`backend/worker-entry.js`): New standalone entry point that starts all 6 background workers (dialer, retry, billing-rollup, lease-sweeper, webhooks-out, call-scheduler) without starting Express or WebSocket servers. Includes a minimal HTTP health probe on port 3001.
+- **`railway.worker.json`** (`backend/railway.worker.json`): Railway service config for the worker process. Start command: `node worker-entry.js`, healthcheck at `/health`, restart on failure with 5 max retries.
+- **`Procfile`** updated: Added `worker: node worker-entry.js` alongside existing `web: node server.js`.
+- **`package.json`** updated: Added `start:workers` script.
+
+#### Vercel — Security Headers
+- **X-XSS-Protection: 0** (`vercel.json`): Explicitly disables the legacy browser XSS auditor. Modern Content-Security-Policy supersedes it, and the auditor itself can introduce vulnerabilities via selective script blocking attacks.
+
+---
+
 ## [1.9.5] — 2026-07-06
 
 ### Added

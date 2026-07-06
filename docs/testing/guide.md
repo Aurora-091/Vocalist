@@ -14,6 +14,32 @@ backend/src/tests/
 └── invariants/        # Automated test suites (remediation, integrations, state machines)
 ```
 
+### Test Suites
+
+| File | Coverage Area |
+|------|---------------|
+| `auth-middleware.test.js` | JWT validation, token expiry, org extraction |
+| `billing.test.js` | Overage calculation, idempotency, cost formulas |
+| `consent-gate.test.js` | DPDP consent enforcement before outbound calls |
+| `consent-locked.test.js` | Consent withdrawal blocks further processing |
+| `elevenlabs.test.js` | ElevenLabs webhook signature, payload parsing |
+| `enterprise-inquiries.test.js` | Enterprise form validation |
+| `idempotency.test.js` | Duplicate request prevention |
+| `inbound-gate.test.js` | Inbound call admission control |
+| `integrations.test.js` | Provider connect/disconnect flows |
+| `onboarding.test.js` | Onboarding step progression |
+| `phone.test.js` | E.164 normalization, country inference |
+| `remediation.test.js` | Audit issue fixes verification |
+| `security-headers.test.js` | Vercel security headers (CSP, HSTS, XSS, Permissions-Policy) |
+| `settings-sync.test.js` | Settings read/write consistency |
+| `shopify-provider.test.js` | Shopify integration provider |
+| `shopify-v2.test.js` | Shopify v2 playbooks and scheduled calls |
+| `state-machine.test.js` | Campaign target state transitions |
+| `twilio-stream.test.js` | Twilio media stream WebSocket handling |
+| `twilio.test.js` | Twilio subaccount provisioning |
+| `webhook-sig.test.js` | Webhook HMAC signature verification |
+| `worker-infra.test.js` | Worker service splitting, Railway config, Procfile, health probes |
+
 ---
 
 ## 2. Running Automated Tests
@@ -25,6 +51,13 @@ npm test
 ```
 
 This runs the custom node test runner on all `*.test.js` files under the `invariants` directory.
+
+### Running Individual Test Suites
+```bash
+cd backend
+SUPABASE_URL=http://localhost SUPABASE_ANON_KEY=dummy_key_must_be_20_chars \
+  node --test src/tests/invariants/worker-infra.test.js
+```
 
 ### Code Coverage
 To verify test coverage:
@@ -48,7 +81,20 @@ const shopifyFixture = JSON.parse(
 
 ---
 
-## 4. Maintenance of the Living Edge-Cases Sheet
+## 4. Infrastructure Tests
+
+The `worker-infra.test.js` and `security-headers.test.js` suites verify deployment configuration correctness without requiring network access or running services. They validate:
+
+- **Worker splitting**: `worker-entry.js` imports all workers, has a health probe, handles signals, and does NOT start Express.
+- **Railway configs**: Both `railway.json` (API) and `railway.worker.json` (workers) have correct start commands and healthcheck paths.
+- **Procfile**: Defines both `web` and `worker` process types.
+- **Security headers**: All Vercel response headers match expected security posture (HSTS, CSP directives, XSS protection disabled, frame/object blocking).
+
+These tests run as part of the standard test suite and catch configuration drift before deployment.
+
+---
+
+## 5. Maintenance of the Living Edge-Cases Sheet
 When writing new features, modifying webhooks, or updating the database schema:
 1. **Automated Test**: Write a matching unit/integration test in `backend/src/tests/invariants/`.
 2. **Changelog Entry**: Add details of the fix or feature to `docs/CHANGELOG.md`.

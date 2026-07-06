@@ -30,6 +30,21 @@ graph TD
 * **Configuration**:
   - Run command: `npm start` (defined in `backend/package.json`).
   - CommonJS runtime bindings.
+  - Set `RUN_WORKERS=0` when running alongside the dedicated worker service.
+
+### Worker Service (Background Processing)
+* **Platform**: Railway (see `backend/railway.worker.json`)
+* **Configuration**:
+  - Run command: `node worker-entry.js` (or `npm run start:workers`).
+  - Requires `SUPABASE_SERVICE_ROLE_KEY` to be set (will exit fatally otherwise).
+  - Health probe on port `WORKER_HEALTH_PORT` (default: 3001).
+  - Runs 6 workers: dialer, retry, billing-rollup, lease-sweeper, webhooks-out, call-scheduler.
+  - Graceful shutdown on SIGTERM with 5-second drain timeout.
+* **Scaling Notes**:
+  - The API and Worker services share the same codebase but run different entry points.
+  - Worker service has no Express HTTP server — only a minimal health endpoint.
+  - Scale workers independently of the API (e.g., increase replicas during campaign bursts).
+  - Database-native cron jobs (pg_cron) provide a fallback for lease reclamation and billing drift even if the worker service is down.
 
 ### Database & Auth (Supabase)
 * **Hosting**: Supabase Cloud
@@ -75,10 +90,15 @@ Ensure the following properties are configured in the environment profile:
    ```
 2. **Supabase Auth — Leaked Password Protection**: In the Supabase Dashboard, go to Authentication > Providers > Email and enable the **Leaked Password Protection** toggle. This enables HaveIBeenPwned breach detection and cannot be set via SQL migration.
 3. **Supabase Auth — Connection Pool Strategy**: In the Supabase Dashboard, go to Database > Connection Pooling and switch the Auth pool from an absolute connection count to **percentage-based** allocation. This prevents Auth from consuming a fixed share of the connection pool under high load. This is a Dashboard-only setting and cannot be set via SQL migration.
-4. **Twilio Subaccounts**: Verify Twilio sandbox environment keys if staging matches localhost bindings.
-5. **Stripe Webhooks**: Bind Stripe webhook handlers to `/v1/webhooks/stripe`.
-6. **ElevenLabs Profiles**: Verify Voice IDs mapped in `vertical_configs` exist on target ElevenLabs accounts.
-7. **Static Assets**: Compile package assets:
+4. **Supabase — PITR (Point-in-Time Recovery)**: In the Supabase Dashboard, go to Database > Backups and enable PITR. Provides continuous WAL archiving with recovery to any second in the last 7 days. Critical for financial data integrity.
+5. **Supabase — Network Restrictions**: In the Supabase Dashboard, go to Database > Network Restrictions and restrict direct DB access to known IPs only (Railway service IPs, developer VPN CIDRs).
+6. **Railway — Region Colocation**: Verify the Railway service region matches the Supabase project region (both should be the same AWS region, e.g., `us-east-1`). Cross-region DB calls add 40-80ms per query.
+7. **Railway — Worker Service**: Deploy the worker service using `backend/railway.worker.json`. Set `RUN_WORKERS=0` on the API service and ensure `SUPABASE_SERVICE_ROLE_KEY` is configured on the worker service.
+8. **Vercel — Deployment Protection**: Enable Vercel Deployment Protection for preview deployments to prevent unauthorized access to staging URLs.
+9. **Twilio Subaccounts**: Verify Twilio sandbox environment keys if staging matches localhost bindings.
+10. **Stripe Webhooks**: Bind Stripe webhook handlers to `/v1/webhooks/stripe`.
+11. **ElevenLabs Profiles**: Verify Voice IDs mapped in `vertical_configs` exist on target ElevenLabs accounts.
+12. **Static Assets**: Compile package assets:
    ```bash
    npm run build
    ```
