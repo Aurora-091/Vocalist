@@ -1,4 +1,4 @@
-import { ShoppingBag, PhoneIncoming, PhoneOutgoing, Bot, Megaphone, MessageSquare, Users, BookOpen, PhoneCall, Volume2, Plug, ChartBar as BarChart2, LayoutDashboard, TrendingUp, CreditCard, Settings, ShoppingCart, Repeat, Headphones } from "lucide-react";
+import { ShoppingBag, PhoneIncoming, PhoneOutgoing, Bot, Megaphone, MessageSquare, Users, BookOpen, PhoneCall, Volume2, Plug, ChartBar as BarChart2, LayoutDashboard, TrendingUp, CreditCard, Settings, ShoppingCart, Repeat, Headphones, BookMarked } from "lucide-react";
 import type { VerticalDefinition } from "./index";
 
 export const shopifyVertical: VerticalDefinition = {
@@ -71,6 +71,7 @@ export const shopifyVertical: VerticalDefinition = {
         { to: "/agents", label: "Agents", icon: Bot },
         { to: "/campaigns", label: "Campaigns", icon: Megaphone },
         { to: "/calls", label: "Conversations", icon: MessageSquare },
+        { to: "/playbooks", label: "Playbooks", icon: BookMarked },
       ],
     },
     {

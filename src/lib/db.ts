@@ -164,6 +164,7 @@ export async function listCalls(opts?: {
   status?: string;
   date_from?: string;
   date_to?: string;
+  test_only?: boolean;
   limit?: number;
   offset?: number;
 }) {
@@ -178,6 +179,7 @@ export async function listCalls(opts?: {
   if (opts?.status) query = query.eq("status", opts.status);
   if (opts?.date_from) query = query.gte("created_at", opts.date_from);
   if (opts?.date_to) query = query.lte("created_at", opts.date_to);
+  if (opts?.test_only) query = query.filter("outcome->test", "eq", "true");
   const { data, error, count } = await query;
   if (error) throw error;
   return { data: data || [], count: count || 0 };

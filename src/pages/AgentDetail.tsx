@@ -133,12 +133,14 @@ export default function AgentDetail() {
   const objectiveRef = useRef<HTMLTextAreaElement>(null);
   const guardrailsRef = useRef<HTMLTextAreaElement>(null);
   const lastFocusedField = useRef<"objective" | "guardrails" | null>(null);
+  const personaCardRef = useRef<HTMLDivElement>(null);
 
   // Test call
   const [testNumber, setTestNumber] = useState("");
   const [calling, setCalling] = useState(false);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [webTestOpen, setWebTestOpen] = useState(false);
+  const [lastWebTestAt, setLastWebTestAt] = useState<string | null>(null);
 
   // Skills
   const [allSkills, setAllSkills] = useState<any[]>([]);
@@ -203,6 +205,21 @@ export default function AgentDetail() {
       setAllSkills(skillsRes.skills || []);
       const ids = new Set((activeRes.skills || []).map((s: any) => s.skill_id));
       setActiveSkillIds(ids);
+
+      // Last web test timestamp
+      try {
+        const { data: testRows } = await supabase
+          .from("calls")
+          .select("created_at")
+          .eq("agent_id", id)
+          .eq("direction", "outbound")
+          .filter("outcome->test", "eq", "true")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (testRows && testRows.length > 0) setLastWebTestAt(testRows[0].created_at);
+      } catch {
+        // non-fatal
+      }
     } catch {
       setAgent(null);
     } finally {
@@ -531,6 +548,7 @@ export default function AgentDetail() {
       )}
 
       {/* Persona card */}
+      <div ref={personaCardRef}>
       <Card className="gap-0 overflow-visible py-0 shadow-card">
         <div className="border-b px-6 py-4 flex items-center justify-between">
           <div className="font-medium">Persona</div>
@@ -696,6 +714,7 @@ export default function AgentDetail() {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* Deployment card */}
       <Card className="gap-0 overflow-visible py-0 shadow-card">
@@ -838,14 +857,27 @@ export default function AgentDetail() {
             <p className="text-sm text-text-muted mb-3">
               Talk to your agent directly in the browser. No phone needed.
             </p>
-            <Button
-              disabled={!agent.provider_ref}
-              onClick={() => setWebTestOpen(true)}
-              className="w-full sm:w-auto"
-            >
-              <Globe className="w-4 h-4 mr-2" />
-              Test in browser
-            </Button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button
+                disabled={!agent.provider_ref}
+                onClick={() => setWebTestOpen(true)}
+                className="w-full sm:w-auto"
+              >
+                <Globe className="w-4 h-4 mr-2" />
+                Test in browser
+              </Button>
+              {lastWebTestAt && (
+                <span className="text-xs text-text-muted">
+                  Last tested{" "}
+                  {new Date(lastWebTestAt).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Phone test — secondary */}
@@ -917,6 +949,15 @@ export default function AgentDetail() {
           onOpenChange={setWebTestOpen}
           agentId={id!}
           agentName={agent.name}
+          onGoFix={(notes) => {
+            setWebTestOpen(false);
+            setTimeout(() => {
+              personaCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              if (notes) {
+                objectiveRef.current?.focus();
+              }
+            }, 100);
+          }}
         />
       )}
 

@@ -34,6 +34,7 @@ const OAuthCallback = lazy(() => import("@/pages/auth/OAuthCallback"));
 const AuthBridge = lazy(() => import("@/pages/auth/AuthBridge"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const Knowledge = lazy(() => import("@/pages/Knowledge"));
+const Playbooks = lazy(() => import("@/pages/Playbooks"));
 
 function PageLoader() {
   return (
@@ -103,6 +104,7 @@ export default function CustomerApp() {
             <Route path="/outcomes" element={<Outcomes />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/knowledge" element={<Knowledge />} />
+            <Route path="/playbooks" element={<Playbooks />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

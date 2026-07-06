@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useConversation } from "@11labs/react";
-import { Mic, MicOff, Phone, PhoneOff, Volume2 } from "lucide-react";
+import { Mic, MicOff, Phone, PhoneOff, Volume2, Wrench, StickyNote } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { captureEvent } from "@/lib/posthog";
 
@@ -19,6 +20,7 @@ type WebTestCallModalProps = {
   onOpenChange: (open: boolean) => void;
   agentId: string;
   agentName: string;
+  onGoFix?: (notes: string) => void;
 };
 
 const MAX_DURATION_SEC = 300;
@@ -28,6 +30,7 @@ export function WebTestCallModal({
   onOpenChange,
   agentId,
   agentName,
+  onGoFix,
 }: WebTestCallModalProps) {
   const [phase, setPhase] = useState<
     "idle" | "requesting-mic" | "connecting" | "active" | "ended"
@@ -36,6 +39,7 @@ export function WebTestCallModal({
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [muted, setMuted] = useState(false);
+  const [notes, setNotes] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -93,6 +97,7 @@ export function WebTestCallModal({
       setMessages([]);
       setError(null);
       setElapsed(0);
+      setNotes("");
       stopTimer();
     }
   }, [open, stopTimer]);
@@ -242,6 +247,22 @@ export function WebTestCallModal({
           <p className="text-sm text-destructive">{error}</p>
         )}
 
+        {/* Post-call notes (only in ended phase) */}
+        {phase === "ended" && (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+              <StickyNote className="w-3 h-3" />
+              Quick notes
+            </label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="What needs fixing? e.g. 'Agent didn't mention discount' or 'Tone too formal'"
+              className="resize-none text-sm min-h-[72px]"
+            />
+          </div>
+        )}
+
         {/* Controls */}
         <div className="flex items-center gap-2">
           {phase === "idle" && (
@@ -280,6 +301,18 @@ export function WebTestCallModal({
             <Button variant="outline" onClick={handleStart} className="flex-1">
               <Phone className="w-4 h-4 mr-2" />
               Start new conversation
+            </Button>
+          )}
+          {phase === "ended" && onGoFix && (
+            <Button
+              onClick={() => {
+                onOpenChange(false);
+                onGoFix(notes);
+              }}
+              className="flex-1"
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              Go fix it
             </Button>
           )}
         </div>

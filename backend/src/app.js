@@ -37,6 +37,7 @@ const adminRoutes = require("./modules/admin/admin.routes");
 const skillRoutes = require("./modules/skills/skills.routes");
 const enterpriseRoutes = require("./modules/enterprise/enterprise.routes");
 const shopifyInternalRoutes = require("./modules/integrations/shopify.internal.routes");
+const playbookRoutes = require("./modules/playbooks/playbooks.routes");
 
 function buildCorsOptions() {
   const allowed = (process.env.CORS_ALLOWED_ORIGINS || "")
@@ -135,6 +136,7 @@ function createApp() {
   app.use("/v1/twilio", twilioRoutes);
   app.use("/v1/admin", adminRoutes);
   app.use("/v1/skills", skillRoutes);
+  app.use("/v1/playbooks", playbookRoutes);
   app.use(notFound);
   app.use(errorHandler);
 

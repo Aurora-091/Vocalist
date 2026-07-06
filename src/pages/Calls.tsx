@@ -146,6 +146,7 @@ export default function Conversations() {
   const agentId = searchParams.get("agent") || "";
   const statusFilter = searchParams.get("status") || "";
   const directionFilter = searchParams.get("direction") || "";
+  const testOnly = searchParams.get("test") === "1";
   const dateFrom = searchParams.get("from") || defaultDateFrom();
   const dateTo = searchParams.get("to") || new Date().toISOString().split("T")[0];
   const page = Number(searchParams.get("page") || "0");
@@ -199,6 +200,7 @@ export default function Conversations() {
         status: statusFilter || undefined,
         date_from: dateFrom ? `${dateFrom}T00:00:00Z` : undefined,
         date_to: dateTo ? `${dateTo}T23:59:59Z` : undefined,
+        test_only: testOnly || undefined,
       };
       const [result, summaryResult] = await Promise.all([
         listCalls({ ...filterOpts, limit: pageSize, offset: page * pageSize }),
@@ -214,7 +216,7 @@ export default function Conversations() {
     } finally {
       setLoading(false);
     }
-  }, [agentId, statusFilter, directionFilter, dateFrom, dateTo, page, pageSize]);
+  }, [agentId, statusFilter, directionFilter, dateFrom, dateTo, page, pageSize, testOnly]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -289,7 +291,18 @@ export default function Conversations() {
           }}
           label="Outbound"
         />
-        {(statusFilter || directionFilter || dateFrom !== defaultDateFrom()) && (
+        <QuickPill
+          active={testOnly}
+          onClick={() => {
+            if (testOnly) {
+              setSearchParams({});
+            } else {
+              setSearchParams({ test: "1" });
+            }
+          }}
+          label="Test calls"
+        />
+        {(statusFilter || directionFilter || testOnly || dateFrom !== defaultDateFrom()) && (
           <button
             onClick={resetFilters}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
