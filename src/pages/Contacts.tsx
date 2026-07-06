@@ -268,6 +268,7 @@ export default function Contacts() {
                       <button
                         onClick={() => setConfirmDeleteId(c.id)}
                         className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                        aria-label={`Delete ${c.name || c.e164}`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getOverview, getOutcomesData } from "../lib/db";
-import { StatCard } from "../components/legacy-ui/StatCard";
+import { supabase } from "../lib/supabase";
+import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, ShoppingCart, Phone, Target } from "lucide-react";
@@ -84,20 +85,33 @@ export default function Outcomes() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [o, d] = await Promise.all([getOverview(), getOutcomesData(30)]);
-        setOverview(o || {});
-        setData(d);
-      } catch {
-        setOverview({});
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const load = useCallback(async () => {
+    try {
+      const [o, d] = await Promise.all([getOverview(), getOutcomesData(30)]);
+      setOverview(o || {});
+      setData(d);
+    } catch {
+      setOverview({});
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("outcomes-live")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "calls" },
+        () => { load(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [load]);
 
   const currency = data?.currency || "INR";
   const currencySym = currency === "INR" ? "₹" : "$";

@@ -27,7 +27,7 @@ import {
 import { useState } from "react";
 import { listCalls, getCallsSummary, getCall, listAgents } from "../lib/db";
 import { supabase } from "../lib/supabase";
-import { StatCard } from "../components/legacy-ui/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

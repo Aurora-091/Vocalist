@@ -4,7 +4,7 @@ import { Plus, Check, Sparkles, Phone, Bot, Megaphone } from "lucide-react";
 import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls } from "../lib/db";
 import { supabase } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
-import { StatCard } from "../components/legacy-ui/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -275,7 +275,7 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="gap-0 overflow-visible py-0 shadow-card">
           <div className="border-b px-6 py-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" role="status" aria-live="polite" aria-atomic="true">
               <span className="relative flex h-2 w-2">
                 {liveCalls.length > 0 && (
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />

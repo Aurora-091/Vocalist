@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { ChartBar as BarChart2, TrendingDown, Phone, CircleCheck as CheckCircle, UserMinus, DollarSign } from "lucide-react";
 import { api } from "../lib/api";
-import { StatCard } from "../components/legacy-ui/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 

@@ -251,12 +251,12 @@ export default function ShopifyConnect() {
                 </Button>
               </div>
               {syncResult && (
-                <p className="text-xs text-success mt-1.5">
+                <p className="text-xs text-success mt-1.5" role="status" aria-live="polite">
                   Synced {syncResult.synced} customer{syncResult.synced !== 1 ? "s" : ""} successfully.
                 </p>
               )}
               {syncError && (
-                <p className="text-xs text-destructive mt-1.5">{syncError}</p>
+                <p className="text-xs text-destructive mt-1.5" role="alert">{syncError}</p>
               )}
             </div>
 

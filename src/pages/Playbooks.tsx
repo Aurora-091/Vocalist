@@ -102,6 +102,18 @@ export default function Playbooks() {
     setDrafts((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), ...patch } }));
   }
 
+  async function toggleEnabled(key: Playbook["key"], enabled: boolean) {
+    const prev = drafts[key];
+    setDraft(key, { enabled });
+    try {
+      await api.patch(`/v1/playbooks/${key}`, { enabled });
+      toast.success(`${PLAYBOOK_META[key].label} ${enabled ? "enabled" : "disabled"}`);
+    } catch (e: any) {
+      setDrafts((d) => ({ ...d, [key]: prev || {} }));
+      toast.error(e?.message || "Failed to update");
+    }
+  }
+
   async function save(key: Playbook["key"]) {
     const draft = drafts[key];
     if (!draft) return;
@@ -162,7 +174,7 @@ export default function Playbooks() {
                     <div className="flex items-center gap-3 shrink-0">
                       <Switch
                         checked={!!draft.enabled}
-                        onCheckedChange={(v) => setDraft(key, { enabled: v })}
+                        onCheckedChange={(v) => toggleEnabled(key, v)}
                       />
                       <button
                         onClick={() => setExpanded((prev) => ({ ...prev, [key]: !isOpen }))}
