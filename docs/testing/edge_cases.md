@@ -23,22 +23,6 @@ This document catalogs critical system boundaries, fail-modes, and security inte
 
 ---
 
-## Non-Automatable Manual Test Cases
-
-This table logs critical system behaviors that **cannot** be verified via automated unit/integration tests because they depend on physical hardware, real-world network routing, email rendering engines, or complex human visual interactions.
-
-| Test ID | Category | Scenario / Behavior | Why It Cannot Be Unit-Tested | Manual Verification Procedure | Expected Staging Outcome |
-|---|---|---|---|---|---|
-| **MAN-1** | Telephony | Real Audio Quality & Jitter | Unit tests can only verify that payloads are parsed. They cannot evaluate audio codec clarity, network jitter, regional routing latency, or cell tower packet drops. | 1. Navigate to an Outbound Agent detail page.<br>2. Click "Web Test Call" or trigger a live call to a real mobile number.<br>3. Speak normally and evaluate the synthesized voice and response delay. | The conversation should have clear audio without robotic clipping or dropouts. Delays between speech and response should be under 1.5 seconds. |
-| **MAN-2** | Integrations | OAuth Live Authorization Handshake | Requires human interaction with external secure identity pages (Shopify/Salesforce login portals), CAPTCHA solving, and multi-factor authentication (MFA). | 1. Go to Integrations Connect page and click "Connect Shopify".<br>2. Log in using a test merchant account when redirected to the Shopify admin page.<br>3. Approve app permissions and verify redirection back to the Weeber dashboard. | The integration status in Weeber transitions to "Active", and the access token is safely encrypted and vaulted. |
-| **MAN-3** | UI/UX | Responsive Layout, Input Zoom & Soft Keyboard Overlaps | Headless testing tools (like Vitest/JSDOM) do not run standard browser layout engines or simulate mobile operating system soft keyboard actions. | 1. Open the Weeber calls dashboard on an iPhone (Safari) and Android device (Chrome).<br>2. Focus on the search input box inside the Contacts list.<br>3. Check if the page auto-zooms or pushes content out of view. | Viewport should adjust cleanly. The soft keyboard should overlay without blocking critical actions, and no horizontal scrollbars should appear. |
-| **MAN-4** | UI/UX | Optimistic UI Visual Transitions & Flicker Detection | Unit tests assert state variables in DOM nodes, but cannot detect micro-visual glitches, component flickering, or layout shifts (CLS) during transitions. | 1. Open the Playbooks page.<br>2. Click the enable/disable switch of an active playbook.<br>3. Visually watch the switch toggle transition before the API request completes. | The switch moves immediately and smoothly to the target state without jumping, flickering, or returning to the old state (unless the API fails, in which case it reverts with a toast). |
-| **MAN-5** | Realtime | WebSocket Connection Drop & Recovery | Severing physical loop/socket adapters and verifying retry back-off reconnection states in Supabase client cannot be reliably automated in sandbox runners. | 1. Open the Dashboard page showing active calls.<br>2. Manually disable the computer's network adapter or sever the internet connection.<br>3. Wait 15 seconds, re-enable the network connection, and watch the status indicators. | The frontend should render a offline toast notification, and automatically reconnect to the Supabase socket channel when internet returns, syncing all missed realtime calls. |
-| **MAN-6** | Email | Multi-Client HTML Email Rendering | Code assertions only verify that the generated output contains raw HTML strings, not how different rendering engines (like Microsoft Outlook's Word-based parser) draw CSS. | 1. Trigger an onboarding verification email using Resend.<br>2. Send the test email to accounts on Gmail (Web/App), Outlook (Desktop), and Apple Mail (iOS).<br>3. Inspect the visual layout, button borders, and font sizing. | The email template must render correctly across all clients, maintaining the modern Weeber layout, responsive alignment, and readable typography. |
-
----
-
 ## Maintenance Guidelines
 * **Commit Rule**: Do not approve pull requests adding new functional routes or webhook handlers unless a corresponding manual edge-case row is added to the checklist above.
 * **Release Protocol**: Before migrating production databases to a new version, a QA engineer must walk through the manual verification steps for all "Pending" items in staging and update their status to "Verified".
-
