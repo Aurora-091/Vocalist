@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy, Zap, Globe } from "lucide-react";
+import { useParams, useSearchParams, Link } from "react-router-dom";
+import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Copy, Zap, Globe, LayoutTemplate, MessageSquare, WrapText, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { getAgent, listVoices, listAgentKnowledge, getCall } from "../lib/db";
 import { api } from "../lib/api";
@@ -22,6 +22,8 @@ import {
 import VoiceLibrary from "./VoiceLibrary";
 import { WebTestCallModal } from "@/components/WebTestCallModal";
 import { VariablesPanel } from "@/components/VariablesPanel";
+import { AgentPresetPicker } from "@/components/AgentPresetPicker";
+import { PromptHistoryDrawer } from "@/components/PromptHistoryDrawer";
 
 const TONE_PRESETS = [
   "warm and professional",
@@ -89,6 +91,9 @@ type Agent = {
 
 export default function AgentDetail() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const fromCallId = searchParams.get("from_call");
+
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -100,6 +105,16 @@ export default function AgentDetail() {
   const [promptLoading, setPromptLoading] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
   const [langVoiceWarning, setLangVoiceWarning] = useState<string[]>([]);
+
+  // Change-template modal
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+
+  // Prompt history drawer
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // from_call reference panel
+  const [fromCall, setFromCall] = useState<any>(null);
+  const [fromCallLoading, setFromCallLoading] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -113,6 +128,11 @@ export default function AgentDetail() {
   const [transferNumber, setTransferNumber] = useState("");
   const [timezone, setTimezone] = useState("");
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(["en"]);
+
+  // Textarea refs for variable insertion
+  const objectiveRef = useRef<HTMLTextAreaElement>(null);
+  const guardrailsRef = useRef<HTMLTextAreaElement>(null);
+  const lastFocusedField = useRef<"objective" | "guardrails" | null>(null);
 
   // Test call
   const [testNumber, setTestNumber] = useState("");
@@ -193,6 +213,16 @@ export default function AgentDetail() {
   useEffect(() => {
     load();
   }, [id]);
+
+  // Load the referenced call when from_call param is present
+  useEffect(() => {
+    if (!fromCallId) return;
+    setFromCallLoading(true);
+    getCall(fromCallId)
+      .then(setFromCall)
+      .catch(() => setFromCall(null))
+      .finally(() => setFromCallLoading(false));
+  }, [fromCallId]);
 
   // Re-check language-voice compatibility when languages change
   useEffect(() => {
@@ -285,6 +315,75 @@ export default function AgentDetail() {
     }
   }
 
+  function handleInsertVariable(snippet: string) {
+    const field = lastFocusedField.current;
+    const ref = field === "objective" ? objectiveRef : field === "guardrails" ? guardrailsRef : null;
+
+    if (!ref?.current) {
+      // Fallback: append to objective
+      setObjective((v) => v + (v.endsWith(" ") || v === "" ? "" : " ") + snippet);
+      toast.success(`Inserted ${snippet} into Objective`);
+      return;
+    }
+
+    const el = ref.current;
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const before = el.value.slice(0, start);
+    const after = el.value.slice(end);
+    const next = before + snippet + after;
+
+    if (field === "objective") setObjective(next);
+    else setGuardrails(next);
+
+    // Restore cursor position after React re-render
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + snippet.length;
+      el.setSelectionRange(pos, pos);
+    });
+    toast.success(`Inserted ${snippet}`);
+  }
+
+  async function handleApplyTemplate(preset: any, mode: "replace" | "merge") {
+    if (!agent) return;
+    const p = preset.persona || {};
+
+    if (mode === "replace") {
+      setObjective(p.objective || "");
+      setGuardrails(
+        Array.isArray(p.guardrails) ? p.guardrails.join("\n") : p.guardrails || ""
+      );
+      setIdentity(p.identity || "");
+      setFirstMessage(p.first_message || p.opening_message || "");
+      const tone = p.tone || "";
+      const isPreset = (TONE_PRESETS as readonly string[]).includes(tone);
+      if (!tone || isPreset) {
+        setToneMode(tone || TONE_PRESETS[0]);
+        setCustomTone("");
+      } else {
+        setToneMode("custom");
+        setCustomTone(tone);
+      }
+      toast.success(`Prompt replaced with "${preset.name}" template.`);
+    } else {
+      // Merge: append guardrails, keep existing objective
+      const newGuardrails = Array.isArray(p.guardrails)
+        ? p.guardrails.join("\n")
+        : p.guardrails || "";
+      if (newGuardrails) {
+        setGuardrails((prev) => {
+          const trimmed = prev.trim();
+          return trimmed ? `${trimmed}\n${newGuardrails}` : newGuardrails;
+        });
+      }
+      if (p.identity && !identity) setIdentity(p.identity);
+      toast.success(`Rules from "${preset.name}" merged into guardrails.`);
+    }
+
+    setTemplateModalOpen(false);
+  }
+
   if (loading) return <Skeleton className="h-64" />;
   if (!agent) return <div className="text-sm text-text-muted">Agent not found.</div>;
 
@@ -328,10 +427,131 @@ export default function AgentDetail() {
         </div>
       )}
 
+      {/* from_call reference panel */}
+      {fromCallId && (
+        <Card className="gap-0 overflow-visible py-0 shadow-card border-amber-200 bg-amber-50/30">
+          <div className="border-b border-amber-200 px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-amber-800">
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-sm font-medium">Improving from call</span>
+              <span className="font-mono text-xs opacity-70">{fromCallId.slice(0, 8)}…</span>
+            </div>
+            <Link
+              to={`/agents/${id}`}
+              replace
+              className="p-1 rounded text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </Link>
+          </div>
+          {fromCallLoading ? (
+            <div className="px-6 py-4 space-y-2">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : fromCall ? (
+            <CardContent className="px-6 py-4 space-y-4">
+              <div className="flex items-center gap-4 text-xs text-amber-700 flex-wrap">
+                <span className="capitalize font-medium">{fromCall.status?.replace(/_/g, " ")}</span>
+                {fromCall.duration_sec != null && <span>{fromCall.duration_sec}s</span>}
+                {fromCall.hangup_by && <span>Hung up by <span className="capitalize">{fromCall.hangup_by}</span></span>}
+                {fromCall.cost_usd != null && <span>${Number(fromCall.cost_usd).toFixed(3)}</span>}
+              </div>
+
+              {/* Transcript */}
+              {Array.isArray(fromCall.transcript) && fromCall.transcript.length > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-amber-600 font-medium mb-2">Transcript</p>
+                  <div className="max-h-40 overflow-y-auto space-y-1.5 rounded-md border border-amber-200 bg-white/60 p-3">
+                    {fromCall.transcript.map((t: any, i: number) => {
+                      const speaker = t.role || t.speaker || "agent";
+                      const isAgent = speaker === "agent" || speaker === "assistant";
+                      return (
+                        <div key={i} className="text-xs">
+                          <span className={`font-medium mr-1.5 ${isAgent ? "text-amber-800" : "text-zinc-500"}`}>
+                            {isAgent ? "Agent" : "User"}:
+                          </span>
+                          <span className="text-zinc-700">{t.text || t.content}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Eval failures */}
+              {(() => {
+                const evalCriteria = fromCall.outcome?.evaluation_criteria_results || fromCall.outcome?.evaluation_criteria;
+                const failures = evalCriteria
+                  ? Object.entries(evalCriteria).filter(([, v]: [string, any]) => {
+                      const result = typeof v === "object" && v !== null ? v.result : v;
+                      return result === "failure";
+                    })
+                  : [];
+                if (failures.length === 0) return null;
+                return (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-red-600 font-medium mb-2">Evaluation Failures</p>
+                    <div className="space-y-1.5">
+                      {failures.map(([key, v]: [string, any]) => (
+                        <div key={key} className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs">
+                          <div className="font-medium text-red-700">{key.replace(/_/g, " ")}</div>
+                          {v?.rationale && <div className="text-red-600 mt-0.5">{v.rationale}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Tool call failures */}
+              {(() => {
+                const toolCalls = fromCall.outcome?.tool_calls || [];
+                const failedTools = toolCalls.filter((tc: any) => tc.error || tc.status === "error" || tc.status === "failed");
+                if (failedTools.length === 0) return null;
+                return (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-red-600 font-medium mb-2">Tool Call Failures</p>
+                    <div className="space-y-1.5">
+                      {failedTools.map((tc: any, i: number) => (
+                        <div key={i} className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs font-mono text-red-700">
+                          {tc.name || tc.tool}: {tc.error || "failed"}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          ) : (
+            <div className="px-6 py-4 text-sm text-amber-700">Call not found.</div>
+          )}
+        </Card>
+      )}
+
       {/* Persona card */}
       <Card className="gap-0 overflow-visible py-0 shadow-card">
-        <div className="border-b px-6 py-4">
+        <div className="border-b px-6 py-4 flex items-center justify-between">
           <div className="font-medium">Persona</div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-text-muted hover:text-text transition-colors"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              History
+            </button>
+            <button
+              type="button"
+              onClick={() => setTemplateModalOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-text-muted hover:text-text transition-colors"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5" />
+              Change template
+            </button>
+          </div>
         </div>
         <CardContent className="px-6 py-5">
           <div className="grid sm:grid-cols-2 gap-4">
@@ -350,8 +570,10 @@ export default function AgentDetail() {
             </Field>
             <Field label="Objective" full>
               <Textarea
+                ref={objectiveRef}
                 value={objective}
                 onChange={(e) => setObjective(e.target.value)}
+                onFocus={() => { lastFocusedField.current = "objective"; }}
                 rows={3}
                 placeholder="Answer questions and book appointments. Route billing questions to a human."
               />
@@ -390,8 +612,10 @@ export default function AgentDetail() {
             )}
             <Field label="Guardrails (one per line)" full>
               <Textarea
+                ref={guardrailsRef}
                 value={guardrails}
                 onChange={(e) => setGuardrails(e.target.value)}
+                onFocus={() => { lastFocusedField.current = "guardrails"; }}
                 rows={3}
                 placeholder={"Do not discuss pricing unless asked.\nAlways offer to transfer to a human for complex issues."}
                 className="font-mono"
@@ -425,7 +649,10 @@ export default function AgentDetail() {
 
           {/* Variables detected in prompt fields */}
           <div className="mt-4">
-            <VariablesPanel promptText={`${objective}\n${firstMessage}\n${identity}\n${guardrails}`} />
+            <VariablesPanel
+              promptText={`${objective}\n${firstMessage}\n${identity}\n${guardrails}`}
+              onInsert={handleInsertVariable}
+            />
           </div>
 
           {langVoiceWarning.length > 0 && (
@@ -666,6 +893,24 @@ export default function AgentDetail() {
         </CardContent>
       </Card>
 
+      {/* Prompt history drawer */}
+      {historyOpen && (
+        <PromptHistoryDrawer
+          agentId={id!}
+          onRestore={load}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
+
+      {/* Change Template modal */}
+      {templateModalOpen && (
+        <ChangeTemplateModal
+          agent={agent}
+          onApply={handleApplyTemplate}
+          onClose={() => setTemplateModalOpen(false)}
+        />
+      )}
+
       {webTestOpen && (
         <WebTestCallModal
           open={webTestOpen}
@@ -902,5 +1147,110 @@ function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => vo
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+type ChangeTemplateModalProps = {
+  agent: Agent | null;
+  onApply: (preset: any, mode: "replace" | "merge") => void;
+  onClose: () => void;
+};
+
+function ChangeTemplateModal({ agent, onApply, onClose }: ChangeTemplateModalProps) {
+  const [step, setStep] = useState<"pick" | "confirm">("pick");
+  const [selectedPreset, setSelectedPreset] = useState<any | null>(null);
+  const [mode, setMode] = useState<"replace" | "merge">("merge");
+
+  function handlePresetSelect(preset: any) {
+    setSelectedPreset(preset);
+    setStep("confirm");
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-bg border border-border rounded-xl shadow-elevated w-full max-w-3xl max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div className="font-semibold">
+            {step === "pick" ? "Change template" : "Apply template"}
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {step === "pick" ? (
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <AgentPresetPicker
+              verticalKey={agent?.vertical || undefined}
+              showAllVerticals={true}
+              onSelect={handlePresetSelect}
+              onSkip={onClose}
+            />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            <div>
+              <p className="text-sm font-medium">How do you want to apply "{selectedPreset?.name}"?</p>
+              <p className="text-xs text-text-muted mt-1">
+                This affects objective, guardrails, tone, opening message, and identity.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setMode("merge")}
+                className={`w-full text-left p-4 rounded-md border transition-all ${
+                  mode === "merge"
+                    ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20"
+                    : "border-border bg-surface hover:border-text/20"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <WrapText className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-sm font-medium">Merge rules</span>
+                  {mode === "merge" && <Check className="w-3.5 h-3.5 text-primary ml-auto" />}
+                </div>
+                <p className="text-xs text-text-muted pl-6">
+                  Appends the template's guardrails to your existing ones. Preserves your objective, tone, and opening message.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode("replace")}
+                className={`w-full text-left p-4 rounded-md border transition-all ${
+                  mode === "replace"
+                    ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20"
+                    : "border-border bg-surface hover:border-text/20"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <LayoutTemplate className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-sm font-medium">Replace prompt</span>
+                  {mode === "replace" && <Check className="w-3.5 h-3.5 text-primary ml-auto" />}
+                </div>
+                <p className="text-xs text-text-muted pl-6">
+                  Overwrites objective, guardrails, tone, opening message, and identity with the template's values. Your changes will be lost unless you save first.
+                </p>
+              </button>
+            </div>
+
+            <div className="flex justify-between gap-3 pt-2">
+              <Button variant="ghost" onClick={() => setStep("pick")}>
+                Back
+              </Button>
+              <Button onClick={() => onApply(selectedPreset, mode)}>
+                Apply template
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

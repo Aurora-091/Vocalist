@@ -23,14 +23,17 @@ type Preset = {
 
 export function AgentPresetPicker({
   verticalKey,
+  showAllVerticals = false,
   onSelect,
   onSkip,
 }: {
   verticalKey?: string;
+  showAllVerticals?: boolean;
   onSelect: (preset: Preset & { overrideVoiceId?: string }) => void;
   onSkip: () => void;
 }) {
-  const [presets, setPresets] = useState<Preset[] | null>(null);
+  const [allPresets, setAllPresets] = useState<Preset[] | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("all");
   const [selected, setSelected] = useState<string | null>(null);
   const [voiceStep, setVoiceStep] = useState(false);
   const [overrideVoiceId, setOverrideVoiceId] = useState<string>("");
@@ -39,15 +42,30 @@ export function AgentPresetPicker({
   useEffect(() => {
     (async () => {
       try {
-        const data = await listAgentPresets(verticalKey);
-        setPresets(data);
+        // If showAllVerticals, fetch without vertical filter
+        const data = await listAgentPresets(showAllVerticals ? undefined : verticalKey);
+        setAllPresets(data);
+        // Default to the org's vertical tab if present
+        if (showAllVerticals && verticalKey) {
+          setActiveTab(verticalKey);
+        }
       } catch {
-        setPresets([]);
+        setAllPresets([]);
       }
     })();
-  }, [verticalKey]);
+  }, [verticalKey, showAllVerticals]);
 
-  const selectedPreset = presets?.find((p) => p.id === selected);
+  const verticals = allPresets
+    ? [...new Set(allPresets.map((p) => p.vertical_key))].sort()
+    : [];
+
+  const visiblePresets = allPresets
+    ? activeTab === "all"
+      ? allPresets
+      : allPresets.filter((p) => p.vertical_key === activeTab)
+    : [];
+
+  const selectedPreset = allPresets?.find((p) => p.id === selected);
 
   function handleConfirm() {
     if (!selectedPreset) return;
@@ -56,7 +74,9 @@ export function AgentPresetPicker({
 
   function handleFinish(skipVoice: boolean) {
     if (!selectedPreset) return;
-    const finalVoiceId = skipVoice ? selectedPreset.voice_id || undefined : overrideVoiceId || selectedPreset.voice_id || undefined;
+    const finalVoiceId = skipVoice
+      ? selectedPreset.voice_id || undefined
+      : overrideVoiceId || selectedPreset.voice_id || undefined;
     onSelect({ ...selectedPreset, overrideVoiceId: finalVoiceId });
   }
 
@@ -111,7 +131,7 @@ export function AgentPresetPicker({
           <div className="font-medium">Choose a template</div>
           <p className="text-sm text-text-muted mt-0.5">
             Pre-built agent personas with tools and voice configured.
-            {verticalKey && (
+            {!showAllVerticals && verticalKey && (
               <span className="ml-1">
                 Showing <span className="capitalize font-medium text-text">{verticalKey}</span> templates.
               </span>
@@ -123,18 +143,47 @@ export function AgentPresetPicker({
         </Button>
       </div>
 
-      {presets === null ? (
+      {/* Vertical tabs — only shown when browsing all verticals */}
+      {showAllVerticals && verticals.length > 1 && (
+        <div className="flex items-center gap-1 overflow-x-auto border-b border-border pb-0">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              activeTab === "all"
+                ? "border-foreground text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All
+          </button>
+          {verticals.map((v) => (
+            <button
+              key={v}
+              onClick={() => setActiveTab(v)}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap capitalize border-b-2 -mb-px transition-colors ${
+                activeTab === v
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {allPresets === null ? (
         <div className="grid md:grid-cols-2 gap-3">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
         </div>
-      ) : presets.length === 0 ? (
+      ) : visiblePresets.length === 0 ? (
         <div className="text-center py-8 text-sm text-text-muted">
-          No templates available for this vertical.
+          No templates available{activeTab !== "all" ? ` for ${activeTab}` : ""}.
         </div>
       ) : (
         <>
           <div className="grid md:grid-cols-2 gap-3">
-            {presets.map((p) => {
+            {visiblePresets.map((p) => {
               const isSelected = selected === p.id;
               return (
                 <button
@@ -151,7 +200,12 @@ export function AgentPresetPicker({
                       <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
                         <Bot className="w-4 h-4" />
                       </span>
-                      <div className="font-medium text-sm">{p.name}</div>
+                      <div>
+                        <div className="font-medium text-sm">{p.name}</div>
+                        {showAllVerticals && (
+                          <div className="text-[10px] text-muted-foreground capitalize mt-0.5">{p.vertical_key}</div>
+                        )}
+                      </div>
                     </div>
                     <Badge
                       variant="secondary"

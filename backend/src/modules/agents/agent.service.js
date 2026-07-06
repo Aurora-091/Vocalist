@@ -1,7 +1,14 @@
 const personaService = require("../../services/persona.service");
-const crypto = require("crypto");
 const { BadRequest, NotFound } = require("../../utils/errors");
 const { buildVoiceProvider } = require("../../providers/voice/factory");
+
+// Maximum persona history entries per tier
+const HISTORY_CAP = { free: 5, starter: 10, pro: 20, enterprise: 50 };
+const DEFAULT_HISTORY_CAP = 5;
+
+function getHistoryCap(planTier) {
+  return HISTORY_CAP[planTier] || DEFAULT_HISTORY_CAP;
+}
 
 class AgentService {
   async getIntegrationConfig(supabase, orgId) {
@@ -140,6 +147,28 @@ class AgentService {
 
     const voice_id = dbUpdateData.voice_id || existing.voice_id || null;
 
+    // Push current persona to history before overwriting
+    const historyEntry = {
+      persona: existing.persona || {},
+      saved_at: new Date().toISOString(),
+    };
+    const currentHistory = Array.isArray(existing.persona_history) ? existing.persona_history : [];
+    // Fetch org plan tier to determine history cap
+    let planTier = "free";
+    try {
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("plan_tiers(tier_key)")
+        .eq("org_id", existing.org_id)
+        .in("status", ["active", "trialing"])
+        .maybeSingle();
+      planTier = sub?.plan_tiers?.tier_key || "free";
+    } catch (_) {
+      // non-fatal, fall back to free cap
+    }
+    const cap = getHistoryCap(planTier);
+    const newHistory = [historyEntry, ...currentHistory].slice(0, cap);
+
     // 3. Update Database
     const { data: updatedAgent, error: updateErr } = await supabase
       .from("agents")
@@ -150,7 +179,8 @@ class AgentService {
         sync_error: null,
         last_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        persona: mergedPersona
+        persona: mergedPersona,
+        persona_history: newHistory
       })
       .eq("id", agentId)
       .select("*")
@@ -225,6 +255,52 @@ class AgentService {
       .update({
         sync_status: "synced",
         sync_error: null,
+        last_synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", agentId)
+      .select("*")
+      .single();
+    if (updateErr) throw updateErr;
+    return updated;
+  }
+
+  async getHistory(supabase, orgId, agentId) {
+    const { data, error } = await supabase
+      .from("agents")
+      .select("persona_history")
+      .eq("id", agentId)
+      .eq("org_id", orgId)
+      .is("deleted_at", null)
+      .single();
+    if (error || !data) throw NotFound("Agent not found or access denied");
+    return Array.isArray(data.persona_history) ? data.persona_history : [];
+  }
+
+  async restorePersona(supabase, orgId, agentId, historyIndex) {
+    const { data: existing, error: fetchErr } = await supabase
+      .from("agents")
+      .select("*")
+      .eq("id", agentId)
+      .eq("org_id", orgId)
+      .is("deleted_at", null)
+      .single();
+    if (fetchErr || !existing) throw NotFound("Agent not found or access denied");
+
+    const history = Array.isArray(existing.persona_history) ? existing.persona_history : [];
+    const entry = history[historyIndex];
+    if (!entry) throw BadRequest("History entry not found");
+
+    // Push current state to history before restoring
+    const historyEntry = { persona: existing.persona || {}, saved_at: new Date().toISOString() };
+    const newHistory = [historyEntry, ...history].slice(0, DEFAULT_HISTORY_CAP * 4);
+
+    const { data: updated, error: updateErr } = await supabase
+      .from("agents")
+      .update({
+        persona: entry.persona,
+        persona_history: newHistory,
+        sync_status: "synced",
         last_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })

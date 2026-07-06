@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   MessageSquare,
   RefreshCw,
@@ -22,6 +22,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Bell,
+  Wrench,
 } from "lucide-react";
 import { useState } from "react";
 import { listCalls, getCallsSummary, getCall, listAgents } from "../lib/db";
@@ -615,6 +616,7 @@ function CopyableId({ id }: { id: string }) {
 }
 
 function ConversationDrawer({ id, onClose }: { id: string; onClose: () => void }) {
+  const navigate = useNavigate();
   const [conversation, setConversation] = useState<any>(null);
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
 
@@ -743,6 +745,24 @@ function ConversationDrawer({ id, onClose }: { id: string; onClose: () => void }
                         : "—"
                     } />
                   </dl>
+                  {conversation.agent_id && (
+                    <div className="mt-6 pt-4 border-t border-border">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          onClose();
+                          navigate(`/agents/${conversation.agent_id}?from_call=${id}`);
+                        }}
+                      >
+                        <Wrench className="w-3.5 h-3.5 mr-1.5" />
+                        Improve agent
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Opens the agent editor with this call pinned for reference.
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* Transcript tab */}

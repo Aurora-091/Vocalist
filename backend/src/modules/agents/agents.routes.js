@@ -399,5 +399,29 @@ router.post(
   })
 );
 
+// ─── Persona History ────────────────────────────────────────────────────────
+
+router.get(
+  "/:id/history",
+  validate({ params: z.object({ id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    const history = await agentService.getHistory(req.supabase, req.auth.orgId, req.params.id);
+    res.json({ history });
+  })
+);
+
+router.post(
+  "/:id/restore",
+  requireRole("owner", "admin"),
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({ index: z.number().int().min(0) }),
+  }),
+  asyncHandler(async (req, res) => {
+    const agent = await agentService.restorePersona(req.supabase, req.auth.orgId, req.params.id, req.body.index);
+    res.json({ agent });
+  })
+);
+
 module.exports = router;
 

@@ -147,6 +147,7 @@ export default function AgentsList() {
         <div className="bg-surface border border-border rounded-md shadow-card p-6">
           <AgentPresetPicker
             verticalKey={vertical || undefined}
+            showAllVerticals={true}
             onSelect={createFromPreset}
             onSkip={() => setMode("manual")}
           />
