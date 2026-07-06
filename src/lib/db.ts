@@ -759,6 +759,94 @@ export async function getRecentCallStatuses(days = 30) {
   return data || [];
 }
 
+export async function getOutcomesData(days = 30) {
+  const orgId = await getOrgId();
+  if (!orgId) return null;
+  const cutoff = new Date(Date.now() - days * 86400_000).toISOString();
+
+  const [
+    { data: scheduledRows },
+    { data: dailyCallRows },
+    { data: playbookRows },
+  ] = await Promise.all([
+    // Scheduled call pipeline breakdown
+    supabase
+      .from("scheduled_calls")
+      .select("status, outcome, playbook_key, recovered_value, recovered_currency, attempt")
+      .eq("org_id", orgId)
+      .gte("created_at", cutoff),
+
+    // Daily call volume (last N days)
+    supabase
+      .from("calls")
+      .select("created_at, status, direction")
+      .eq("org_id", orgId)
+      .gte("created_at", cutoff)
+      .order("created_at", { ascending: true }),
+
+    // Playbook performance
+    supabase
+      .from("scheduled_calls")
+      .select("playbook_key, outcome, recovered_value, attempt")
+      .eq("org_id", orgId)
+      .gte("created_at", cutoff),
+  ]);
+
+  const rows = scheduledRows || [];
+  const dailyRows = dailyCallRows || [];
+  const pbRows = playbookRows || [];
+
+  // Pipeline breakdown by status
+  const pipelineByStatus: Record<string, number> = {};
+  for (const r of rows) {
+    const key = r.outcome || r.status || "pending";
+    pipelineByStatus[key] = (pipelineByStatus[key] || 0) + 1;
+  }
+
+  // Recovery metrics
+  const recoveredRows = rows.filter((r) => r.outcome === "recovered");
+  const totalRecovered = recoveredRows.reduce((s, r) => s + (parseFloat(r.recovered_value) || 0), 0);
+  const currency = recoveredRows[0]?.recovered_currency || "INR";
+  const totalScheduled = rows.length;
+  const totalConverted = rows.filter((r) => r.outcome === "cancelled_converted").length;
+  const conversionRate = totalScheduled > 0 ? ((recoveredRows.length + totalConverted) / totalScheduled) * 100 : 0;
+
+  // Daily call volume buckets
+  const buckets: Record<string, { total: number; completed: number }> = {};
+  for (const r of dailyRows) {
+    const day = r.created_at.slice(0, 10);
+    if (!buckets[day]) buckets[day] = { total: 0, completed: 0 };
+    buckets[day].total++;
+    if (r.status === "completed") buckets[day].completed++;
+  }
+  const dailyVolume = Object.entries(buckets)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, { total, completed }]) => ({ date, total, completed }));
+
+  // Playbook performance
+  const playbookStats: Record<string, { scheduled: number; recovered: number; revenue: number }> = {};
+  for (const r of pbRows) {
+    const key = r.playbook_key || "unknown";
+    if (!playbookStats[key]) playbookStats[key] = { scheduled: 0, recovered: 0, revenue: 0 };
+    playbookStats[key].scheduled++;
+    if (r.outcome === "recovered") {
+      playbookStats[key].recovered++;
+      playbookStats[key].revenue += parseFloat(r.recovered_value) || 0;
+    }
+  }
+
+  return {
+    totalRecovered,
+    currency,
+    totalScheduled,
+    cartsConverted: recoveredRows.length + totalConverted,
+    conversionRate,
+    pipelineByStatus,
+    dailyVolume,
+    playbookStats,
+  };
+}
+
 // ───── Phone Numbers ─────
 
 export async function unlinkPhoneNumberAgent(id: string) {

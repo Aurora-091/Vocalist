@@ -395,7 +395,25 @@ router.post(
 
     const { signed_url } = await response.json();
 
-    res.json({ signed_url, agent_id: agent.provider_ref });
+    // Pre-create a calls row so the ElevenLabs webhook can link the conversation
+    // back to this session and so the test flag is queryable from the start.
+    const { data: callRow, error: callErr } = await req.supabase
+      .from("calls")
+      .insert({
+        org_id: agent.org_id,
+        agent_id: agent.id,
+        direction: "outbound",
+        provider: "elevenlabs",
+        channel: "web_test",
+        status: "queued",
+        outcome: { test: true },
+      })
+      .select("id")
+      .single();
+
+    if (callErr) throw callErr;
+
+    res.json({ signed_url, agent_id: agent.provider_ref, call_id: callRow.id });
   })
 );
 

@@ -206,4 +206,26 @@ router.get(
   })
 );
 
+// PATCH /v1/calls/:id — limited update, used by the frontend to link a
+// pre-created web-test call row to its ElevenLabs conversation_id on connect.
+router.patch(
+  "/:id",
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({ conversation_id: z.string().max(200) }),
+  }),
+  asyncHandler(async (req, res) => {
+    const { data, error } = await req.supabase
+      .from("calls")
+      .update({ conversation_id: req.body.conversation_id, status: "in_progress", started_at: new Date().toISOString() })
+      .eq("id", req.params.id)
+      .eq("org_id", req.auth.orgId)
+      .select("id")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw NotFound("Call not found");
+    res.json({ ok: true });
+  })
+);
+
 module.exports = router;

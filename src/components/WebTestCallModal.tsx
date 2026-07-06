@@ -42,12 +42,18 @@ export function WebTestCallModal({
   const [notes, setNotes] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const pendingCallIdRef = useRef<string | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
       setPhase("active");
       setError(null);
       captureEvent("web_test_started", { agent_id: agentId, agent_name: agentName });
+      // Link the pre-created calls row to the ElevenLabs conversation_id
+      const convId = conversation.getId();
+      if (pendingCallIdRef.current && convId) {
+        api.patch(`/v1/calls/${pendingCallIdRef.current}`, { conversation_id: convId }).catch(() => {});
+      }
     },
     onDisconnect: () => {
       setPhase("ended");
@@ -121,10 +127,11 @@ export function WebTestCallModal({
     setPhase("connecting");
 
     try {
-      const { signed_url } = await api.post<{ signed_url: string; agent_id: string }>(
+      const { signed_url, call_id } = await api.post<{ signed_url: string; agent_id: string; call_id: string }>(
         `/v1/agents/${agentId}/web-session`
       );
 
+      pendingCallIdRef.current = call_id ?? null;
       await conversation.startSession({ signedUrl: signed_url });
       startTimer();
     } catch (e: any) {
