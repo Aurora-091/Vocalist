@@ -107,6 +107,24 @@ router.post(
   })
 );
 
+router.post(
+  "/shopify/sync-contacts",
+  requireRole("owner", "admin"),
+  asyncHandler(async (req, res) => {
+    const { data: row, error } = await req.supabase
+      .from("integrations")
+      .select("type, config, status")
+      .eq("type", "shopify")
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!row || row.status !== "active") throw NotFound("Shopify integration not connected");
+    const provider = buildProvider("shopify", req.auth.orgId, row.config);
+    const result = await provider.syncContacts();
+    res.json(result);
+  })
+);
+
 router.delete(
   "/:type",
   requireRole("owner", "admin"),

@@ -772,7 +772,7 @@ export async function getOutcomesData(days = 30) {
     // Scheduled call pipeline breakdown
     supabase
       .from("scheduled_calls")
-      .select("status, outcome, playbook_key, recovered_value, recovered_currency, attempt")
+      .select("status, outcome, cancelled_reason, playbook_key, recovered_value, recovered_currency, attempt")
       .eq("org_id", orgId)
       .gte("created_at", cutoff),
 
@@ -799,7 +799,10 @@ export async function getOutcomesData(days = 30) {
   // Pipeline breakdown by status
   const pipelineByStatus: Record<string, number> = {};
   for (const r of rows) {
-    const key = r.outcome || r.status || "pending";
+    let key = r.outcome || r.status || "pending";
+    if (key === "cancelled" && r.cancelled_reason === "converted") {
+      key = "cancelled_converted";
+    }
     pipelineByStatus[key] = (pipelineByStatus[key] || 0) + 1;
   }
 

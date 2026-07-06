@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ShoppingBag, Check, Loader as Loader2, ArrowRight, ExternalLink } from "lucide-react";
+import { ShoppingBag, Check, Loader as Loader2, ArrowRight, ExternalLink, RefreshCw, Users, Settings } from "lucide-react";
 import { getShopifyIntegration, getOrgId } from "../lib/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { api } from "../lib/api";
 
 type Step = "domain" | "redirecting" | "done";
+
+interface ShopStats {
+  product_count?: number;
+  order_count_30d?: number;
+  customer_count?: number;
+  shop_name?: string;
+}
 
 const WEEBERSH_INSTALL_URL =
   import.meta.env.VITE_WEEBERSH_INSTALL_URL || "https://weebersh.com/api/auth";
@@ -17,6 +25,10 @@ export default function ShopifyConnect() {
   const [domain, setDomain] = useState("");
   const [loading, setLoading] = useState(true);
   const [shopDomain, setShopDomain] = useState("");
+  const [shopStats, setShopStats] = useState<ShopStats>({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ synced: number } | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -25,17 +37,43 @@ export default function ShopifyConnect() {
 
       if (integration?.status === "active") {
         setShopDomain(integration.config?.shop_domain || "");
+        setShopStats({
+          shop_name: integration.config?.shop_name,
+          product_count: integration.config?.stats?.product_count,
+          order_count_30d: integration.config?.stats?.order_count_30d,
+          customer_count: integration.config?.stats?.customer_count,
+        });
         setStep("done");
       } else if (shopifyParam === "connected") {
         const refreshed = await getShopifyIntegration();
         if (refreshed?.status === "active") {
           setShopDomain(refreshed.config?.shop_domain || "");
+          setShopStats({
+            shop_name: refreshed.config?.shop_name,
+            product_count: refreshed.config?.stats?.product_count,
+            order_count_30d: refreshed.config?.stats?.order_count_30d,
+            customer_count: refreshed.config?.stats?.customer_count,
+          });
           setStep("done");
         }
       }
       setLoading(false);
     })();
   }, [searchParams]);
+
+  async function handleSyncContacts() {
+    setSyncing(true);
+    setSyncError(null);
+    setSyncResult(null);
+    try {
+      const result = await api.post<{ synced: number; note?: string }>("/v1/integrations/shopify/sync-contacts");
+      setSyncResult({ synced: result.synced ?? 0 });
+    } catch (err: any) {
+      setSyncError(err?.message || "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   function normalizeDomain(input: string): string {
     let d = input.trim().toLowerCase();
@@ -146,20 +184,83 @@ export default function ShopifyConnect() {
         )}
 
         {step === "done" && (
-          <div className="p-6 text-center py-12">
-            <span className="w-14 h-14 rounded-full bg-success/10 text-success inline-flex items-center justify-center mb-4">
-              <Check className="w-7 h-7" />
-            </span>
-            <div className="font-medium text-lg">Shopify connected</div>
-            <p className="mt-2 text-sm text-text-muted">
-              {shopDomain && <span className="font-mono">{shopDomain}</span>}
-              {shopDomain ? " is now linked to Weeber. " : ""}
-              Your agents can access orders, carts, and customer data.
-            </p>
-            <div className="mt-4">
-              <Badge variant="secondary" className="bg-success/15 text-success"><span className="size-1.5 rounded-full bg-current mr-1" />Active</Badge>
+          <div className="p-6 space-y-6">
+            <div className="flex items-center gap-4">
+              <span className="w-12 h-12 rounded-full bg-success/10 text-success inline-flex items-center justify-center shrink-0">
+                <Check className="w-6 h-6" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-base">
+                  {shopStats.shop_name || "Shopify store"} connected
+                </div>
+                {shopDomain && (
+                  <p className="text-xs text-text-muted font-mono mt-0.5 truncate">{shopDomain}</p>
+                )}
+              </div>
+              <Badge variant="secondary" className="bg-success/15 text-success shrink-0">
+                <span className="size-1.5 rounded-full bg-current mr-1" />Active
+              </Badge>
             </div>
-            <div className="mt-8 flex justify-center gap-3">
+
+            {(shopStats.customer_count != null || shopStats.order_count_30d != null || shopStats.product_count != null) && (
+              <div className="grid grid-cols-3 gap-3">
+                {shopStats.customer_count != null && (
+                  <div className="bg-surface-2 rounded-md px-3 py-2.5 text-center">
+                    <div className="text-lg font-semibold font-mono">{shopStats.customer_count.toLocaleString()}</div>
+                    <div className="text-xs text-text-muted mt-0.5">Customers</div>
+                  </div>
+                )}
+                {shopStats.order_count_30d != null && (
+                  <div className="bg-surface-2 rounded-md px-3 py-2.5 text-center">
+                    <div className="text-lg font-semibold font-mono">{shopStats.order_count_30d.toLocaleString()}</div>
+                    <div className="text-xs text-text-muted mt-0.5">Orders (30d)</div>
+                  </div>
+                )}
+                {shopStats.product_count != null && (
+                  <div className="bg-surface-2 rounded-md px-3 py-2.5 text-center">
+                    <div className="text-lg font-semibold font-mono">{shopStats.product_count.toLocaleString()}</div>
+                    <div className="text-xs text-text-muted mt-0.5">Products</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-text-muted mb-2">Actions</div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSyncContacts}
+                  disabled={syncing}
+                >
+                  {syncing ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  Sync customers
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => navigate("/contacts")}>
+                  <Users className="w-3.5 h-3.5 mr-1.5" />
+                  View contacts
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => navigate("/integrations/playbooks")}>
+                  <Settings className="w-3.5 h-3.5 mr-1.5" />
+                  Configure playbooks
+                </Button>
+              </div>
+              {syncResult && (
+                <p className="text-xs text-success mt-1.5">
+                  Synced {syncResult.synced} customer{syncResult.synced !== 1 ? "s" : ""} successfully.
+                </p>
+              )}
+              {syncError && (
+                <p className="text-xs text-destructive mt-1.5">{syncError}</p>
+              )}
+            </div>
+
+            <div className="border-t border-border pt-4 flex gap-2">
               <Button onClick={() => navigate("/agents")}>
                 Create an agent
                 <ArrowRight className="w-4 h-4 ml-2" />

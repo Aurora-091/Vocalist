@@ -40,9 +40,29 @@ async function processDueCalls() {
     }
 
     // Quiet hours check: defer if outside calling window
-    const timezone = call.metadata?.timezone || "Asia/Kolkata";
-    const startHour = call.metadata?.call_hours_start ?? 9;
-    const endHour = call.metadata?.call_hours_end ?? 21;
+    // Prefer playbook settings; fall back to metadata if no playbook row
+    let startHour = 9;
+    let endHour = 21;
+    let timezone = "Asia/Kolkata";
+
+    if (call.playbook_key) {
+      const { data: pb } = await admin
+        .from("playbooks")
+        .select("call_hours_start, call_hours_end, timezone")
+        .eq("org_id", call.org_id)
+        .eq("key", call.playbook_key)
+        .maybeSingle();
+      if (pb) {
+        startHour = pb.call_hours_start ?? 9;
+        endHour = pb.call_hours_end ?? 21;
+        timezone = pb.timezone || "Asia/Kolkata";
+      }
+    } else {
+      startHour = call.metadata?.call_hours_start ?? 9;
+      endHour = call.metadata?.call_hours_end ?? 21;
+      timezone = call.metadata?.timezone || "Asia/Kolkata";
+    }
+
     if (isWithinQuietHours(new Date(), startHour, endHour, timezone)) {
       const nextWindow = nextBusinessWindow(new Date(), startHour, timezone);
       await admin
