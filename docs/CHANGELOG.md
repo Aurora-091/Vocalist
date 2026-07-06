@@ -77,6 +77,15 @@ Nine new integration provider modules under `backend/src/modules/integrations/pr
 - **M5 Webhook error logging** (`webhook.service.js`): `markProcessed` now logs `P0001` exceptions with a warning instead of silently swallowing them.
 - **M7 trust proxy** (`app.js`): `trust proxy` is now only set in production, not unconditionally in all environments.
 
+### Database Linter Performance Remediation — 2026-07-06
+
+- **RLS InitPlan optimization** (`20260706045640_linter_warn_remediation.sql`): Wrapped all bare `auth.uid()`, `auth.jwt()`, and `auth.role()` calls in `(select ...)` subqueries across 35 policies on 11 tables (`user_notification_prefs`, `user_sessions`, `integration_bridge_config`, `oauth_tokens`, `whatsapp_messages`, `agent_active_skills`, `scheduled_calls`, `enterprise_inquiries`, `site_settings`). PostgreSQL now evaluates these once per query rather than once per row, eliminating per-row RPC overhead.
+- **Multiple permissive policies fix** (`site_settings`): Replaced the `FOR ALL` `site_settings_admin_write` policy with three targeted `FOR INSERT`, `FOR UPDATE`, `FOR DELETE` policies. The catch-all `FOR ALL` overlapped with `site_settings_public_read` (FOR SELECT), causing the planner to consider both for SELECT — now only one SELECT policy exists.
+- **Duplicate index dropped** (`agents.org_id`): Dropped `idx_agents_org` which was identical to the auto-named `agents_org_id_idx` created by the base migration.
+- **Foreign-key index coverage** (`20260706000001_linter_fk_indexes.sql`): Added `CREATE INDEX IF NOT EXISTS` for every FK column without a covering index, as identified by the Supabase DB linter. Covers `agent_active_skills`, `calls`, `campaigns`, `call_events` (parent → propagates), `usage_ledger` (parent → propagates), `audit_log`, `dialer_transitions`, `dpdp_requests`, `scheduled_calls`, `user_sessions`, `notifications`, `webhook_dlq`, `whatsapp_messages`, and 20+ additional tables. FK lookups (ON DELETE CASCADE evaluation, JOIN performance) are now fully indexed.
+- **Unused indexes deferred**: ~30 indexes reported at zero scans by the linter have been intentionally left in place pending 30 days of production traffic. See `docs/database-guide.md §14.2` for the review process.
+- **Auth DB connections strategy**: Supabase recommends percentage-based Auth connection pool allocation (not absolute count). This is a Dashboard-only setting — see `docs/DEPLOYMENT.md` for the manual step.
+
 ### Database Linter Security Remediation — 2026-07-05
 
 - **Function permissions** (`20260705200000_linter_security_remediation.sql`): Explicitly revoked `EXECUTE` on five SECURITY DEFINER functions from `anon` and `authenticated` roles, and granted exclusively to `service_role`:

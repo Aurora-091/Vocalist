@@ -1,6 +1,6 @@
 # Weeber — Full Codebase Audit
 
-_Last updated: 2026-07-05_
+_Last updated: 2026-07-06_
 _Scope: Security, code quality, architecture, dependencies & configuration_
 _Stack: React + Vite + Tailwind v4 + shadcn/ui (frontend) · Node/Express 5 (backend) · Supabase (Postgres + Auth + Edge Functions + 10 Edge Functions) · ElevenLabs + Twilio + Stripe_
 
@@ -16,9 +16,9 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 | High | 8 (8 fixed) |
 | Medium | 14 (12 fixed, 2 open: M1, M2) |
 | Low / Informational | 9 |
-| DB Linter | 3 categories (2 fixed via migration, 1 manual dashboard step) |
+| DB Linter | 7 categories (6 fixed via migration, 1 manual dashboard step, 1 deferred 30-day review) |
 
-**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction. The July 5 remediation pass addressed CSP, code-splitting, Twilio lifecycle, rate limiting, remaining medium findings (M3–M8 resolved or verified safe), and Supabase database linter warnings (function permissions, partition RLS policies).
+**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction. The July 5 remediation pass addressed CSP, code-splitting, Twilio lifecycle, rate limiting, remaining medium findings (M3–M8 resolved or verified safe), and Supabase database linter warnings (function permissions, partition RLS policies). The July 6 pass resolved all remaining DB linter WARN findings (RLS InitPlan per-row evaluation, multiple permissive policies, duplicate index) and added FK covering indexes across the full schema.
 
 ### DB Linter Findings (2026-07-05)
 
@@ -27,6 +27,17 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 | SECURITY DEFINER functions callable by anon/authenticated | Fixed | `20260705200000_linter_security_remediation.sql` — explicit REVOKE from anon+authenticated, GRANT to service_role. `auth_org()` keeps authenticated access (required for RLS). |
 | 57 partition tables with RLS enabled but no policies | Fixed | Same migration — DO block creates matching policies on all existing partitions; `ensure_monthly_partitions()` rewritten to create policies on future partitions at creation time. |
 | Leaked password protection disabled | Open (manual) | Dashboard-only setting — cannot be set via SQL. Enable in Supabase Dashboard: Authentication > Providers > Email > "Leaked Password Protection". |
+
+### DB Linter Findings (2026-07-06)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| WARN: auth_rls_initplan — 35 policies re-evaluate auth functions per row | Fixed | `20260706045640_linter_warn_remediation.sql` — wrapped `auth.uid()`, `auth.jwt()`, `auth.role()` in `(select ...)` across 11 tables. PostgreSQL evaluates once per query. |
+| WARN: multiple_permissive_policies — site_settings FOR ALL + FOR SELECT overlap | Fixed | Same migration — dropped `site_settings_admin_write` (FOR ALL); replaced with three targeted INSERT/UPDATE/DELETE policies. |
+| WARN: duplicate_index — agents.org_id has two identical indexes | Fixed | Same migration — dropped `idx_agents_org` (duplicate of auto-named `agents_org_id_idx`). |
+| INFO: unindexed_foreign_keys — FK columns without covering indexes | Fixed | `20260706000001_linter_fk_indexes.sql` — added `CREATE INDEX IF NOT EXISTS` for all unindexed FK columns across the full schema. Parent-table indexes propagate to all partitions. |
+| INFO: unused_index — ~30 indexes with zero scans | Deferred | Intentionally not dropped. Re-evaluate after 30 days of production traffic. See `docs/database-guide.md §14.2`. |
+| INFO: auth_db_connections_absolute — Auth pool uses absolute count | Open (manual) | Dashboard-only: set Auth connection pool to percentage-based allocation in Supabase Dashboard > Database > Connection Pooling. |
 
 ---
 

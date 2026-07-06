@@ -74,10 +74,11 @@ Ensure the following properties are configured in the environment profile:
    supabase migration up
    ```
 2. **Supabase Auth — Leaked Password Protection**: In the Supabase Dashboard, go to Authentication > Providers > Email and enable the **Leaked Password Protection** toggle. This enables HaveIBeenPwned breach detection and cannot be set via SQL migration.
-3. **Twilio Subaccounts**: Verify Twilio sandbox environment keys if staging matches localhost bindings.
-4. **Stripe Webhooks**: Bind Stripe webhook handlers to `/v1/webhooks/stripe`.
-5. **ElevenLabs Profiles**: Verify Voice IDs mapped in `vertical_configs` exist on target ElevenLabs accounts.
-6. **Static Assets**: Compile package assets:
+3. **Supabase Auth — Connection Pool Strategy**: In the Supabase Dashboard, go to Database > Connection Pooling and switch the Auth pool from an absolute connection count to **percentage-based** allocation. This prevents Auth from consuming a fixed share of the connection pool under high load. This is a Dashboard-only setting and cannot be set via SQL migration.
+4. **Twilio Subaccounts**: Verify Twilio sandbox environment keys if staging matches localhost bindings.
+5. **Stripe Webhooks**: Bind Stripe webhook handlers to `/v1/webhooks/stripe`.
+6. **ElevenLabs Profiles**: Verify Voice IDs mapped in `vertical_configs` exist on target ElevenLabs accounts.
+7. **Static Assets**: Compile package assets:
    ```bash
    npm run build
    ```

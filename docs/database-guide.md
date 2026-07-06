@@ -837,6 +837,39 @@ Freed agent capacity goes into: the consent property tests, the idempotency fuzz
 
 ---
 
+## 14. Index Review (2026-07-06)
+
+### 14.1 Foreign-Key Index Coverage
+
+Migration `20260706000001_linter_fk_indexes.sql` adds `CREATE INDEX IF NOT EXISTS` for every FK column that lacked a covering index, as identified by the Supabase DB linter `unindexed_foreign_keys` rule. Key additions include:
+
+| Table | New indexes |
+|-------|-------------|
+| `agent_active_skills` | `agent_id`, `skill_id`, `org_id` |
+| `calls` | `agent_id`, `campaign_id`, `contact_id` |
+| `campaigns` | `agent_id` |
+| `call_events` (parent) | `call_id` — propagates to all partitions |
+| `usage_ledger` (parent) | `call_id` — propagates to all partitions |
+| `audit_log` | `org_id` |
+| `dialer_transitions` | `org_id` |
+| `dpdp_requests` | `org_id`, `contact_id` |
+| `scheduled_calls` | `org_id`, `agent_id` |
+| `user_sessions` | `org_id` |
+| `notifications` | `org_id`, `user_id` |
+| Other FK columns | `idx_*` added on 30+ additional tables — see migration for full list |
+
+### 14.2 Unused Index Review
+
+The Supabase DB linter reports ~30 indexes with zero scans since the last statistics reset. **These have NOT been dropped.** Indexes appear unused when:
+
+- The table is new and traffic has not yet reached it.
+- The index supports a query plan that only activates under certain data distributions.
+- Statistics were reset recently (e.g., after a migration or vacuum).
+
+**Action:** Re-run `SELECT * FROM pg_stat_user_indexes WHERE idx_scan = 0` after 30 days of sustained production traffic. Any index still at zero scans after 30 days is a candidate for removal. Document the removal in a migration with a comment referencing this review date.
+
+---
+
 ## Appendix — invariants the DB must always satisfy
 
 1. Every table with `org_id` has RLS enabled + an isolation policy. *(rls-coverage)*
