@@ -39,4 +39,11 @@ function computeRetryAt(now, attempt, { startHour = 9, endHour = 21, timezone = 
   return candidate;
 }
 
-module.exports = { getNextRetryDelay, canRetry, isWithinQuietHours, nextBusinessWindow, computeRetryAt, MAX_ATTEMPTS };
+function clampToQuietHours(date, { startHour = 9, endHour = 21, timezone = "Asia/Kolkata" } = {}) {
+  if (isWithinQuietHours(date, startHour, endHour, timezone)) {
+    return nextBusinessWindow(date, startHour, timezone);
+  }
+  return date;
+}
+
+module.exports = { getNextRetryDelay, canRetry, isWithinQuietHours, nextBusinessWindow, computeRetryAt, clampToQuietHours, MAX_ATTEMPTS };

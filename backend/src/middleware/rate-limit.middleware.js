@@ -64,4 +64,14 @@ const expensiveOpsLimiter = rateLimit({
   message: { error: { code: "rate_limited", message: "Too many requests for this operation. Please wait." } },
 });
 
-module.exports = { apiLimiter, webhookLimiter, authLimiter, waitlistLimiter, enterpriseLimiter, expensiveOpsLimiter };
+// Web test call sessions — 10 per org per hour.
+const webSessionLimiter = rateLimit({
+  windowMs: 3_600_000,
+  max: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: keyForReq,
+  message: { error: { code: "rate_limited", message: "Web test call limit reached. Try again later." } },
+});
+
+module.exports = { apiLimiter, webhookLimiter, authLimiter, waitlistLimiter, enterpriseLimiter, expensiveOpsLimiter, webSessionLimiter };

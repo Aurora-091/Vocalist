@@ -132,4 +132,53 @@ function scrubSecrets(config) {
   return out;
 }
 
+// ─── Playbooks CRUD ──────────────────────────────────────────────────────────
+
+const PLAYBOOK_KEYS = ["cart_recovery", "cod_confirm", "feedback"];
+
+const playbookSchema = z.object({
+  enabled: z.boolean().optional(),
+  agent_id: z.string().uuid().nullable().optional(),
+  delay_minutes: z.number().int().min(1).max(43200).optional(),
+  max_attempts: z.number().int().min(1).max(5).optional(),
+  call_hours_start: z.number().int().min(0).max(23).optional(),
+  call_hours_end: z.number().int().min(1).max(24).optional(),
+  timezone: z.string().max(80).optional(),
+  config: z.record(z.string(), z.any()).optional(),
+});
+
+router.get(
+  "/playbooks",
+  asyncHandler(async (req, res) => {
+    const { data, error } = await req.supabase
+      .from("playbooks")
+      .select("*")
+      .order("key", { ascending: true });
+    if (error) throw error;
+    res.json({ playbooks: data || [] });
+  })
+);
+
+router.put(
+  "/playbooks/:key",
+  requireRole("owner", "admin"),
+  validate({
+    params: z.object({ key: z.enum(PLAYBOOK_KEYS) }),
+    body: playbookSchema,
+  }),
+  asyncHandler(async (req, res) => {
+    const { key } = req.params;
+    const orgId = req.auth.orgId;
+    const payload = { org_id: orgId, key, ...req.body };
+
+    const { data, error } = await req.supabase
+      .from("playbooks")
+      .upsert(payload, { onConflict: "org_id,key" })
+      .select("*")
+      .single();
+    if (error) throw error;
+    res.json({ playbook: data });
+  })
+);
+
 module.exports = router;

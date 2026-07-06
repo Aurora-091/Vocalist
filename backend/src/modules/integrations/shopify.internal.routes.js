@@ -4,6 +4,7 @@ const { verifyInternalSecret } = require("./shopify.oauth");
 const logger = require("../../config/logger");
 const asyncHandler = require("../../utils/asyncHandler");
 const { tryE164 } = require("../../utils/phone");
+const { clampToQuietHours } = require("../../utils/scheduling");
 
 const router = express.Router();
 router.use(express.json({ limit: "1mb" }));
@@ -135,7 +136,7 @@ router.post(
         // Reset scheduled_at — customer is still editing
         const { data: playbook } = await admin
           .from("playbooks")
-          .select("delay_minutes")
+          .select("delay_minutes, call_hours_start, call_hours_end, timezone")
           .eq("org_id", orgId)
           .eq("key", "cart_recovery")
           .maybeSingle();
@@ -146,7 +147,13 @@ router.post(
           .eq("type", "shopify")
           .maybeSingle();
         const delayMinutes = playbook?.delay_minutes || integ?.call_delay_minutes || 30;
-        updates.scheduled_at = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+        const rawAt = new Date(Date.now() + delayMinutes * 60 * 1000);
+        const clampedAt = clampToQuietHours(rawAt, {
+          startHour: playbook?.call_hours_start || 9,
+          endHour: playbook?.call_hours_end || 21,
+          timezone: playbook?.timezone || integration.config?.timezone || "Asia/Kolkata",
+        });
+        updates.scheduled_at = clampedAt.toISOString();
 
         await admin.from("scheduled_calls").update(updates).eq("id", existing.id);
         return res.status(200).json({ ok: true, updated: true, id: existing.id });
@@ -201,7 +208,13 @@ router.post(
     );
 
     const delayMinutes = playbook?.delay_minutes || integ?.call_delay_minutes || 30;
-    const scheduledAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+    const rawScheduledAt = new Date(Date.now() + delayMinutes * 60 * 1000);
+    const clampedAt = clampToQuietHours(rawScheduledAt, {
+      startHour: playbook?.call_hours_start || 9,
+      endHour: playbook?.call_hours_end || 21,
+      timezone: playbook?.timezone || integration.config?.timezone || "Asia/Kolkata",
+    });
+    const scheduledAt = clampedAt.toISOString();
 
     const { data: inserted, error: insertErr } = await admin
       .from("scheduled_calls")
@@ -354,7 +367,7 @@ router.post(
     if (isCOD && e164 && !existingOrder) {
       const { data: codPlaybook } = await admin
         .from("playbooks")
-        .select("agent_id, delay_minutes, enabled")
+        .select("agent_id, delay_minutes, enabled, call_hours_start, call_hours_end, timezone")
         .eq("org_id", orgId)
         .eq("key", "cod_confirm")
         .maybeSingle();
@@ -372,7 +385,13 @@ router.post(
 
       if (codAgentId && codEnabled) {
         const delayMinutes = codPlaybook?.delay_minutes || integ?.config?.cod_delay_minutes || 5;
-        const scheduledAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+        const rawCodAt = new Date(Date.now() + delayMinutes * 60 * 1000);
+        const clampedCodAt = clampToQuietHours(rawCodAt, {
+          startHour: codPlaybook?.call_hours_start || 9,
+          endHour: codPlaybook?.call_hours_end || 21,
+          timezone: codPlaybook?.timezone || integration.config?.timezone || "Asia/Kolkata",
+        });
+        const scheduledAt = clampedCodAt.toISOString();
 
         await admin.from("scheduled_calls").insert({
           org_id: orgId,
@@ -443,7 +462,7 @@ router.post(
     // Resolve feedback playbook
     const { data: fbPlaybook } = await admin
       .from("playbooks")
-      .select("agent_id, delay_minutes, enabled, config")
+      .select("agent_id, delay_minutes, enabled, config, call_hours_start, call_hours_end, timezone")
       .eq("org_id", orgId)
       .eq("key", "feedback")
       .maybeSingle();
@@ -468,7 +487,13 @@ router.post(
     // Delay: playbook delay_minutes (designed as delay_days * 1440 in config), default 2 days
     const delayDays = fbPlaybook?.config?.delay_days || 2;
     const delayMinutes = fbPlaybook?.delay_minutes || delayDays * 1440;
-    const scheduledAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+    const rawFbAt = new Date(Date.now() + delayMinutes * 60 * 1000);
+    const clampedFbAt = clampToQuietHours(rawFbAt, {
+      startHour: fbPlaybook?.call_hours_start || 9,
+      endHour: fbPlaybook?.call_hours_end || 21,
+      timezone: fbPlaybook?.timezone || integration.config?.timezone || "Asia/Kolkata",
+    });
+    const scheduledAt = clampedFbAt.toISOString();
 
     await admin.from("scheduled_calls").insert({
       org_id: orgId,

@@ -100,8 +100,12 @@ export default function Dashboard() {
     if (!overview) return 0;
     const raw = overview[key];
     if (raw !== undefined) return raw;
-    if (key === "carts_recovered" || key === "reservations") return overview.bookings ?? 0;
-    if (key === "revenue_recovered") return overview.revenue_recovered ? `$${overview.revenue_recovered}` : "$0";
+    if (key === "carts_recovered" || key === "reservations") return overview.carts_recovered ?? overview.bookings ?? 0;
+    if (key === "revenue_recovered") {
+      const val = overview.revenue_recovered ?? 0;
+      const curr = overview.revenue_currency === "INR" ? "\u20B9" : "$";
+      return val ? `${curr}${Number(val).toLocaleString()}` : `${curr}0`;
+    }
     if (key === "no_shows_prevented") return overview.no_shows_prevented ?? 0;
     if (key === "checkins_handled") return overview.checkins_handled ?? 0;
     return 0;

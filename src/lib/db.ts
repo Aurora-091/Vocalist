@@ -318,11 +318,31 @@ export async function getOverview() {
     .eq("new_status", "revoked")
     .gte("created_at", thirtyDaysAgo);
 
+  // Recovered revenue from attributed calls
+  const { data: recoveredRows } = await supabase
+    .from("scheduled_calls")
+    .select("recovered_value, recovered_currency")
+    .eq("org_id", orgId)
+    .eq("outcome", "recovered")
+    .gte("updated_at", thirtyDaysAgo);
+
+  const recoveredTotal = (recoveredRows || []).reduce(
+    (sum, r) => sum + (parseFloat(r.recovered_value) || 0),
+    0
+  );
+  const recoveredCurrency = recoveredRows?.[0]?.recovered_currency || "INR";
+
+  // Count of carts actually recovered
+  const cartsRecovered = (recoveredRows || []).length;
+
   return {
     calls_total: callsTotal || 0,
     calls_completed: callsCompleted || 0,
-    bookings: 0,
+    bookings: cartsRecovered,
     opt_outs: optOuts || 0,
+    revenue_recovered: recoveredTotal,
+    revenue_currency: recoveredCurrency,
+    carts_recovered: cartsRecovered,
   };
 }
 

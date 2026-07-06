@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor, Trash2, LogOut } from "lucide-react";
+import { api } from "@/lib/api";
 import {
   getOrg,
   updateOrg,
@@ -35,12 +36,13 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
-const TABS = ["Profile", "Organization", "Appearance", "Security", "Notifications", "Webhooks", "Compliance"] as const;
+const TABS = ["Profile", "Organization", "Playbooks", "Appearance", "Security", "Notifications", "Webhooks", "Compliance"] as const;
 type Tab = (typeof TABS)[number];
 
 const PANELS: Record<Tab, React.ComponentType> = {
   Profile: ProfilePanel,
   Organization: OrgPanel,
+  Playbooks: PlaybooksPanel,
   Appearance: AppearancePanel,
   Security: SecurityPanel,
   Notifications: NotificationsPanel,
@@ -678,5 +680,185 @@ function WebhooksPanel() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Playbooks Panel ─────────────────────────────────────────────────────────
+
+type Playbook = {
+  id?: string;
+  key: string;
+  enabled: boolean;
+  agent_id: string | null;
+  delay_minutes: number;
+  max_attempts: number;
+  call_hours_start: number;
+  call_hours_end: number;
+  timezone: string;
+  config: Record<string, unknown>;
+};
+
+const PLAYBOOK_META: Record<string, { label: string; description: string; defaultDelay: number }> = {
+  cart_recovery: { label: "Cart Recovery", description: "Call customers who abandoned their cart", defaultDelay: 30 },
+  cod_confirm: { label: "COD Confirmation", description: "Verify cash-on-delivery orders to reduce RTO", defaultDelay: 5 },
+  feedback: { label: "Feedback Collection", description: "Post-delivery satisfaction check and review request", defaultDelay: 2880 },
+};
+
+function PlaybooksPanel() {
+  const [playbooks, setPlaybooks] = useState<Record<string, Playbook>>({});
+  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [pbRes, agentsData] = await Promise.all([
+          api.get<{ playbooks: Playbook[] }>("/v1/integrations/playbooks"),
+          import("@/lib/db").then((m) => m.listAgents()),
+        ]);
+
+        const map: Record<string, Playbook> = {};
+        for (const key of Object.keys(PLAYBOOK_META)) {
+          const existing = pbRes.playbooks.find((p) => p.key === key);
+          map[key] = existing || {
+            key,
+            enabled: true,
+            agent_id: null,
+            delay_minutes: PLAYBOOK_META[key].defaultDelay,
+            max_attempts: 3,
+            call_hours_start: 9,
+            call_hours_end: 21,
+            timezone: "Asia/Kolkata",
+            config: {},
+          };
+        }
+        setPlaybooks(map);
+        setAgents((agentsData || []).map((a: any) => ({ id: a.id, name: a.name })));
+      } catch {
+        toast.error("Failed to load playbooks");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  function update(key: string, patch: Partial<Playbook>) {
+    setPlaybooks((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+  }
+
+  async function save(key: string) {
+    setSaving(key);
+    try {
+      const pb = playbooks[key];
+      const { id, ...payload } = pb;
+      await api.put(`/v1/integrations/playbooks/${key}`, payload);
+      toast.success(`${PLAYBOOK_META[key].label} saved`);
+    } catch {
+      toast.error("Failed to save playbook");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  if (loading) return <Skeleton className="h-48" />;
+
+  return (
+    <div className="space-y-6">
+      {Object.entries(PLAYBOOK_META).map(([key, meta]) => {
+        const pb = playbooks[key];
+        if (!pb) return null;
+        const isFeedback = key === "feedback";
+
+        return (
+          <Card key={key} className="gap-0 overflow-visible py-0 shadow-card">
+            <div className="border-b px-6 py-4 flex items-center justify-between">
+              <div>
+                <div className="font-medium">{meta.label}</div>
+                <div className="text-xs text-text-muted mt-0.5">{meta.description}</div>
+              </div>
+              <Switch
+                checked={pb.enabled}
+                onCheckedChange={(v) => update(key, { enabled: v })}
+              />
+            </div>
+            <CardContent className="px-6 py-5">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel>Agent</FieldLabel>
+                  <Select
+                    value={pb.agent_id || ""}
+                    onValueChange={(v) => update(key, { agent_id: v || null })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select agent" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {agents.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field>
+                  <FieldLabel>{isFeedback ? "Delay (days)" : "Delay (minutes)"}</FieldLabel>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={isFeedback ? Math.round(pb.delay_minutes / 1440) : pb.delay_minutes}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 1;
+                      update(key, { delay_minutes: isFeedback ? val * 1440 : val });
+                    }}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel>Max retries</FieldLabel>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={pb.max_attempts}
+                    onChange={(e) => update(key, { max_attempts: parseInt(e.target.value) || 3 })}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel>Calling window</FieldLabel>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={23}
+                      className="w-20"
+                      value={pb.call_hours_start}
+                      onChange={(e) => update(key, { call_hours_start: parseInt(e.target.value) || 9 })}
+                    />
+                    <span className="text-xs text-text-muted">to</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={24}
+                      className="w-20"
+                      value={pb.call_hours_end}
+                      onChange={(e) => update(key, { call_hours_end: parseInt(e.target.value) || 21 })}
+                    />
+                  </div>
+                  <FieldDescription>Hours ({pb.timezone})</FieldDescription>
+                </Field>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <Button size="sm" onClick={() => save(key)} disabled={saving === key}>
+                  {saving === key ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
   );
 }

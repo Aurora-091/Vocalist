@@ -3,6 +3,7 @@ const { z } = require("zod");
 const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
+const { webSessionLimiter } = require("../../middleware/rate-limit.middleware");
 const { NotFound, BadRequest, UnprocessableEntity } = require("../../utils/errors");
 const agentService = require("./agent.service");
 const callService = require("../calls/call.service");
@@ -354,6 +355,47 @@ router.post(
     }
 
     res.json({ ok: true });
+  })
+);
+
+// ─── Web Test Call Session ───────────────────────────────────────────────────
+
+router.post(
+  "/:id/web-session",
+  webSessionLimiter,
+  validate({ params: z.object({ id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    const { data: agent, error: agentErr } = await req.supabase
+      .from("agents")
+      .select("id, name, provider, provider_ref, org_id")
+      .eq("id", req.params.id)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (agentErr) throw agentErr;
+    if (!agent) throw NotFound("Agent not found");
+    if (!agent.provider_ref || agent.provider_ref.startsWith("local_")) {
+      throw BadRequest("Agent not provisioned with ElevenLabs. Save the agent first.");
+    }
+
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      throw BadRequest("ElevenLabs API key not configured");
+    }
+
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agent.provider_ref}`,
+      { method: "GET", headers: { "xi-api-key": apiKey } }
+    );
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw BadRequest(`ElevenLabs signed URL failed: ${response.status}`, detail);
+    }
+
+    const { signed_url } = await response.json();
+
+    res.json({ signed_url, agent_id: agent.provider_ref });
   })
 );
 
