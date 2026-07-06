@@ -18,7 +18,7 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 | Low / Informational | 9 |
 | DB Linter | 7 categories (6 fixed via migration, 1 manual dashboard step, 1 deferred 30-day review) |
 
-**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction. The July 5 remediation pass addressed CSP, code-splitting, Twilio lifecycle, rate limiting, remaining medium findings (M3–M8 resolved or verified safe), and Supabase database linter warnings (function permissions, partition RLS policies). The July 6 pass resolved all remaining DB linter WARN findings (RLS InitPlan per-row evaluation, multiple permissive policies, duplicate index) and added FK covering indexes across the full schema.
+**Overall:** The codebase is fully hardened against the vulnerabilities highlighted in both the June 16 and June 18 audits. Webhook signatures are timing-safe verified, OAuth exchanges are CSRF protected, environment secret leakages are prevented via Vault decryption lookups, and client-side data fetching is consolidated via a centralized `db.ts` abstraction. The July 5 remediation pass addressed CSP, code-splitting, Twilio lifecycle, rate limiting, remaining medium findings (M3–M8 resolved or verified safe), and Supabase database linter warnings (function permissions, partition RLS policies). The July 6 pass resolved all remaining DB linter WARN findings (RLS InitPlan per-row evaluation, multiple permissive policies, duplicate index), added FK covering indexes across the full schema, fixed a broken-access-control bug in `agent_active_skills` RLS policies (org UUID vs user UUID type mismatch), removed three zombie tables, and automated partition retention via pg_cron.
 
 ### DB Linter Findings (2026-07-05)
 
@@ -38,6 +38,14 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 | INFO: unindexed_foreign_keys — FK columns without covering indexes | Fixed | `20260706000001_linter_fk_indexes.sql` — added `CREATE INDEX IF NOT EXISTS` for all unindexed FK columns across the full schema. Parent-table indexes propagate to all partitions. |
 | INFO: unused_index — ~30 indexes with zero scans | Deferred | Intentionally not dropped. Re-evaluate after 30 days of production traffic. See `docs/database-guide.md §14.2`. |
 | INFO: auth_db_connections_absolute — Auth pool uses absolute count | Open (manual) | Dashboard-only: set Auth connection pool to percentage-based allocation in Supabase Dashboard > Database > Connection Pooling. |
+
+### Architecture Hardening (2026-07-06)
+
+| Item | Status | Resolution |
+|------|--------|------------|
+| `agent_active_skills` RLS semantic bug — `org_id = auth.uid()` compares org UUID vs user UUID | Fixed | `20260706000002_fix_agent_active_skills_policies.sql` — replaced `auth.uid()` with `auth_org()` on all 4 policies. Broken access control: was silently blocking all skills access. |
+| Zombie tables: `audit_log`, `consent_notices`, `dpdp_requests` — live in DB, zero code references | Fixed | `20260706000003_drop_zombie_tables.sql` — `DROP TABLE IF EXISTS ... CASCADE` for all three. |
+| No automated partition retention — old partitions accumulate indefinitely | Fixed | `20260706000004_partition_retention_automation.sql` — `drop_old_partitions()` function + `aurora_partition_retention` pg_cron job at `0 3 28 * *`. Retention: `call_events` 12mo, `webhook_events` 6mo, `usage_ledger` indefinite. |
 
 ---
 

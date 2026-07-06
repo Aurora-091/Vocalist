@@ -2,7 +2,7 @@
 
 **Stack:** Supabase (Postgres 15) · RLS-enforced multi-tenancy · SQL migrations (54 files)
 **Scope:** Schema + ERD, RLS, consent/DNC + audit, dialer state machine, billing/metering, migrations, indexes/partitioning, backups/PITR/GDPR, webhook ledger, call-record storage.
-**Last updated:** 2026-07-05
+**Last updated:** 2026-07-06
 **Audience:** the 2 engineers. Design-doc depth with copy-ready DDL for the load-bearing pieces.
 
 > **Legal-critical reminder:** the consent/DNC tables, the dialer state machine, the metering ledger, and RLS are **Tier-1**. Human-authored. Agents may write tests and review only. Everything in this doc that touches those is written to be the *most-tested code in the system*.
@@ -697,7 +697,14 @@ Partitioned tables (`call_events`, `webhook_events`, `usage_ledger`) grow indefi
 | `webhook_events` | 6 months | Audit trail; replayable from provider if older events needed |
 | `usage_ledger` | **Indefinite** | Billing records required for legal/tax compliance |
 
-Partition creation is automated via `ensure_monthly_partitions()` called by pg_cron. Old partitions beyond retention windows should be detached and dropped monthly.
+Partition lifecycle is fully automated via two pg_cron jobs:
+
+| Job name | Schedule | Function | Purpose |
+|----------|----------|----------|---------|
+| `aurora_partition_rotation` | `0 3 25 * *` | `ensure_monthly_partitions(3)` | Creates 3 months of forward partitions |
+| `aurora_partition_retention` | `0 3 28 * *` | `drop_old_partitions()` | Drops expired partitions per policy above |
+
+`drop_old_partitions()` is SECURITY DEFINER, REVOKE from anon/authenticated, GRANT to service_role. It explicitly skips `usage_ledger`. The retention job runs 3 days after the rotation job so forward partitions always exist before old ones are pruned. Logs dropped partition names via RAISE NOTICE.
 
 ---
 
@@ -850,9 +857,7 @@ Migration `20260706000001_linter_fk_indexes.sql` adds `CREATE INDEX IF NOT EXIST
 | `campaigns` | `agent_id` |
 | `call_events` (parent) | `call_id` — propagates to all partitions |
 | `usage_ledger` (parent) | `call_id` — propagates to all partitions |
-| `audit_log` | `org_id` |
 | `dialer_transitions` | `org_id` |
-| `dpdp_requests` | `org_id`, `contact_id` |
 | `scheduled_calls` | `org_id`, `agent_id` |
 | `user_sessions` | `org_id` |
 | `notifications` | `org_id`, `user_id` |
