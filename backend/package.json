@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
+    "start:workers": "node worker-entry.js",
     "dev": "nodemon server.js",
     "build": "node -e \"require('./server.js')\" --check 2>/dev/null || node --check server.js && echo backend syntax ok",
     "test": "cross-env SUPABASE_URL=http://localhost SUPABASE_ANON_KEY=dummy_key_must_be_20_chars node --test src/tests/invariants/*.test.js",
