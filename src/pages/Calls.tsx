@@ -616,10 +616,33 @@ function CopyableId({ id }: { id: string }) {
 
 function ConversationDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const [conversation, setConversation] = useState<any>(null);
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
 
   useEffect(() => {
     getCall(id).then(setConversation).catch(() => setConversation(null));
   }, [id]);
+
+  // Resolve private-bucket recording paths to signed URLs.
+  // recording_url is either a full https:// URL (provider-hosted, legacy) or a
+  // bucket-relative path like "{orgId}/{callId}.mp3" (archived to call-recordings).
+  useEffect(() => {
+    setRecordingUrl(null);
+    const raw = conversation?.recording_url;
+    if (!raw) return;
+
+    if (raw.startsWith("http")) {
+      setRecordingUrl(raw);
+      return;
+    }
+
+    supabase.storage
+      .from("call-recordings")
+      .createSignedUrl(raw, 3600)
+      .then(({ data, error }) => {
+        if (error) return;
+        setRecordingUrl(data.signedUrl);
+      });
+  }, [conversation?.recording_url]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -771,18 +794,20 @@ function ConversationDrawer({ id, onClose }: { id: string; onClose: () => void }
 
                 {/* Recording tab */}
                 <TabsContent value="recording">
-                  {conversation.recording_url ? (
+                  {recordingUrl ? (
                     <div className="space-y-3">
                       <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
                         Call Recording
                       </p>
                       <audio
-                        src={conversation.recording_url}
+                        src={recordingUrl}
                         controls
                         className="w-full"
                         aria-label="Call recording"
                       />
                     </div>
+                  ) : conversation?.recording_url && !recordingUrl ? (
+                    <p className="text-sm text-muted-foreground">Loading recording…</p>
                   ) : (
                     <p className="text-sm text-muted-foreground">No recording available.</p>
                   )}

@@ -20,6 +20,12 @@ function masterClient() {
 
 async function getOrCreateSubaccount(orgId, friendlyName) {
   const admin = requireAdmin();
+
+  // Acquire a per-org advisory lock before the check-then-create pattern.
+  // pg_advisory_xact_lock is transaction-scoped: concurrent requests for the same
+  // org queue here rather than racing to create duplicate Twilio subaccounts.
+  await admin.rpc("request_advisory_lock", { lock_key: `subaccount_provision:${orgId}` });
+
   const { data: existing } = await admin
     .from("twilio_subaccounts")
     .select("*")
