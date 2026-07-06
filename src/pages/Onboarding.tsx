@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ArrowRight, ArrowLeft, Phone, Loader as Loader2, Play } from "lucide-react";
+import { Check, ArrowRight, ArrowLeft, Phone, Loader as Loader2, Play, Mic } from "lucide-react";
 import { api } from "../lib/api";
 import { listAgentPresets, listVoices } from "../lib/db";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { VerticalProvider, useVertical } from "../lib/VerticalContext";
 import type { VerticalKey } from "../config/verticals";
+import { WebTestCallModal } from "../components/WebTestCallModal";
 
 type Preset = {
   id: string;
@@ -80,6 +81,7 @@ function OnboardingInner() {
   const [busy, setBusy] = useState(false);
   const [calling, setCalling] = useState(false);
   const [callPlaced, setCallPlaced] = useState(false);
+  const [webTestOpen, setWebTestOpen] = useState(false);
 
   const currentKey = STEPS[step];
 
@@ -354,7 +356,7 @@ function OnboardingInner() {
             {currentKey === "test_call" && (
               <div className="space-y-4">
                 <p className="text-sm text-text-muted">
-                  Hear your agent live. Enter your phone number and we'll call you.
+                  Hear your agent live. Test in your browser or enter your phone number for a real call.
                 </p>
                 {!createdAgentId ? (
                   <div className="space-y-3">
@@ -371,16 +373,25 @@ function OnboardingInner() {
                       Agent created successfully.
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      <input
-                        value={testNumber}
-                        onChange={(e) => setTestNumber(e.target.value)}
-                        placeholder="+1 415 555 0199"
-                        className="h-10 px-3 rounded-md border border-border bg-surface flex-1 min-w-[240px] font-mono text-sm"
-                      />
-                      <Button onClick={placeTestCall} disabled={calling || !testNumber.trim()}>
-                        {calling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Phone className="w-4 h-4 mr-2" />}
-                        {calling ? "Calling..." : "Test call"}
+                      <Button variant="outline" onClick={() => setWebTestOpen(true)}>
+                        <Mic className="w-4 h-4 mr-2" />
+                        Test in browser
                       </Button>
+                    </div>
+                    <div className="border-t border-border pt-3">
+                      <p className="text-xs text-text-muted mb-2">Or test via phone call:</p>
+                      <div className="flex flex-wrap gap-3">
+                        <input
+                          value={testNumber}
+                          onChange={(e) => setTestNumber(e.target.value)}
+                          placeholder="+1 415 555 0199"
+                          className="h-10 px-3 rounded-md border border-border bg-surface flex-1 min-w-[240px] font-mono text-sm"
+                        />
+                        <Button onClick={placeTestCall} disabled={calling || !testNumber.trim()}>
+                          {calling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Phone className="w-4 h-4 mr-2" />}
+                          {calling ? "Calling..." : "Test call"}
+                        </Button>
+                      </div>
                     </div>
                     {callPlaced && (
                       <p className="text-xs text-text-muted">
@@ -388,6 +399,14 @@ function OnboardingInner() {
                       </p>
                     )}
                   </div>
+                )}
+                {createdAgentId && (
+                  <WebTestCallModal
+                    open={webTestOpen}
+                    onOpenChange={setWebTestOpen}
+                    agentId={createdAgentId}
+                    agentName={businessName || "Your agent"}
+                  />
                 )}
               </div>
             )}

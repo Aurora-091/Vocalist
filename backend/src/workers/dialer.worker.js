@@ -155,6 +155,25 @@ async function dispatchOne(admin, { campaign, agent, target }) {
   return { ok: true, call_id: callRow.id, provider_call_id: providerCall.provider_call_id };
 }
 
+async function maybeCompleteCampaign(admin, campaignId) {
+  const { count: inFlightCount } = await admin
+    .from("campaign_targets")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId)
+    .in("state", [STATES.QUEUED, STATES.DIALING, STATES.RINGING, STATES.IN_CALL, STATES.RETRY_WAIT]);
+
+  if ((inFlightCount || 0) === 0) {
+    const { error } = await admin
+      .from("campaigns")
+      .update({ status: "completed", updated_at: new Date().toISOString() })
+      .eq("id", campaignId)
+      .eq("status", "running");
+    if (!error) {
+      logger.info({ campaignId }, "Campaign auto-completed — all targets in terminal state");
+    }
+  }
+}
+
 async function tickCampaign(campaign) {
   const admin = requireAdmin();
   const slots = campaign.concurrency || 5;
@@ -196,6 +215,11 @@ async function tickCampaign(campaign) {
       logger.error({ err: err.message, targetId: target.target_id }, "Dispatch failed");
     }
   }
+
+  if (targets.length === 0) {
+    await maybeCompleteCampaign(admin, campaign.id);
+  }
+
   return { dispatched: results.length, results };
 }
 

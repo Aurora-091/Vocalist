@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { captureEvent } from "@/lib/posthog";
 
 type Message = { source: "user" | "ai"; text: string };
 
@@ -42,15 +43,18 @@ export function WebTestCallModal({
     onConnect: () => {
       setPhase("active");
       setError(null);
+      captureEvent("web_test_started", { agent_id: agentId, agent_name: agentName });
     },
     onDisconnect: () => {
       setPhase("ended");
       stopTimer();
+      captureEvent("web_test_ended", { agent_id: agentId, duration_sec: elapsed });
     },
     onError: (message: string) => {
       setError(message);
       setPhase("ended");
       stopTimer();
+      captureEvent("web_test_error", { agent_id: agentId, error: message });
     },
     onMessage: ({ message, source }) => {
       setMessages((prev) => [...prev, { source, text: message }]);
