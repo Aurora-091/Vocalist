@@ -1,0 +1,22 @@
+{
+  "id": 8394012,
+  "name": "#1045",
+  "total_price": "2999.00",
+  "currency": "INR",
+  "email": "customer@example.com",
+  "financial_status": "pending",
+  "gateway": "cash_on_delivery",
+  "customer": {
+    "first_name": "Rajesh",
+    "last_name": "Kumar",
+    "phone": "+91 98765 43210"
+  },
+  "line_items": [
+    {
+      "id": 1948501,
+      "title": "Weeber Smart Voice Premium Plan",
+      "price": "2999.00",
+      "quantity": 1
+    }
+  ]
+}
