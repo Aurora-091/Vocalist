@@ -4,6 +4,26 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
+## [1.11.0] — 2026-07-06
+
+### Production-Readiness Polish (Phase 5)
+
+#### Code Quality & Tooling
+- **ESLint flat config** (`eslint.config.js`): Replaced the `echo 'lint stub'` script with a real ESLint setup using `@eslint/js`, `typescript-eslint`, and `eslint-plugin-react-hooks`. Zero errors across the `src/` directory. Classic rules-of-hooks + exhaustive-deps enforced; compiler-oriented rules disabled for the current codebase maturity level.
+- **Legacy UI elimination**: Removed the entire `src/components/legacy-ui/` directory (Badge, Button, Card, StatCard, States). The `StatCard` component was migrated to `src/components/ui/stat-card.tsx` following the shadcn/ui pattern. All import paths updated across Dashboard, Calls, Analytics, and Outcomes pages.
+
+#### UX Improvements
+- **Command palette expansion** (`CommandPalette.tsx`): Added debounced contact search (250ms, min 2 chars), agent listing on open, and playbook settings navigation. Contacts display name + phone; agents link directly to detail pages.
+- **Optimistic UI — Playbooks toggle** (`Playbooks.tsx`): The enabled/disabled switch now auto-saves optimistically via `api.patch`, with instant visual feedback and automatic rollback + toast on failure. No longer requires the explicit "Save" button for the enabled state.
+- **Optimistic UI — Campaign pause/resume** (`CampaignDetail.tsx`): Already implemented — saves previous state, updates immediately, reverts on error with toast notification.
+- **Supabase Realtime on Outcomes** (`Outcomes.tsx`): Subscribed to `postgres_changes` on the `calls` table. Stats, pipeline, and playbook performance now refresh automatically when calls complete — no manual page reload needed.
+
+#### Accessibility
+- **Live regions**: Added `role="status" aria-live="polite" aria-atomic="true"` to the Dashboard live-calls indicator. Added `role="status"` to Shopify sync success message and `role="alert"` to sync error message.
+- **Icon-only buttons**: Added `aria-label` to the mobile delete button in Contacts (`Delete {name}`).
+
+---
+
 ## [1.10.0] — 2026-07-06
 
 ### Infrastructure Hardening

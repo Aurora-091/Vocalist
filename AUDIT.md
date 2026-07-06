@@ -14,7 +14,7 @@ This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase mig
 |----------|-------|
 | Critical | 4 (4 fixed) |
 | High | 8 (8 fixed) |
-| Medium | 14 (12 fixed, 2 open: M1, M2) |
+| Medium | 14 (14 fixed) |
 | Low / Informational | 9 |
 | DB Linter | 7 categories (6 fixed via migration, 1 manual dashboard step, 1 deferred 30-day review) |
 
@@ -196,11 +196,13 @@ This creates inconsistent error handling and makes it harder to apply cross-cutt
 
 ## Previously Identified Medium (status updated 2026-07-05)
 
-### M1 — TypeScript strictness disabled (open)
-**Location:** `tsconfig.json:14` — `"strict": false`
+### M1 — TypeScript strictness disabled (fixed)
+**Location:** `tsconfig.json:14` — `"strict": true`
+**Status:** `strict` mode is now enabled. All pages compile cleanly.
 
-### M2 — Lint is a stub; no enforced linting (open)
-**Location:** `package.json` — `"lint": "echo 'lint stub'"`
+### M2 — Lint is a stub; no enforced linting (fixed)
+**Location:** `package.json` — `"lint": "eslint src"`
+**Status:** ESLint flat config (`eslint.config.js`) with TypeScript and React Hooks rules. Zero errors; warnings tracked for progressive tightening.
 
 ### M3 — Hardcoded demo credentials in client bundle (resolved — not a real issue)
 **Location:** `src/pages/Login.tsx:13-14`
