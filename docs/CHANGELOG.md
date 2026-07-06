@@ -4,18 +4,6 @@ All notable changes to the Weeber platform will be documented in this file. This
 
 ---
 
-## [1.9.5] — 2026-07-06
-
-### Added
-- **Professional Testing Layout** (`backend/src/tests/`):
-  - Created `logs/` directory with `.gitignore` to prevent committing failed run logs.
-  - Created `fixtures/` directory containing `shopify_order.json` (Shopify checkout mock) and `elevenlabs_call.json` (ElevenLabs event mock).
-  - Added `docs/testing/edge_cases.md` mapping critical logic boundaries (A-1 orphan states, T-6 purchase rollbacks, S-16 bucket security) to manual walk-through check-lists.
-  - Added `docs/testing/guide.md` containing developer instructions for invariants and QA checklist updates.
-- **Log Redirection Script** (`package.json`): Added `"test:ci"` runner which saves output logs and prints detailed results on failed runs.
-
----
-
 ## [Unreleased] — 2026-07-05
 
 ### Added
