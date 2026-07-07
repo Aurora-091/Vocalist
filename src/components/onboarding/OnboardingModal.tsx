@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { Check, Play, ArrowRight, Loader as Loader2, Mic } from "lucide-react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { Check, ArrowRight, Loader as Loader2, Mic, ShoppingBag, Activity, Building2, Phone } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { WeeberLogo } from "@/components/WeeberLogo";
 import { ConversationPanel } from "./ConversationPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,6 +11,7 @@ import { listAgentPresets, listVoices, getOrg, updateOnboardingStep } from "@/li
 import { toast } from "sonner";
 import type { VerticalKey } from "@/config/verticals";
 import { useVertical } from "@/lib/VerticalContext";
+import { cn } from "@/lib/utils";
 
 type Preset = {
   id: string;
@@ -39,11 +39,34 @@ type Voice = {
 const STEP_KEYS = ["template", "business", "voice", "test"] as const;
 type StepKey = (typeof STEP_KEYS)[number];
 
+const STEP_LABELS: Record<StepKey, string> = {
+  template: "Template",
+  business: "Business",
+  voice: "Voice",
+  test: "Test call",
+};
+
 const STEP_TITLES: Record<StepKey, string> = {
-  template: "What kind of business?",
-  business: "Tell us about your store",
-  voice: "How should it sound?",
-  test: "Say hello to your agent",
+  template: "What kind of business do you run?",
+  business: "Tell us about your business",
+  voice: "Pick your agent's voice",
+  test: "Talk to your agent",
+};
+
+const STEP_SUBTITLES: Record<StepKey, string> = {
+  template: "Pick the flow that matches your calls.",
+  business: "Your agent will greet callers with your business name.",
+  voice: "Your agent will use this voice on every call.",
+  test: "Make a live browser call right now to hear it in action.",
+};
+
+const VERTICAL_ICON: Record<string, ReactNode> = {
+  shopify: <ShoppingBag className="w-3.5 h-3.5" />,
+  ecommerce: <ShoppingBag className="w-3.5 h-3.5" />,
+  clinic: <Activity className="w-3.5 h-3.5" />,
+  healthcare: <Activity className="w-3.5 h-3.5" />,
+  hotel: <Building2 className="w-3.5 h-3.5" />,
+  hospitality: <Building2 className="w-3.5 h-3.5" />,
 };
 
 type OnboardingModalProps = {
@@ -61,10 +84,9 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   const [activeVerticalTab, setActiveVerticalTab] = useState<string>("all");
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
   const [businessName, setBusinessName] = useState("");
-  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [timezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string>("");
-  const [showVoicePicker, setShowVoicePicker] = useState(false);
   const [createdAgentId, setCreatedAgentId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -179,336 +201,463 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
     }
   }
 
-  const modalContent = (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border shrink-0">
-        <div className="flex items-center gap-3">
-          <WeeberLogo size="sm" />
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">{STEP_TITLES[currentKey]}</h2>
+  // ── Step content ──────────────────────────────────────────────────────────
+
+  const stepContent = (() => {
+    if (finished) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-4 py-12">
+          <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
+            <Check className="w-7 h-7 text-emerald-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-semibold text-foreground">You're all set</p>
+            <p className="text-sm text-muted-foreground mt-1">Taking you to your dashboard…</p>
           </div>
         </div>
-        {step > 0 && !creating && (
-          <button
-            onClick={handleSkip}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Skip for now
-          </button>
-        )}
-      </div>
+      );
+    }
 
-      {/* Progress dots */}
-      <div className="flex items-center gap-2 px-6 py-3 border-b border-border shrink-0">
-        {STEP_KEYS.map((k, i) => (
-          <div key={k} className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full transition-colors ${
-                i < step ? "bg-emerald-500" : i === step ? "bg-foreground" : "bg-muted"
-              }`}
-            />
-            {i === step && (
-              <span className="text-xs font-medium text-foreground">
-                Step {i + 1} of {STEP_KEYS.length}
-              </span>
-            )}
+    if (currentKey === "template") {
+      return (
+        <div className="flex flex-col gap-4 h-full">
+          {/* Pill filter row */}
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button
+              onClick={() => setActiveVerticalTab("all")}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
+                activeVerticalTab === "all"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+              )}
+            >
+              All
+            </button>
+            {verticals.map((v) => (
+              <button
+                key={v}
+                onClick={() => setActiveVerticalTab(v)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium transition-colors border flex items-center gap-1.5",
+                  activeVerticalTab === v
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                )}
+              >
+                {VERTICAL_ICON[v] ?? null}
+                <span className="capitalize">{v}</span>
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Step content */}
-      <div className="flex-1 overflow-y-auto px-6 py-5">
-        {finished ? (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center animate-[scale-in_0.3s_ease-out]">
-              <Check className="w-8 h-8" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">Your agent is ready</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Let's get it a phone number.
-              </p>
-            </div>
-          </div>
-        ) : currentKey === "template" ? (
-          <div className="space-y-4">
-            {verticals.length > 1 && (
-              <div className="flex items-center gap-1 overflow-x-auto border-b border-border pb-0">
-                <button
-                  onClick={() => setActiveVerticalTab("all")}
-                  className={`px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                    activeVerticalTab === "all"
-                      ? "border-foreground text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  All
-                </button>
-                {verticals.map((v) => (
+          {/* Preset grid */}
+          <div className="flex-1 overflow-y-auto -mx-1 px-1">
+            {presets === null ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : visiblePresets.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-sm text-muted-foreground">No templates available.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2">
+                {visiblePresets.map((p) => (
                   <button
-                    key={v}
-                    onClick={() => setActiveVerticalTab(v)}
-                    className={`px-3 py-2 text-xs font-medium whitespace-nowrap capitalize border-b-2 -mb-px transition-colors ${
-                      activeVerticalTab === v
-                        ? "border-foreground text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
+                    key={p.id}
+                    onClick={() => setSelectedPreset(p)}
+                    className={cn(
+                      "text-left p-5 rounded-xl border transition-all",
+                      selectedPreset?.id === p.id
+                        ? "ring-2 ring-foreground border-transparent bg-muted/60"
+                        : "border-border bg-background hover:border-foreground/30 hover:bg-muted/30"
+                    )}
                   >
-                    {v}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-muted-foreground">
+                        {VERTICAL_ICON[p.vertical_key] ?? <Phone className="w-3.5 h-3.5" />}
+                      </span>
+                      <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                        {p.vertical_key}
+                      </span>
+                      {selectedPreset?.id === p.id && (
+                        <Check className="w-3.5 h-3.5 text-emerald-500 ml-auto" />
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-foreground leading-snug">{p.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
+                      {p.description}
+                    </p>
                   </button>
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      );
+    }
 
-            {presets === null ? (
-              <div className="text-sm text-muted-foreground animate-pulse">Loading templates...</div>
-            ) : visiblePresets.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No templates available.</div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-3">
-                {visiblePresets.map((p) => {
-                  const isSelected = selectedPreset?.id === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => setSelectedPreset(p)}
-                      className={`text-left p-4 rounded-md border transition-all ${
-                        isSelected
-                          ? "border-foreground bg-muted/50 ring-1 ring-foreground/20"
-                          : "border-border bg-background hover:border-foreground/20"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="font-medium text-sm">{p.name}</div>
-                        <Badge variant="secondary" className="text-[10px] capitalize">
-                          {p.direction}
-                        </Badge>
-                      </div>
-                      <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
-                        {p.description}
-                      </p>
-                      {p.vertical_key && (
-                        <span className="mt-2 inline-block text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
-                          {p.vertical_key}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : currentKey === "business" ? (
-          <div className="space-y-4 max-w-md">
-            <p className="text-sm text-muted-foreground">
-              This personalizes your agent's greeting and identity.
-            </p>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Business name
-              </label>
-              <input
-                autoFocus
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="Bloom Dental Clinic"
-                className="h-10 px-3 rounded-md border border-border bg-background w-full text-sm focus:outline-none focus:border-foreground focus:ring-1 focus:ring-foreground/20"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Timezone
-              </label>
-              <input
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                className="h-10 px-3 rounded-md border border-border bg-background w-full text-sm focus:outline-none focus:border-foreground focus:ring-1 focus:ring-foreground/20"
-              />
-            </div>
-            {selectedPreset && (
-              <div className="p-3 rounded-md bg-muted/50 border border-border">
-                <div className="text-xs font-medium text-muted-foreground mb-1">Template</div>
-                <div className="text-sm font-medium">{selectedPreset.name}</div>
-              </div>
-            )}
-          </div>
-        ) : currentKey === "voice" ? (
-          <div className="space-y-4">
-            {!showVoicePicker ? (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Your agent will use <span className="font-medium text-foreground">{selectedPreset?.voice_name || "the default voice"}</span>.
-                </p>
-                <div className="flex items-center gap-3 p-4 rounded-md border border-border bg-muted/30">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <Mic className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{selectedPreset?.voice_name || "Default"}</div>
-                    <div className="text-xs text-muted-foreground">Pre-selected for this template</div>
-                  </div>
-                  {selectedPreset?.voice_id && voices.find((v) => v.voice_id === selectedPreset.voice_id)?.preview_url && (
-                    <button
-                      onClick={() => {
-                        const voice = voices.find((v) => v.voice_id === selectedPreset.voice_id);
-                        if (voice?.preview_url) new Audio(voice.preview_url).play().catch(() => {});
-                      }}
-                      className="p-2 rounded-md hover:bg-muted transition-colors"
-                    >
-                      <Play className="w-4 h-4" />
-                    </button>
+    if (currentKey === "business") {
+      return (
+        <div className="flex flex-col justify-center h-full">
+          <div className="max-w-sm w-full">
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+                  Business name
+                </label>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && businessName.trim() && handleBusinessContinue()}
+                  placeholder="e.g. Acme Store"
+                  autoFocus
+                  className={cn(
+                    "h-12 w-full rounded-xl border border-border bg-background px-4 text-sm",
+                    "text-foreground placeholder:text-muted-foreground/50",
+                    "focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-foreground/40",
+                    "transition-colors"
                   )}
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleVoiceContinue} className="flex-1">
-                    Keep this voice
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowVoicePicker(true)}>
-                    Choose different
-                  </Button>
-                </div>
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+                  Timezone
+                </label>
+                <input
+                  type="text"
+                  value={timezone}
+                  readOnly
+                  className={cn(
+                    "h-12 w-full rounded-xl border border-border bg-muted/40 px-4 text-sm",
+                    "text-muted-foreground cursor-default"
+                  )}
+                />
+                <p className="text-[11px] text-muted-foreground/70">
+                  Detected from your browser. You can change this later in settings.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (currentKey === "voice") {
+      const activeVoice = voices.find((v) => v.voice_id === selectedVoice);
+      return (
+        <div className="flex flex-col gap-4 h-full">
+          {/* Voice list */}
+          <div className="flex-1 overflow-y-auto -mx-1 px-1">
+            {voices.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Choose a voice</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
+                {voices.map((v) => (
                   <button
-                    onClick={() => setShowVoicePicker(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
+                    key={v.voice_id}
+                    onClick={() => setSelectedVoice(v.voice_id)}
+                    className={cn(
+                      "text-left px-4 py-3 rounded-xl border transition-all flex items-center gap-3",
+                      selectedVoice === v.voice_id
+                        ? "ring-2 ring-foreground border-transparent bg-muted/60"
+                        : "border-border bg-background hover:border-foreground/30 hover:bg-muted/30"
+                    )}
                   >
-                    Cancel
-                  </button>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                  {voices.map((v) => (
-                    <div
-                      key={v.voice_id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedVoice(v.voice_id)}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedVoice(v.voice_id); }}
-                      className={`relative text-left p-3 rounded-md border transition-colors cursor-pointer ${
-                        selectedVoice === v.voice_id
-                          ? "border-foreground bg-muted/50"
-                          : "border-border bg-background hover:bg-muted/30"
-                      }`}
-                    >
-                      {selectedVoice === v.voice_id && (
-                        <Check className="absolute top-2 right-2 w-3.5 h-3.5" />
-                      )}
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{v.name}</span>
-                        {v.preview_url && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              new Audio(v.preview_url!).play().catch(() => {});
-                            }}
-                            className="p-1 rounded hover:bg-muted"
-                          >
-                            <Play className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <Mic className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{v.name}</p>
                       {v.labels && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {[v.labels.gender, v.labels.accent, v.labels.use_case].filter(Boolean).join(" \u00b7 ")}
-                        </div>
+                        <p className="text-[11px] text-muted-foreground capitalize">
+                          {[v.labels.gender, v.labels.accent].filter(Boolean).join(" · ")}
+                        </p>
                       )}
                     </div>
-                  ))}
-                </div>
-                <Button onClick={handleVoiceContinue} className="w-full" disabled={!selectedVoice}>
-                  Use selected voice
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : currentKey === "test" ? (
-          <div className="space-y-4">
-            {creating ? (
-              <div className="flex flex-col items-center justify-center py-8 gap-3">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Creating your agent...</p>
-              </div>
-            ) : !createdAgentId ? (
-              <div className="flex flex-col items-center justify-center py-8 gap-3">
-                <p className="text-sm text-muted-foreground">Setting up your agent...</p>
-                <Button onClick={createAgent} disabled={creating}>
-                  Create agent
-                </Button>
-              </div>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Talk to your agent in the browser. Test how it handles a real conversation.
-                </p>
-                <ConversationPanel
-                  agentId={createdAgentId}
-                  agentName={businessName || "Your agent"}
-                  onSessionStart={() => setSessionStarted(true)}
-                />
-              </>
-            )}
-          </div>
-        ) : null}
-      </div>
-
-      {/* Footer */}
-      {!finished && (
-        <div className="px-6 py-4 border-t border-border shrink-0 flex items-center justify-between">
-          <div>
-            {step > 0 && !creating && (
-              <Button variant="ghost" size="sm" onClick={() => setStep((s) => s - 1)}>
-                Back
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {currentKey === "template" && (
-              <Button onClick={handleSelectPresetAndContinue} disabled={!selectedPreset}>
-                Continue
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-            {currentKey === "business" && (
-              <Button onClick={handleBusinessContinue} disabled={!businessName.trim()}>
-                Continue
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-            {currentKey === "test" && createdAgentId && !creating && (
-              <>
-                {!sessionStarted && (
-                  <button
-                    onClick={handleFinish}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Finish without testing
+                    {selectedVoice === v.voice_id && (
+                      <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    )}
                   </button>
-                )}
-                {sessionStarted && (
-                  <Button onClick={handleFinish}>
-                    <Check className="w-4 h-4 mr-2" />
-                    Finish
-                  </Button>
-                )}
-              </>
+                ))}
+              </div>
             )}
           </div>
         </div>
-      )}
+      );
+    }
+
+    if (currentKey === "test") {
+      if (creating) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Setting up your agent…</p>
+          </div>
+        );
+      }
+      if (!createdAgentId) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Initializing…</p>
+          </div>
+        );
+      }
+      return (
+        <ConversationPanel
+          agentId={createdAgentId}
+          agentName={selectedPreset?.name ?? "Agent"}
+          onSessionStart={() => setSessionStarted(true)}
+        />
+      );
+    }
+
+    return null;
+  })();
+
+  // ── Footer actions ────────────────────────────────────────────────────────
+
+  const footerActions = (() => {
+    if (finished) return null;
+
+    const backBtn = step > 0 ? (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setStep((s) => s - 1)}
+        className="text-muted-foreground"
+      >
+        Back
+      </Button>
+    ) : (
+      <button
+        onClick={handleSkip}
+        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        Skip for now
+      </button>
+    );
+
+    let primaryBtn: ReactNode = null;
+
+    if (currentKey === "template") {
+      primaryBtn = (
+        <Button
+          disabled={!selectedPreset}
+          onClick={handleSelectPresetAndContinue}
+          size="sm"
+        >
+          Continue
+          <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+        </Button>
+      );
+    } else if (currentKey === "business") {
+      primaryBtn = (
+        <Button
+          disabled={!businessName.trim()}
+          onClick={handleBusinessContinue}
+          size="sm"
+        >
+          Continue
+          <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+        </Button>
+      );
+    } else if (currentKey === "voice") {
+      primaryBtn = (
+        <Button
+          disabled={!selectedVoice}
+          onClick={handleVoiceContinue}
+          size="sm"
+        >
+          {creating ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              Creating…
+            </>
+          ) : (
+            <>
+              Continue
+              <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+            </>
+          )}
+        </Button>
+      );
+    } else if (currentKey === "test") {
+      primaryBtn = (
+        <Button onClick={handleFinish} size="sm">
+          {sessionStarted ? "Finish setup" : "Skip test"}
+          <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+        </Button>
+      );
+    }
+
+    return (
+      <div className="flex items-center justify-between pt-4 border-t border-border shrink-0">
+        {backBtn}
+        {primaryBtn}
+      </div>
+    );
+  })();
+
+  // ── Left step rail ────────────────────────────────────────────────────────
+
+  const stepRail = (
+    <div className="w-52 shrink-0 flex flex-col border-r border-border bg-muted/20 px-5 py-6">
+      <div className="mb-8">
+        <WeeberLogo className="h-6 w-auto" />
+      </div>
+
+      <div className="flex flex-col gap-1 flex-1">
+        {STEP_KEYS.map((key, i) => {
+          const isDone = i < step;
+          const isActive = i === step;
+
+          return (
+            <div key={key} className="flex gap-3">
+              {/* Line + circle column */}
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold transition-colors",
+                    isDone
+                      ? "bg-emerald-500 text-white"
+                      : isActive
+                      ? "bg-foreground text-background"
+                      : "bg-muted border border-border text-muted-foreground"
+                  )}
+                >
+                  {isDone ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                </div>
+                {i < STEP_KEYS.length - 1 && (
+                  <div
+                    className={cn(
+                      "w-px flex-1 my-1 min-h-[28px]",
+                      isDone ? "bg-emerald-500/40" : "bg-border"
+                    )}
+                  />
+                )}
+              </div>
+
+              {/* Label + hint column */}
+              <div className="pb-7 last:pb-0">
+                <p
+                  className={cn(
+                    "text-sm font-medium leading-6 transition-colors",
+                    isActive ? "text-foreground" : isDone ? "text-muted-foreground" : "text-muted-foreground/60"
+                  )}
+                >
+                  {STEP_LABELS[key]}
+                </p>
+                {isActive && (
+                  <p className="text-[11px] text-muted-foreground leading-relaxed -mt-0.5">
+                    {STEP_SUBTITLES[key]}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        onClick={handleSkip}
+        className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors mt-auto"
+      >
+        Skip for now
+      </button>
     </div>
   );
+
+  // ── Right content panel ───────────────────────────────────────────────────
+
+  const contentPanel = (
+    <div className="flex flex-col flex-1 overflow-hidden px-8 py-7">
+      {!finished && (
+        <div className="mb-6 shrink-0">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">
+            Step {step + 1} of {STEP_KEYS.length}
+          </p>
+          <h2 className="text-2xl font-semibold text-foreground leading-tight">
+            {STEP_TITLES[currentKey]}
+          </h2>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        {stepContent}
+      </div>
+
+      {footerActions}
+    </div>
+  );
+
+  // ── Desktop layout ────────────────────────────────────────────────────────
+
+  const desktopLayout = (
+    <div className="flex flex-1 overflow-hidden">
+      {stepRail}
+      {contentPanel}
+    </div>
+  );
+
+  // ── Mobile layout ─────────────────────────────────────────────────────────
+
+  const mobileLayout = (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Segmented progress bar */}
+      <div className="flex gap-1.5 px-4 pt-4 pb-3 shrink-0">
+        {STEP_KEYS.map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "flex-1 h-1 rounded-full transition-colors",
+              i < step
+                ? "bg-emerald-500"
+                : i === step
+                ? "bg-foreground"
+                : "bg-muted"
+            )}
+          />
+        ))}
+      </div>
+
+      {/* Heading */}
+      {!finished && (
+        <div className="px-4 pb-4 shrink-0">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">
+            {STEP_LABELS[currentKey]}
+          </p>
+          <h2 className="text-xl font-semibold text-foreground leading-tight">
+            {STEP_TITLES[currentKey]}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">{STEP_SUBTITLES[currentKey]}</p>
+        </div>
+      )}
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-4 min-h-0">
+        {stepContent}
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 pb-6 pt-2 shrink-0">
+        {footerActions}
+      </div>
+    </div>
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="h-[95dvh]">
-          {modalContent}
+          {mobileLayout}
         </DrawerContent>
       </Drawer>
     );
@@ -517,10 +666,10 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[70vw] max-w-4xl h-[70vh] min-h-[560px] p-0 gap-0 flex flex-col overflow-hidden"
+        className="w-[85vw] max-w-5xl h-[78vh] min-h-[580px] p-0 gap-0 flex flex-col overflow-hidden"
         showCloseButton={false}
       >
-        {modalContent}
+        {desktopLayout}
       </DialogContent>
     </Dialog>
   );
