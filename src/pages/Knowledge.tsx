@@ -106,7 +106,7 @@ export default function Knowledge() {
 
       {adding && (
         <AddSourceForm
-          defaultTab={tab}
+          defaultTab={_tab}
           onClose={() => setAdding(false)}
           onSaved={() => { setAdding(false); load(); }}
         />

@@ -614,7 +614,7 @@ function VoiceCard({
   selectedVoiceId,
   isSelector,
   onSelect,
-  _filterLanguages,
+  filterLanguages,
   isCompatible,
   agents,
   onAssignSuccess,

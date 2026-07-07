@@ -200,13 +200,13 @@ export default function Outcomes() {
               </p>
             ) : (
               (() => {
-                const entries = Object.entries(data.pipelineByStatus).sort((a, b) => b[1] - a[1]);
-                const max = Math.max(...entries.map(([, v]) => v as number), 1);
+                const entries = Object.entries(data.pipelineByStatus as Record<string, number>).sort((a, b) => b[1] - a[1]);
+                const max = Math.max(...entries.map(([, v]) => v), 1);
                 return entries.map(([status, count]) => (
                   <HBar
                     key={status}
                     label={status}
-                    value={count as number}
+                    value={count}
                     max={max}
                     color={PIPELINE_COLORS[status] || "bg-muted-foreground"}
                   />

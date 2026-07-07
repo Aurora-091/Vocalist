@@ -29,7 +29,7 @@ type SetupNumberProps = {
   embedded?: boolean;
 };
 
-export function SetupNumber({ _onComplete, onSkip, embedded }: SetupNumberProps) {
+export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) {
   const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
   const [account, setAccount] = useState<TwilioAccount | null | undefined>(undefined);
   const [loadingAccount, setLoadingAccount] = useState(true);

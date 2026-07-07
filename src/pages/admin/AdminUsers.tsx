@@ -36,14 +36,14 @@ export default function AdminUsers() {
   useEffect(() => { load(); }, [load]);
 
   async function viewUser(id: string) {
-    setDetailLoading(true);
+    _setDetailLoading(true);
     try {
       const data = await adminApi.getUserDetail(id);
       setDetail(data);
       setSelectedPlan(data.orgs?.plan_id || "starter");
       setShowPlanSelect(false);
     } finally {
-      setDetailLoading(false);
+      _setDetailLoading(false);
     }
   }
 
