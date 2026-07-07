@@ -2,14 +2,11 @@ import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ShieldCheck, Phone, Zap, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { api, ApiError } from "../lib/api";
-import { appUrl, isAppDomain } from "../lib/hostname";
 import { WeeberLogo } from "../components/WeeberLogo";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-
 import { trackSignupConversion } from "../lib/analytics";
 
 const signupSchema = z.object({
@@ -44,44 +41,25 @@ export default function Signup() {
   });
 
   async function submit(data: SignupFormValues) {
-    try {
-      const result = await api.post<{
-        session: { access_token: string; refresh_token: string };
-        user: { id: string };
-        org: { id: string };
-      }>("/v1/auth/signup", { email: data.email, password: data.password, org_name: data.orgName });
-
-      if (result.session) {
-        await supabase.auth.setSession({
-          access_token: result.session.access_token,
-          refresh_token: result.session.refresh_token,
-        });
-        trackSignupConversion();
-        toast.success("Account created successfully!");
-        if (isAppDomain) {
-          navigate("/onboarding");
-        } else {
-          window.location.href = `${appUrl("/auth/bridge?redirect=/onboarding")}#access_token=${result.session.access_token}&refresh_token=${result.session.refresh_token}`;
-        }
-      } else {
-        trackSignupConversion();
-        toast.success("Account created! Please log in.");
-        navigate("/login");
-      }
-    } catch (error: any) {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-      } else {
-        toast.error(error.message || "Couldn't create your account.");
-      }
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: { data: { org_name: data.orgName } },
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
     }
+    trackSignupConversion();
+    toast.success("Account created successfully!");
+    navigate("/onboarding");
   }
 
   async function signUpWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: appUrl("/auth/bridge?redirect=/onboarding"),
+        redirectTo: `${window.location.origin}/onboarding`,
         queryParams: { prompt: "select_account" },
       },
     });

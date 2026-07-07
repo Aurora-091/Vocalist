@@ -2,17 +2,12 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, Phone, ShieldCheck, Zap, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { api } from "../lib/api";
-import { appUrl, isAppDomain } from "../lib/hostname";
 import { WeeberLogo } from "../components/WeeberLogo";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { usePageTitle } from "../hooks/usePageTitle";
-
-const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL || "";
-const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || "";
 
 const loginSchema = z.object({
   email: z.email("Please enter a valid email address."),
@@ -25,7 +20,6 @@ export default function Login() {
   usePageTitle("Login");
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="robots"]');
@@ -44,68 +38,33 @@ export default function Login() {
   });
 
   async function submit(data: LoginFormValues) {
-    try {
-      const result = await api.post<{
-        session: { access_token: string; refresh_token: string };
-        user: { id: string };
-      }>("/v1/auth/login", data);
-      if (result.session) {
-        await supabase.auth.setSession({
-          access_token: result.session.access_token,
-          refresh_token: result.session.refresh_token,
-        });
-        if (isAppDomain) {
-          navigate("/dashboard");
-        } else {
-          window.location.href = `${appUrl("/auth/bridge?redirect=/dashboard")}#access_token=${result.session.access_token}&refresh_token=${result.session.refresh_token}`;
-        }
-      }
-    } catch {
-      toast.error("That email and password didn't match. Try again.");
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+    if (error) {
+      toast.error(error.message === "Invalid login credentials"
+        ? "That email and password didn't match. Try again."
+        : error.message);
+      return;
     }
+    navigate("/dashboard");
   }
 
   async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: appUrl("/auth/bridge?redirect=/dashboard"),
+        redirectTo: `${window.location.origin}/dashboard`,
         queryParams: { prompt: "select_account" },
       },
     });
     if (error) toast.error(error.message);
   }
 
-  function loginAsDemo() {
-    if (!DEMO_EMAIL || !DEMO_PASSWORD) {
-      toast.error("Demo account not configured.");
-      return;
-    }
-    setDemoLoading(true);
-    api.post<{
-      session: { access_token: string; refresh_token: string };
-    }>("/v1/auth/login", { email: DEMO_EMAIL, password: DEMO_PASSWORD }).then(async (result) => {
-      if (result.session) {
-        await supabase.auth.setSession({
-          access_token: result.session.access_token,
-          refresh_token: result.session.refresh_token,
-        });
-        if (isAppDomain) {
-          navigate("/dashboard");
-        } else {
-          window.location.href = `${appUrl("/auth/bridge?redirect=/dashboard")}#access_token=${result.session.access_token}&refresh_token=${result.session.refresh_token}`;
-        }
-      }
-      setDemoLoading(false);
-    }).catch(() => {
-      setDemoLoading(false);
-      toast.error("Demo account not available. Please sign up.");
-    });
-  }
-
   return (
     <div className="marketing min-h-full flex flex-col lg:flex-row">
-      {/* Left panel — always dark by design */}
+      {/* Left panel */}
       <div className="hidden lg:flex lg:w-[45%] bg-[#111] text-white p-12 flex-col justify-between">
         <div>
           <Link to="/" className="inline-flex items-center">
@@ -224,26 +183,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          {/* Demo account card */}
-          {DEMO_EMAIL && DEMO_PASSWORD && (
-            <div className="mt-6 border border-[#E2E8F0] bg-[#F1F5F9] p-4 rounded-md">
-              <div className="text-xs font-medium tracking-widest uppercase text-[#64748B] mb-2">
-                Try Weeber instantly
-              </div>
-              <p className="text-sm text-[#475569] mb-3">
-                Explore the full platform with pre-loaded data.
-              </p>
-              <button
-                onClick={loginAsDemo}
-                disabled={demoLoading || isSubmitting}
-                className="w-full h-10 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm font-medium rounded-md hover:bg-[#F8F9FB] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {demoLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Login as Demo Account
-              </button>
-            </div>
-          )}
 
           <div className="mt-8 pt-6 border-t border-[#E2E8F0] text-sm text-[#475569]">
             New to Weeber?{" "}
