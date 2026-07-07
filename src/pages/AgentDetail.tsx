@@ -1,8 +1,28 @@
-import { useEffect, useState, useRef } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Save, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Zap, Globe, LayoutTemplate, MessageSquare, WrapText, Clock } from "lucide-react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  Loader2,
+  ChevronDown,
+  Check,
+  Phone,
+  X,
+  Mic,
+  RefreshCw,
+  ChevronRight,
+  TriangleAlert as AlertTriangle,
+  Zap,
+  Globe,
+  LayoutTemplate,
+  MessageSquare,
+  WrapText,
+  Clock,
+  MoreHorizontal,
+  Trash2,
+  History,
+} from "lucide-react";
 import { toast } from "sonner";
-import { getAgent, listVoices, listAgentKnowledge, getCall } from "../lib/db";
+import { getAgent, listVoices, listAgentKnowledge, getCall, listCalls } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -20,12 +40,33 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import VoiceLibrary from "./VoiceLibrary";
 import { WebTestCallModal } from "@/components/WebTestCallModal";
+import { WebTestPanel } from "@/components/WebTestPanel";
 import { VariablesPanel } from "@/components/VariablesPanel";
 import { AgentPresetPicker } from "@/components/AgentPresetPicker";
 import { PromptHistoryDrawer } from "@/components/PromptHistoryDrawer";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { cn } from "@/lib/utils";
+import { formatRelative } from "@/lib/format";
 
 const TONE_PRESETS = [
   "warm and professional",
@@ -91,10 +132,40 @@ type Agent = {
   sync_error?: string | null;
 };
 
+// Snapshot of loaded agent fields for dirty tracking
+type DraftState = {
+  name: string;
+  objective: string;
+  toneMode: string;
+  customTone: string;
+  businessName: string;
+  firstMessage: string;
+  guardrails: string;
+  identity: string;
+  transferNumber: string;
+  timezone: string;
+  selectedLanguages: string[];
+  languageMessages: Record<string, string>;
+  boostKeywords: string[];
+  conversationStyle: "quick" | "balanced" | "patient";
+  recordVoice: boolean;
+  zeroRetentionMode: boolean;
+};
+
+const TAB_KEYS = ["behavior", "voice", "skills", "activity", "advanced"] as const;
+type TabKey = (typeof TAB_KEYS)[number];
+
+function serializeDraft(d: DraftState): string {
+  return JSON.stringify({ ...d, selectedLanguages: [...d.selectedLanguages].sort(), boostKeywords: [...d.boostKeywords] });
+}
+
 export default function AgentDetail() {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const fromCallId = searchParams.get("from_call");
+  const tabParam = (searchParams.get("tab") as TabKey | null) ?? "behavior";
+  const activeTab = TAB_KEYS.includes(tabParam as TabKey) ? (tabParam as TabKey) : "behavior";
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,16 +179,17 @@ export default function AgentDetail() {
   const [promptLoading, setPromptLoading] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
   const [langVoiceWarning, setLangVoiceWarning] = useState<string[]>([]);
-
-  // Change-template modal
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
-
-  // Prompt history drawer
   const [historyOpen, setHistoryOpen] = useState(false);
-
-  // from_call reference panel
   const [fromCall, setFromCall] = useState<any>(null);
   const [fromCallLoading, setFromCallLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [recentCalls, setRecentCalls] = useState<any[]>([]);
+
+  // Inline name editing
+  const [editingName, setEditingName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -139,11 +211,12 @@ export default function AgentDetail() {
   const [zeroRetentionMode, setZeroRetentionMode] = useState(false);
   const [showLanguageOverrides, setShowLanguageOverrides] = useState(false);
 
-  // Textarea refs for variable insertion
+  // Saved snapshot for dirty tracking
+  const [savedDraft, setSavedDraft] = useState<string>("");
+
   const objectiveRef = useRef<HTMLTextAreaElement>(null);
   const guardrailsRef = useRef<HTMLTextAreaElement>(null);
   const lastFocusedField = useRef<"objective" | "guardrails" | null>(null);
-  const personaCardRef = useRef<HTMLDivElement>(null);
 
   // Test call
   const [testNumber, setTestNumber] = useState("");
@@ -151,11 +224,27 @@ export default function AgentDetail() {
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [webTestOpen, setWebTestOpen] = useState(false);
   const [lastWebTestAt, setLastWebTestAt] = useState<string | null>(null);
+  const [testSessionStarted, setTestSessionStarted] = useState(false);
 
   // Skills
   const [allSkills, setAllSkills] = useState<any[]>([]);
   const [activeSkillIds, setActiveSkillIds] = useState<Set<string>>(new Set());
   const [skillsLoading, setSkillsLoading] = useState(false);
+
+  // Dirty state
+  const currentDraft = useCallback((): DraftState => ({
+    name, objective, toneMode, customTone, businessName, firstMessage,
+    guardrails, identity, transferNumber, timezone, selectedLanguages,
+    languageMessages, boostKeywords, conversationStyle, recordVoice, zeroRetentionMode,
+  }), [name, objective, toneMode, customTone, businessName, firstMessage,
+    guardrails, identity, transferNumber, timezone, selectedLanguages,
+    languageMessages, boostKeywords, conversationStyle, recordVoice, zeroRetentionMode]);
+
+  const isDirty = savedDraft !== "" && serializeDraft(currentDraft()) !== savedDraft;
+
+  function setTab(t: TabKey) {
+    setSearchParams((prev) => { prev.set("tab", t); return prev; }, { replace: true });
+  }
 
   async function load() {
     try {
@@ -193,27 +282,18 @@ export default function AgentDetail() {
       setConversationStyle(a.persona?.conversation_style || "balanced");
       const privacyCfg = a.persona?.privacy || a.persona?.privacy_config || {};
       setRecordVoice(
-        typeof privacyCfg.store_audio === "boolean"
-          ? privacyCfg.store_audio
-          : typeof privacyCfg.record_voice === "boolean"
-          ? privacyCfg.record_voice
-          : true
+        typeof privacyCfg.store_audio === "boolean" ? privacyCfg.store_audio
+          : typeof privacyCfg.record_voice === "boolean" ? privacyCfg.record_voice : true
       );
       setZeroRetentionMode(
-        typeof privacyCfg.zero_retention === "boolean"
-          ? privacyCfg.zero_retention
-          : typeof privacyCfg.zero_retention_mode === "boolean"
-          ? privacyCfg.zero_retention_mode
-          : false
+        typeof privacyCfg.zero_retention === "boolean" ? privacyCfg.zero_retention
+          : typeof privacyCfg.zero_retention_mode === "boolean" ? privacyCfg.zero_retention_mode : false
       );
 
-      // Resolve voice name
       if (a.voice_id) {
         const voices = await listVoices();
         const match = voices.find((v: any) => v.voice_id === a.voice_id);
         setVoiceName(match?.name || a.voice_id);
-
-        // Language-voice compatibility check
         const voiceLangs: string[] = match?.language_codes || ["en"];
         const unsupported = langs.filter((l: string) => !voiceLangs.includes(l));
         setLangVoiceWarning(unsupported);
@@ -225,16 +305,13 @@ export default function AgentDetail() {
       const kb = await listAgentKnowledge(id!);
       setKnowledge(kb);
 
-      // Load skills catalog and active skills for this agent
       const [skillsRes, activeRes] = await Promise.all([
         api.get<{ skills: any[] }>("/v1/skills"),
         api.get<{ skills: any[] }>(`/v1/agents/${id}/skills`),
       ]);
       setAllSkills(skillsRes.skills || []);
-      const ids = new Set((activeRes.skills || []).map((s: any) => s.skill_id));
-      setActiveSkillIds(ids);
+      setActiveSkillIds(new Set((activeRes.skills || []).map((s: any) => s.skill_id)));
 
-      // Last web test timestamp
       try {
         const { data: testRows } = await supabase
           .from("calls")
@@ -245,9 +322,47 @@ export default function AgentDetail() {
           .order("created_at", { ascending: false })
           .limit(1);
         if (testRows && testRows.length > 0) setLastWebTestAt(testRows[0].created_at);
-      } catch {
-        // non-fatal
-      }
+      } catch { /* non-fatal */ }
+
+      // Load recent calls for the activity tab / rail
+      try {
+        const { data: calls } = await listCalls({ agent_id: id, limit: 10 });
+        setRecentCalls(calls || []);
+      } catch { /* non-fatal */ }
+
+      // Snapshot for dirty tracking — set after all state is applied
+      const snap: DraftState = {
+        name: a.name || "",
+        objective: a.persona?.objective || "",
+        toneMode: (() => {
+          const t = a.persona?.tone || "";
+          return (TONE_PRESETS as readonly string[]).includes(t) || !t ? (t || TONE_PRESETS[0]) : "custom";
+        })(),
+        customTone: (() => {
+          const t = a.persona?.tone || "";
+          return (TONE_PRESETS as readonly string[]).includes(t) || !t ? "" : t;
+        })(),
+        businessName: a.persona?.business_name || "",
+        firstMessage: a.persona?.first_message || a.persona?.opening_message || "",
+        guardrails: Array.isArray(a.persona?.guardrails)
+          ? (a.persona.guardrails as string[]).join("\n") : a.persona?.guardrails || "",
+        identity: a.persona?.identity || "",
+        transferNumber: a.transfer_number || "",
+        timezone: a.timezone || "America/New_York",
+        selectedLanguages: (a.languages || ["en"]).map((l: string) => l.trim().toLowerCase().slice(0, 5)).filter(Boolean),
+        languageMessages: a.persona?.first_message_overrides || a.persona?.language_messages || {},
+        boostKeywords: Array.isArray(a.persona?.boost_keywords) ? a.persona.boost_keywords : [],
+        conversationStyle: a.persona?.conversation_style || "balanced",
+        recordVoice: (() => {
+          const p = a.persona?.privacy || a.persona?.privacy_config || {};
+          return typeof p.store_audio === "boolean" ? p.store_audio : typeof p.record_voice === "boolean" ? p.record_voice : true;
+        })(),
+        zeroRetentionMode: (() => {
+          const p = a.persona?.privacy || a.persona?.privacy_config || {};
+          return typeof p.zero_retention === "boolean" ? p.zero_retention : typeof p.zero_retention_mode === "boolean" ? p.zero_retention_mode : false;
+        })(),
+      };
+      setSavedDraft(serializeDraft(snap));
     } catch {
       toast.error("Failed to load agent");
       setAgent(null);
@@ -256,30 +371,21 @@ export default function AgentDetail() {
     }
   }
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  useEffect(() => { load(); }, [id]);
 
-  // Load the referenced call when from_call param is present
   useEffect(() => {
     if (!fromCallId) return;
     setFromCallLoading(true);
-    getCall(fromCallId)
-      .then(setFromCall)
-      .catch(() => setFromCall(null))
-      .finally(() => setFromCallLoading(false));
+    getCall(fromCallId).then(setFromCall).catch(() => setFromCall(null)).finally(() => setFromCallLoading(false));
   }, [fromCallId]);
 
-  // Re-check language-voice compatibility when languages change
   useEffect(() => {
     if (!agent?.voice_id) return;
     (async () => {
       const voices = await listVoices();
       const match = voices.find((v: any) => v.voice_id === agent.voice_id);
       const voiceLangs: string[] = match?.language_codes || ["en"];
-      const unsupported = selectedLanguages.filter((l) => !voiceLangs.includes(l));
-      setLangVoiceWarning(unsupported);
+      setLangVoiceWarning(selectedLanguages.filter((l) => !voiceLangs.includes(l)));
     })();
   }, [selectedLanguages, agent?.voice_id]);
 
@@ -289,8 +395,7 @@ export default function AgentDetail() {
     try {
       const effectiveTone = toneMode === "custom" ? customTone : toneMode;
       const guardrailsValue = guardrails.trim()
-        ? guardrails.split("\n").map((s) => s.trim()).filter(Boolean)
-        : [];
+        ? guardrails.split("\n").map((s) => s.trim()).filter(Boolean) : [];
       const persona = {
         ...(agent.persona || {}),
         objective,
@@ -331,11 +436,11 @@ export default function AgentDetail() {
     }
   }
 
-  async function handleVoiceSelect(voiceId: string, name: string) {
+  async function handleVoiceSelect(voiceId: string, vname: string) {
     setVoiceDrawerOpen(false);
     try {
       await api.patch(`/v1/agents/${id}`, { voice_id: voiceId });
-      toast.success(`Voice changed to ${name}.`);
+      toast.success(`Voice changed to ${vname}.`);
       load();
     } catch (e: any) {
       toast.error(e.message || "Failed to change voice.");
@@ -371,25 +476,17 @@ export default function AgentDetail() {
   function handleInsertVariable(snippet: string) {
     const field = lastFocusedField.current;
     const ref = field === "objective" ? objectiveRef : field === "guardrails" ? guardrailsRef : null;
-
     if (!ref?.current) {
-      // Fallback: append to objective
       setObjective((v) => v + (v.endsWith(" ") || v === "" ? "" : " ") + snippet);
       toast.success(`Inserted ${snippet} into Objective`);
       return;
     }
-
     const el = ref.current;
     const start = el.selectionStart ?? el.value.length;
     const end = el.selectionEnd ?? el.value.length;
-    const before = el.value.slice(0, start);
-    const after = el.value.slice(end);
-    const next = before + snippet + after;
-
+    const next = el.value.slice(0, start) + snippet + el.value.slice(end);
     if (field === "objective") setObjective(next);
     else setGuardrails(next);
-
-    // Restore cursor position after React re-render
     requestAnimationFrame(() => {
       el.focus();
       const pos = start + snippet.length;
@@ -401,708 +498,793 @@ export default function AgentDetail() {
   async function handleApplyTemplate(preset: any, mode: "replace" | "merge") {
     if (!agent) return;
     const p = preset.persona || {};
-
     if (mode === "replace") {
       setObjective(p.objective || "");
-      setGuardrails(
-        Array.isArray(p.guardrails) ? p.guardrails.join("\n") : p.guardrails || ""
-      );
+      setGuardrails(Array.isArray(p.guardrails) ? p.guardrails.join("\n") : p.guardrails || "");
       setIdentity(p.identity || "");
       setFirstMessage(p.first_message || p.opening_message || "");
       const tone = p.tone || "";
       const isPreset = (TONE_PRESETS as readonly string[]).includes(tone);
-      if (!tone || isPreset) {
-        setToneMode(tone || TONE_PRESETS[0]);
-        setCustomTone("");
-      } else {
-        setToneMode("custom");
-        setCustomTone(tone);
-      }
+      if (!tone || isPreset) { setToneMode(tone || TONE_PRESETS[0]); setCustomTone(""); }
+      else { setToneMode("custom"); setCustomTone(tone); }
       toast.success(`Prompt replaced with "${preset.name}" template.`);
     } else {
-      // Merge: append guardrails, keep existing objective
-      const newGuardrails = Array.isArray(p.guardrails)
-        ? p.guardrails.join("\n")
-        : p.guardrails || "";
+      const newGuardrails = Array.isArray(p.guardrails) ? p.guardrails.join("\n") : p.guardrails || "";
       if (newGuardrails) {
-        setGuardrails((prev) => {
-          const trimmed = prev.trim();
-          return trimmed ? `${trimmed}\n${newGuardrails}` : newGuardrails;
-        });
+        setGuardrails((prev) => { const t = prev.trim(); return t ? `${t}\n${newGuardrails}` : newGuardrails; });
       }
       if (p.identity && !identity) setIdentity(p.identity);
       toast.success(`Rules from "${preset.name}" merged into guardrails.`);
     }
-
     setTemplateModalOpen(false);
   }
 
-  if (loading) return <Skeleton className="h-64" />;
-  if (!agent) return <div className="text-sm text-text-muted">Agent not found.</div>;
+  async function handleDelete() {
+    if (!agent) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/v1/agents/${id}`);
+      toast.success("Agent deleted.");
+      navigate("/agents");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete agent.");
+      setDeleting(false);
+    }
+  }
+
+  function handleDiscard() {
+    load();
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-12 w-1/2" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+  if (!agent) return <div className="p-6 text-sm text-text-muted">Agent not found.</div>;
 
   const direction = agent.persona?.direction || "inbound";
+  const syncBadge = (() => {
+    if (agent.sync_status === "synced") return <Badge variant="secondary" className="bg-success/15 text-success text-xs">Live</Badge>;
+    if (agent.sync_status === "pending") return <Badge variant="secondary" className="bg-warning/15 text-warning text-xs">Pending</Badge>;
+    if (agent.sync_status === "failed") return <Badge variant="secondary" className="bg-danger/15 text-danger text-xs">Sync failed</Badge>;
+    return <Badge variant="secondary" className="text-xs">Draft</Badge>;
+  })();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <nav className="flex items-center gap-1.5 text-sm text-text-muted" aria-label="Breadcrumb">
-          <Link to="/agents" className="hover:text-text transition-colors">Agents</Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-text font-medium truncate max-w-[200px]">{agent.name}</span>
-        </nav>
-        <div className="mt-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{agent.name}</h1>
-            <p className="text-sm text-text-muted mt-1">{direction} · {agent.provider}</p>
+    <div className="min-h-screen pb-32">
+      {/* ── Sticky header ───────────────────────────────────────────────── */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="flex items-center gap-3 px-6 py-3">
+          {/* Back */}
+          <Link to="/agents" className="shrink-0 p-1.5 -ml-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+
+          {/* Name (inline editable) */}
+          <div className="flex-1 min-w-0">
+            {editingName ? (
+              <input
+                ref={nameInputRef}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => setEditingName(false)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditingName(false); }}
+                className="text-base font-semibold bg-transparent border-b border-foreground/30 outline-none w-full max-w-sm leading-tight py-0.5"
+                autoFocus
+              />
+            ) : (
+              <button
+                onClick={() => { setEditingName(true); setTimeout(() => nameInputRef.current?.select(), 20); }}
+                className="text-base font-semibold truncate max-w-sm text-left hover:opacity-70 transition-opacity leading-tight group flex items-center gap-1.5"
+                title="Click to rename"
+              >
+                {name || agent.name}
+              </button>
+            )}
+            <div className="flex items-center gap-2 mt-0.5">
+              {syncBadge}
+              <span className="text-xs text-muted-foreground capitalize">{direction} · {agent.provider}</span>
+              {selectedLanguages.slice(0, 3).map((l) => (
+                <span key={l} className="px-1.5 py-0 rounded border border-border text-[10px] font-mono text-muted-foreground">{l}</span>
+              ))}
+              {selectedLanguages.length > 3 && (
+                <span className="text-[10px] text-muted-foreground">+{selectedLanguages.length - 3}</span>
+              )}
+              {voiceName && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">{voiceName}</span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {agent.sync_status === "synced" && <Badge variant="secondary" className="bg-success/15 text-success">Synced</Badge>}
-            {agent.sync_status === "pending" && <Badge variant="secondary" className="bg-warning/15 text-warning">Pending</Badge>}
-            {agent.sync_status === "failed" && <Badge variant="secondary" className="bg-danger/15 text-danger">Sync failed</Badge>}
-            {agent.consent_required && <Badge variant="secondary" className="bg-success/15 text-success"><span className="size-1.5 rounded-full bg-current mr-1" />consent locked on</Badge>}
+
+          {/* Right actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              onClick={() => setWebTestOpen(true)}
+              disabled={!agent.provider_ref}
+              className="hidden sm:flex"
+            >
+              <Mic className="w-3.5 h-3.5 mr-1.5" />
+              Talk to agent
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="w-8 h-8">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setWebTestOpen(true)} className="sm:hidden">
+                  <Mic className="w-4 h-4 mr-2" />
+                  Talk to agent
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setHistoryOpen(true)}>
+                  <History className="w-4 h-4 mr-2" />
+                  Prompt history
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTemplateModalOpen(true)}>
+                  <LayoutTemplate className="w-4 h-4 mr-2" />
+                  Change template
+                </DropdownMenuItem>
+                {agent.sync_status === "failed" && (
+                  <DropdownMenuItem onClick={retrySync} disabled={syncing}>
+                    <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                    Retry sync
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete agent
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+
+        {/* Sync failure banner */}
+        {agent.sync_status === "failed" && (
+          <div className="flex items-center gap-3 px-6 py-2 bg-danger/10 border-b border-danger/20 text-xs">
+            <AlertTriangle className="w-3.5 h-3.5 text-danger shrink-0" />
+            <span className="text-danger font-medium">Provider sync failed.</span>
+            {agent.sync_error && <span className="text-text-muted truncate">{agent.sync_error}</span>}
+            <Button variant="outline" size="sm" onClick={retrySync} disabled={syncing} className="ml-auto shrink-0 h-6 text-xs">
+              <RefreshCw className={`w-3 h-3 mr-1 ${syncing ? "animate-spin" : ""}`} />
+              Retry
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Sync failure banner */}
-      {agent.sync_status === "failed" && (
-        <div className="flex items-start gap-3 p-4 rounded-md bg-danger/10 border border-danger/20">
-          <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-danger">Provider sync failed</div>
-            {agent.sync_error && (
-              <div className="text-xs text-text-muted mt-1 break-words">{agent.sync_error}</div>
-            )}
-          </div>
-          <Button variant="outline" onClick={retrySync} disabled={syncing}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Retrying…" : "Retry sync"}
-          </Button>
-        </div>
-      )}
+      {/* ── Main content ─────────────────────────────────────────────────── */}
+      <div className="flex gap-0">
+        {/* Tabs area */}
+        <div className="flex-1 min-w-0">
+          {/* from_call banner */}
+          {fromCallId && (
+            <div className="mx-6 mt-4">
+              <Card className="gap-0 overflow-visible py-0 shadow-card border-amber-200 bg-amber-50/30">
+                <div className="border-b border-amber-200 px-5 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-800">
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="text-sm font-medium">Improving from call</span>
+                    <span className="font-mono text-xs opacity-70">{fromCallId.slice(0, 8)}…</span>
+                  </div>
+                  <Link to={`/agents/${id}`} replace className="p-1 rounded text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-colors" aria-label="Dismiss">
+                    <X className="w-4 h-4" />
+                  </Link>
+                </div>
+                {fromCallLoading ? (
+                  <div className="px-5 py-4 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-20 w-full" /></div>
+                ) : fromCall ? (
+                  <CardContent className="px-5 py-4 space-y-3">
+                    <div className="flex items-center gap-4 text-xs text-amber-700 flex-wrap">
+                      <span className="capitalize font-medium">{fromCall.status?.replace(/_/g, " ")}</span>
+                      {fromCall.duration_sec != null && <span>{fromCall.duration_sec}s</span>}
+                      {fromCall.hangup_by && <span>Hung up by <span className="capitalize">{fromCall.hangup_by}</span></span>}
+                      {fromCall.cost_usd != null && <span>${Number(fromCall.cost_usd).toFixed(3)}</span>}
+                    </div>
+                    {Array.isArray(fromCall.transcript) && fromCall.transcript.length > 0 && (
+                      <div>
+                        <p className="section-label mb-2">Transcript</p>
+                        <div className="max-h-36 overflow-y-auto space-y-1.5 rounded-md border border-amber-200 bg-white/60 p-3">
+                          {fromCall.transcript.map((t: any, i: number) => {
+                            const speaker = t.role || t.speaker || "agent";
+                            const isAgent = speaker === "agent" || speaker === "assistant";
+                            return (
+                              <div key={i} className="text-xs">
+                                <span className={`font-medium mr-1.5 ${isAgent ? "text-amber-800" : "text-zinc-500"}`}>{isAgent ? "Agent" : "User"}:</span>
+                                <span className="text-zinc-700">{t.text || t.content}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                ) : (
+                  <div className="px-5 py-4 text-sm text-amber-700">Call not found.</div>
+                )}
+              </Card>
+            </div>
+          )}
 
-      {/* from_call reference panel */}
-      {fromCallId && (
-        <Card className="gap-0 overflow-visible py-0 shadow-card border-amber-200 bg-amber-50/30">
-          <div className="border-b border-amber-200 px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-amber-800">
-              <MessageSquare className="w-4 h-4" />
-              <span className="text-sm font-medium">Improving from call</span>
-              <span className="font-mono text-xs opacity-70">{fromCallId.slice(0, 8)}…</span>
+          <Tabs value={activeTab} onValueChange={(v) => setTab(v as TabKey)} className="flex-col">
+            <div className="px-6 pt-4 pb-0 border-b border-border">
+              <TabsList variant="line" className="h-auto gap-0 rounded-none p-0 bg-transparent w-full justify-start overflow-x-auto">
+                {TAB_KEYS.map((t) => (
+                  <TabsTrigger
+                    key={t}
+                    value={t}
+                    className="capitalize px-4 py-2.5 rounded-none text-sm h-auto border-0 shrink-0"
+                  >
+                    {t}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
-            <Link
-              to={`/agents/${id}`}
-              replace
-              className="p-1 rounded text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-colors"
-              aria-label="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </Link>
-          </div>
-          {fromCallLoading ? (
-            <div className="px-6 py-4 space-y-2">
-              <Skeleton className="h-4 w-1/3" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          ) : fromCall ? (
-            <CardContent className="px-6 py-4 space-y-4">
-              <div className="flex items-center gap-4 text-xs text-amber-700 flex-wrap">
-                <span className="capitalize font-medium">{fromCall.status?.replace(/_/g, " ")}</span>
-                {fromCall.duration_sec != null && <span>{fromCall.duration_sec}s</span>}
-                {fromCall.hangup_by && <span>Hung up by <span className="capitalize">{fromCall.hangup_by}</span></span>}
-                {fromCall.cost_usd != null && <span>${Number(fromCall.cost_usd).toFixed(3)}</span>}
+
+            {/* ── BEHAVIOR tab ─────────────────────────────── */}
+            <TabsContent value="behavior" className="m-0">
+              <div className="flex gap-6 px-6 pt-6 pb-4 items-start">
+                {/* Editor column */}
+                <div className="flex-1 min-w-0 max-w-2xl space-y-5">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <Field label="Display name">
+                      <Input value={name} onChange={(e) => setName(e.target.value)} />
+                    </Field>
+                    <Field label="Business name">
+                      <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Lakeshore Family Clinic" />
+                    </Field>
+                    <Field label="Objective" full>
+                      <Textarea
+                        ref={objectiveRef}
+                        value={objective}
+                        onChange={(e) => setObjective(e.target.value)}
+                        onFocus={() => { lastFocusedField.current = "objective"; }}
+                        rows={3}
+                        placeholder="Answer questions and book appointments. Route billing questions to a human."
+                      />
+                    </Field>
+                    <Field label="Opening message">
+                      <Input value={firstMessage} onChange={(e) => setFirstMessage(e.target.value)} placeholder="Hello, thanks for calling. How can I help?" />
+                    </Field>
+                    <Field label="Tone">
+                      <Select value={toneMode} onValueChange={setToneMode}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Select tone" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {TONE_PRESETS.map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {t === "custom" ? "Custom…" : t.charAt(0).toUpperCase() + t.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    {toneMode === "custom" && (
+                      <Field label="Custom tone">
+                        <Input value={customTone} onChange={(e) => setCustomTone(e.target.value)} placeholder="Playful yet authoritative, like a knowledgeable friend" />
+                      </Field>
+                    )}
+                    <Field label="Guardrails (one per line)" full>
+                      <Textarea
+                        ref={guardrailsRef}
+                        value={guardrails}
+                        onChange={(e) => setGuardrails(e.target.value)}
+                        onFocus={() => { lastFocusedField.current = "guardrails"; }}
+                        rows={3}
+                        placeholder={"Do not discuss pricing unless asked.\nAlways offer to transfer to a human for complex issues."}
+                        className="font-mono"
+                      />
+                    </Field>
+                    <Field label="Identity (optional)">
+                      <Input value={identity} onChange={(e) => setIdentity(e.target.value)} placeholder="You are Maya, a billing assistant at Acme Corp." />
+                    </Field>
+                  </div>
+
+                  <VariablesPanel
+                    promptText={`${objective}\n${firstMessage}\n${identity}\n${guardrails}`}
+                    onInsert={handleInsertVariable}
+                  />
+
+                  {langVoiceWarning.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-warning">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      Voice may not support:{" "}
+                      {langVoiceWarning.map((c) => LANGUAGE_OPTIONS.find((l) => l.code === c)?.label ?? c).join(", ")}
+                    </div>
+                  )}
+
+                  {/* Prompt preview toggle */}
+                  <div>
+                    <button
+                      type="button"
+                      className="text-sm text-text-muted hover:text-text flex items-center gap-1"
+                      onClick={async () => {
+                        if (!promptOpen && !promptPreview) await loadPromptPreview();
+                        setPromptOpen((v) => !v);
+                      }}
+                    >
+                      <ChevronRight className={`w-3.5 h-3.5 transition-transform ${promptOpen ? "rotate-90" : ""}`} />
+                      Preview compiled prompt
+                    </button>
+                    {promptOpen && (
+                      <div className="mt-3 p-3 rounded-md bg-muted/50 border border-border">
+                        {promptLoading ? <Skeleton className="h-32" /> : (
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">{promptPreview}</pre>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Variables panel docked right at xl */}
+                <div className="hidden xl:block w-64 shrink-0 space-y-4 pt-0.5">
+                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                    <p className="section-label">Prompt history</p>
+                    <button
+                      onClick={() => setHistoryOpen(true)}
+                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Clock className="w-4 h-4" />
+                      View history
+                    </button>
+                    <button
+                      onClick={() => setTemplateModalOpen(true)}
+                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <LayoutTemplate className="w-4 h-4" />
+                      Change template
+                    </button>
+                  </div>
+                </div>
               </div>
+            </TabsContent>
 
-              {/* Transcript */}
-              {Array.isArray(fromCall.transcript) && fromCall.transcript.length > 0 && (
+            {/* ── VOICE tab ─────────────────────────────────── */}
+            <TabsContent value="voice" className="m-0">
+              <div className="px-6 pt-6 pb-4 max-w-2xl space-y-6">
+                {/* Voice picker */}
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest text-amber-600 font-medium mb-2">Transcript</p>
-                  <div className="max-h-40 overflow-y-auto space-y-1.5 rounded-md border border-amber-200 bg-white/60 p-3">
-                    {fromCall.transcript.map((t: any, i: number) => {
-                      const speaker = t.role || t.speaker || "agent";
-                      const isAgent = speaker === "agent" || speaker === "assistant";
+                  <p className="section-label mb-3">Voice</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-10 px-3 rounded-md border border-border bg-muted/40 flex items-center font-mono text-sm text-muted-foreground truncate">
+                      {voiceName}
+                    </div>
+                    <Button variant="outline" onClick={() => setVoiceDrawerOpen(true)}>
+                      <Mic className="w-4 h-4 mr-1.5" />
+                      Change voice
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Languages */}
+                <div>
+                  <p className="section-label mb-3">Languages</p>
+                  <LanguagePicker selected={selectedLanguages} onChange={setSelectedLanguages} />
+                  {langVoiceWarning.length > 0 && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-warning">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      Voice may not support:{" "}
+                      {langVoiceWarning.map((c) => LANGUAGE_OPTIONS.find((l) => l.code === c)?.label ?? c).join(", ")}
+                    </div>
+                  )}
+                </div>
+
+                {/* Per-language opening messages */}
+                {selectedLanguages.length > 1 && (
+                  <div className="border border-border rounded-lg p-4 bg-muted/20">
+                    <button
+                      type="button"
+                      onClick={() => setShowLanguageOverrides(!showLanguageOverrides)}
+                      className="flex items-center justify-between w-full text-sm font-medium text-text hover:text-primary transition-colors"
+                    >
+                      <span>Opening message per language (optional)</span>
+                      {showLanguageOverrides ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </button>
+                    {showLanguageOverrides && (
+                      <div className="mt-4 space-y-3 pt-3 border-t border-border">
+                        {selectedLanguages.slice(1).map((lang) => {
+                          const opt = LANGUAGE_OPTIONS.find((l) => l.code === lang);
+                          return (
+                            <div key={lang} className="space-y-1">
+                              <label className="text-[11px] font-medium text-muted-foreground">
+                                {opt?.label ?? lang} ({lang.toUpperCase()})
+                              </label>
+                              <Input
+                                value={languageMessages[lang] ?? ""}
+                                onChange={(e) => setLanguageMessages((prev) => ({ ...prev, [lang]: e.target.value }))}
+                                placeholder={firstMessage || "Hello!"}
+                                className="font-mono text-xs"
+                              />
+                            </div>
+                          );
+                        })}
+                        <p className="text-[10px] text-muted-foreground">Leave blank to use the default opening message.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Conversation style */}
+                <div>
+                  <p className="section-label mb-3">Conversation style</p>
+                  <div className="flex gap-1 p-1 bg-muted/50 rounded-md border border-border w-fit">
+                    {(["quick", "balanced", "patient"] as const).map((style) => (
+                      <button
+                        key={style}
+                        type="button"
+                        onClick={() => setConversationStyle(style)}
+                        className={`px-3 py-1 text-xs rounded transition-colors capitalize ${
+                          conversationStyle === style
+                            ? "bg-background text-foreground font-medium border border-border shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {conversationStyle === "quick" && "Short pauses, eager responses — ideal for transactional calls."}
+                    {conversationStyle === "balanced" && "Natural pacing — suitable for most use cases."}
+                    {conversationStyle === "patient" && "Long pauses allowed — ideal for complex or slow-paced conversations."}
+                  </p>
+                </div>
+
+                {/* Deployment info */}
+                <div>
+                  <p className="section-label mb-3">Deployment</p>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <Field label="Provider Agent ID">
+                      <div className="h-10 px-3 rounded-md border border-border bg-muted/40 flex items-center font-mono text-xs text-muted-foreground">
+                        {agent.provider_ref || agent.provider_agent_id || "Not provisioned"}
+                      </div>
+                    </Field>
+                    <Field label="Conversation Config ID">
+                      <div className="h-10 px-3 rounded-md border border-border bg-muted/40 flex items-center font-mono text-xs text-muted-foreground">
+                        {agent.conversation_config_id || "None"}
+                      </div>
+                    </Field>
+                    <Field label="Sync Status">
+                      <div className="h-10 px-3 rounded-md border border-border bg-muted/40 flex items-center gap-2">
+                        {syncBadge}
+                      </div>
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Linked knowledge */}
+                <div>
+                  <p className="section-label mb-3">Linked knowledge</p>
+                  <div className="border border-border rounded-md divide-y divide-border bg-muted/20">
+                    {knowledge.length === 0 ? (
+                      <div className="p-3 text-xs text-muted-foreground">No knowledge sources linked. Attach sources from the Integrations page.</div>
+                    ) : knowledge.map((k: any) => (
+                      <div key={k.source_id || k.id} className="p-3 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-medium">{k.knowledge_sources?.title || "Source"}</div>
+                          <div className="text-muted-foreground capitalize">{k.knowledge_sources?.kind}</div>
+                        </div>
+                        <Badge variant="secondary" className={k.knowledge_sources?.status === "ready" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}>
+                          {k.knowledge_sources?.status || "pending"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ── SKILLS tab ─────────────────────────────────── */}
+            <TabsContent value="skills" className="m-0">
+              <div className="px-6 pt-6 pb-4 max-w-2xl">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Toggle capabilities for this agent. Changes sync to the provider on next save.
+                </p>
+                {allSkills.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">No skills available.</div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {allSkills.map((skill: any) => {
+                      const isActive = activeSkillIds.has(skill.id);
                       return (
-                        <div key={i} className="text-xs">
-                          <span className={`font-medium mr-1.5 ${isAgent ? "text-amber-800" : "text-zinc-500"}`}>
-                            {isAgent ? "Agent" : "User"}:
-                          </span>
-                          <span className="text-zinc-700">{t.text || t.content}</span>
+                        <button
+                          key={skill.id}
+                          type="button"
+                          disabled={skillsLoading}
+                          onClick={async () => {
+                            setSkillsLoading(true);
+                            setActiveSkillIds((prev) => {
+                              const next = new Set(prev);
+                              if (isActive) next.delete(skill.id); else next.add(skill.id);
+                              return next;
+                            });
+                            try {
+                              await api.post(`/v1/agents/${id}/skills/${skill.id}/toggle`, { enabled: !isActive });
+                            } catch (e: any) {
+                              setActiveSkillIds((prev) => {
+                                const next = new Set(prev);
+                                if (isActive) next.add(skill.id); else next.delete(skill.id);
+                                return next;
+                              });
+                              toast.error(e.message || "Failed to toggle skill.");
+                            } finally {
+                              setSkillsLoading(false); }
+                          }}
+                          className={cn(
+                            "text-left p-4 rounded-xl border transition-all",
+                            isActive ? "border-foreground/20 bg-foreground/5" : "border-border bg-background hover:bg-muted/40"
+                          )}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-sm font-medium">{skill.name}</span>
+                            <div className={cn("w-8 h-4 rounded-full transition-colors flex items-center px-0.5", isActive ? "bg-emerald-500 justify-end" : "bg-border justify-start")}>
+                              <div className="w-3 h-3 rounded-full bg-white shadow-sm" />
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground line-clamp-2">{skill.description}</div>
+                          <Badge variant="secondary" className="mt-2 text-[10px]">{skill.category}</Badge>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ── ACTIVITY tab ──────────────────────────────── */}
+            <TabsContent value="activity" className="m-0">
+              <div className="px-6 pt-6 pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="section-label">Recent calls</p>
+                  <button onClick={() => setHistoryOpen(true)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <Clock className="w-3.5 h-3.5" />
+                    Prompt history
+                  </button>
+                </div>
+                {recentCalls.length === 0 ? (
+                  <div className="border border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
+                    No calls yet for this agent.
+                  </div>
+                ) : (
+                  <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+                    {recentCalls.map((call: any) => {
+                      const isSuccess = ["completed", "success"].includes(call.status);
+                      const isFailed = ["failed", "no_answer", "busy"].includes(call.status);
+                      return (
+                        <div key={call.id} className="flex items-center gap-4 px-4 py-3 text-sm hover:bg-muted/30 transition-colors">
+                          <div className={cn("w-2 h-2 rounded-full shrink-0", isSuccess ? "bg-emerald-500" : isFailed ? "bg-red-400" : "bg-amber-400")} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium capitalize text-xs">{call.status?.replace(/_/g, " ")}</span>
+                              <span className="text-xs text-muted-foreground capitalize">{call.direction}</span>
+                              {call.channel && call.channel !== "phone" && (
+                                <Badge variant="secondary" className="text-[10px]">{call.channel}</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {call.created_at ? formatRelative(call.created_at) : "—"}
+                              {call.duration_sec != null && <span className="ml-2 num">{call.duration_sec}s</span>}
+                              {call.cost_usd != null && <span className="ml-2 num">${Number(call.cost_usd).toFixed(3)}</span>}
+                            </div>
+                          </div>
+                          <Link to={`/calls?agent=${id}`} className="text-xs text-muted-foreground hover:text-foreground shrink-0">
+                            <ChevronRight className="w-4 h-4" />
+                          </Link>
                         </div>
                       );
                     })}
                   </div>
+                )}
+                <div className="mt-4">
+                  <Link to={`/calls?agent=${id}`} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors">
+                    View all calls <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-              )}
-
-              {/* Eval failures */}
-              {(() => {
-                const evalCriteria = fromCall.outcome?.evaluation_criteria_results || fromCall.outcome?.evaluation_criteria;
-                const failures = evalCriteria
-                  ? Object.entries(evalCriteria).filter(([, v]: [string, any]) => {
-                      const result = typeof v === "object" && v !== null ? v.result : v;
-                      return result === "failure";
-                    })
-                  : [];
-                if (failures.length === 0) return null;
-                return (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-red-600 font-medium mb-2">Evaluation Failures</p>
-                    <div className="space-y-1.5">
-                      {failures.map(([key, v]: [string, any]) => (
-                        <div key={key} className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs">
-                          <div className="font-medium text-red-700">{key.replace(/_/g, " ")}</div>
-                          {v?.rationale && <div className="text-red-600 mt-0.5">{v.rationale}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Tool call failures */}
-              {(() => {
-                const toolCalls = fromCall.outcome?.tool_calls || [];
-                const failedTools = toolCalls.filter((tc: any) => tc.error || tc.status === "error" || tc.status === "failed");
-                if (failedTools.length === 0) return null;
-                return (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-red-600 font-medium mb-2">Tool Call Failures</p>
-                    <div className="space-y-1.5">
-                      {failedTools.map((tc: any, i: number) => (
-                        <div key={i} className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs font-mono text-red-700">
-                          {tc.name || tc.tool}: {tc.error || "failed"}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </CardContent>
-          ) : (
-            <div className="px-6 py-4 text-sm text-amber-700">Call not found.</div>
-          )}
-        </Card>
-      )}
-
-      {/* Persona card */}
-      <div ref={personaCardRef}>
-      <Card className="gap-0 overflow-visible py-0 shadow-card">
-        <div className="border-b px-6 py-4 flex items-center justify-between">
-          <div className="font-medium">Persona</div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setHistoryOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs text-text-muted hover:text-text transition-colors"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              History
-            </button>
-            <button
-              type="button"
-              onClick={() => setTemplateModalOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs text-text-muted hover:text-text transition-colors"
-            >
-              <LayoutTemplate className="w-3.5 h-3.5" />
-              Change template
-            </button>
-          </div>
-        </div>
-        <CardContent className="px-6 py-5">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Display name">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </Field>
-            <Field label="Business name">
-              <Input
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="Lakeshore Family Clinic"
-              />
-            </Field>
-            <Field label="Objective" full>
-              <Textarea
-                ref={objectiveRef}
-                value={objective}
-                onChange={(e) => setObjective(e.target.value)}
-                onFocus={() => { lastFocusedField.current = "objective"; }}
-                rows={3}
-                placeholder="Answer questions and book appointments. Route billing questions to a human."
-              />
-            </Field>
-            <Field label="Opening message (first_message)">
-              <Input
-                value={firstMessage}
-                onChange={(e) => setFirstMessage(e.target.value)}
-                placeholder="Hello, thanks for calling. How can I help?"
-              />
-            </Field>
-            <Field label="Tone">
-              <Select value={toneMode} onValueChange={setToneMode}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select tone" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {TONE_PRESETS.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t === "custom" ? "Custom…" : t.charAt(0).toUpperCase() + t.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-            {toneMode === "custom" && (
-              <Field label="Custom tone">
-                <Input
-                  value={customTone}
-                  onChange={(e) => setCustomTone(e.target.value)}
-                  placeholder="Playful yet authoritative, like a knowledgeable friend"
-                />
-              </Field>
-            )}
-            <Field label="Guardrails (one per line)" full>
-              <Textarea
-                ref={guardrailsRef}
-                value={guardrails}
-                onChange={(e) => setGuardrails(e.target.value)}
-                onFocus={() => { lastFocusedField.current = "guardrails"; }}
-                rows={3}
-                placeholder={"Do not discuss pricing unless asked.\nAlways offer to transfer to a human for complex issues."}
-                className="font-mono"
-              />
-            </Field>
-            <Field label="Identity (optional)">
-              <Input
-                value={identity}
-                onChange={(e) => setIdentity(e.target.value)}
-                placeholder="You are Maya, a billing assistant at Acme Corp."
-              />
-            </Field>
-            <Field label="Timezone">
-              <Input
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-              />
-            </Field>
-            <Field label="Languages">
-              <LanguagePicker selected={selectedLanguages} onChange={setSelectedLanguages} />
-            </Field>
-            {selectedLanguages.length > 1 && (
-              <Field label="" full>
-                <div className="border border-border rounded-lg p-3 bg-surface-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowLanguageOverrides(!showLanguageOverrides)}
-                    className="flex items-center justify-between w-full text-xs font-semibold text-text hover:text-primary transition-colors"
-                  >
-                    <span>Opening message per language (Optional)</span>
-                    {showLanguageOverrides ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
-                  
-                  {showLanguageOverrides && (
-                    <div className="mt-3 space-y-3 pt-3 border-t border-border">
-                      {selectedLanguages.slice(1).map((lang) => {
-                        const opt = LANGUAGE_OPTIONS.find((l) => l.code === lang);
-                        return (
-                          <div key={lang} className="space-y-1">
-                            <label className="text-[11px] font-medium text-text-muted">
-                              {opt?.label ?? lang} ({lang.toUpperCase()})
-                            </label>
-                            <Input
-                              value={languageMessages[lang] ?? ""}
-                              onChange={(e) => setLanguageMessages((prev) => ({ ...prev, [lang]: e.target.value }))}
-                              placeholder={firstMessage || "Hello!"}
-                              className="font-mono text-xs"
-                            />
-                          </div>
-                        );
-                      })}
-                      <p className="text-[10px] text-text-muted mt-1">
-                        Leave blank to use the default opening message.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </Field>
-            )}
-            <Field label="Conversation style">
-              <div className="flex gap-1 p-1 bg-surface-2 rounded-md border border-border w-fit">
-                {(["quick", "balanced", "patient"] as const).map((style) => (
-                  <button
-                    key={style}
-                    type="button"
-                    onClick={() => setConversationStyle(style)}
-                    className={`px-3 py-1 text-xs rounded transition-colors capitalize ${
-                      conversationStyle === style
-                        ? "bg-surface text-text font-medium border border-border"
-                        : "text-text-muted hover:text-text"
-                    }`}
-                  >
-                    {style}
-                  </button>
-                ))}
               </div>
-              <p className="text-xs text-text-muted mt-1.5">
-                {conversationStyle === "quick" && "Short pauses, eager responses — ideal for transactional calls."}
-                {conversationStyle === "balanced" && "Natural pacing — suitable for most use cases."}
-                {conversationStyle === "patient" && "Long pauses allowed — ideal for complex or slow-paced conversations."}
-              </p>
-            </Field>
-            <Field label="Boost keywords (ASR)" full>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    value={boostInput}
-                    onChange={(e) => setBoostInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if ((e.key === "Enter" || e.key === ",") && boostInput.trim()) {
-                        e.preventDefault();
-                        const kw = boostInput.trim().replace(/,$/, "");
-                        if (kw && !boostKeywords.includes(kw) && boostKeywords.length < 50) {
-                          setBoostKeywords((prev) => [...prev, kw]);
-                        }
-                        setBoostInput("");
-                      }
-                    }}
-                    placeholder="Type a keyword and press Enter"
-                    className="text-sm"
-                  />
+            </TabsContent>
+
+            {/* ── ADVANCED tab ──────────────────────────────── */}
+            <TabsContent value="advanced" className="m-0">
+              <div className="px-6 pt-6 pb-4 max-w-2xl space-y-8">
+                {/* Boost keywords */}
+                <div>
+                  <p className="section-label mb-3">Boost keywords (ASR)</p>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        value={boostInput}
+                        onChange={(e) => setBoostInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if ((e.key === "Enter" || e.key === ",") && boostInput.trim()) {
+                            e.preventDefault();
+                            const kw = boostInput.trim().replace(/,$/, "");
+                            if (kw && !boostKeywords.includes(kw) && boostKeywords.length < 50) {
+                              setBoostKeywords((prev) => [...prev, kw]);
+                            }
+                            setBoostInput("");
+                          }
+                        }}
+                        placeholder="Type a keyword and press Enter"
+                        className="text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const kw = boostInput.trim();
+                          if (kw && !boostKeywords.includes(kw) && boostKeywords.length < 50) {
+                            setBoostKeywords((prev) => [...prev, kw]);
+                            setBoostInput("");
+                          }
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                    {boostKeywords.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {boostKeywords.map((kw) => (
+                          <span key={kw} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted border border-border text-xs font-mono">
+                            {kw}
+                            <button
+                              type="button"
+                              onClick={() => setBoostKeywords((prev) => prev.filter((k) => k !== kw))}
+                              className="text-muted-foreground hover:text-destructive transition-colors"
+                              aria-label={`Remove ${kw}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">Brand or product names the agent should recognize accurately. (Max 50.)</p>
+                  </div>
+                </div>
+
+                {/* Timezone + Transfer */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Field label="Timezone">
+                    <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+                  </Field>
+                  <Field label="Human transfer number">
+                    <Input value={transferNumber} onChange={(e) => setTransferNumber(e.target.value)} placeholder="+14155551234" className="font-mono" />
+                  </Field>
+                </div>
+
+                {/* Privacy */}
+                <div>
+                  <p className="section-label mb-3">Privacy &amp; data retention</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">Record voice</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Store call audio in ElevenLabs for transcript and analytics.</p>
+                      </div>
+                      <Switch checked={recordVoice} onCheckedChange={setRecordVoice} aria-label="Record voice" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">Zero retention mode</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">ElevenLabs retains no data from this agent's conversations.</p>
+                      </div>
+                      <Switch checked={zeroRetentionMode} onCheckedChange={setZeroRetentionMode} aria-label="Zero retention mode" />
+                    </div>
+                    {zeroRetentionMode && (
+                      <div className="flex items-start gap-2 p-3 rounded-md bg-warning/10 border border-warning/30 text-xs text-warning">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>Zero retention mode disables transcripts, recordings, and evaluation analysis. Ensure this complies with your legal obligations.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Analysis config preview */}
+                {agent.persona?.analysis_config && (
+                  <div>
+                    <p className="section-label mb-3">Analysis config</p>
+                    <pre className="text-xs font-mono text-muted-foreground bg-muted/40 border border-border rounded-lg p-4 overflow-x-auto">
+                      {JSON.stringify(agent.persona.analysis_config, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Danger zone */}
+                <div className="border border-destructive/30 rounded-xl p-5 space-y-3">
+                  <p className="section-label text-destructive">Danger zone</p>
+                  <p className="text-sm text-muted-foreground">
+                    Deleting this agent removes it from your organization and de-provisions it from ElevenLabs. This cannot be undone.
+                  </p>
                   <Button
-                    type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      const kw = boostInput.trim();
-                      if (kw && !boostKeywords.includes(kw) && boostKeywords.length < 50) {
-                        setBoostKeywords((prev) => [...prev, kw]);
-                        setBoostInput("");
-                      }
-                    }}
+                    className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeleteDialogOpen(true)}
                   >
-                    Add
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    Delete agent
                   </Button>
                 </div>
-                {boostKeywords.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {boostKeywords.map((kw) => (
-                      <span
-                        key={kw}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-2 border border-border text-xs font-mono"
-                      >
-                        {kw}
-                        <button
-                          type="button"
-                          onClick={() => setBoostKeywords((prev) => prev.filter((k) => k !== kw))}
-                          className="text-text-muted hover:text-danger transition-colors"
-                          aria-label={`Remove ${kw}`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <p className="text-xs text-text-muted">Brand or product names the agent should recognize accurately. (Max 50. The shop name is added automatically.)</p>
               </div>
-            </Field>
-            <Field label="Human transfer number">
-              <Input
-                value={transferNumber}
-                onChange={(e) => setTransferNumber(e.target.value)}
-                placeholder="+14155551234"
-                className="font-mono"
-              />
-            </Field>
-          </div>
-
-          {/* Variables detected in prompt fields */}
-          <div className="mt-4">
-            <VariablesPanel
-              promptText={`${objective}\n${firstMessage}\n${identity}\n${guardrails}`}
-              onInsert={handleInsertVariable}
-            />
-          </div>
-
-          {langVoiceWarning.length > 0 && (
-            <div className="mt-4 flex items-center gap-2 text-xs text-warning">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              Voice may not support:{" "}
-              {langVoiceWarning
-                .map((c) => LANGUAGE_OPTIONS.find((l) => l.code === c)?.label ?? c)
-                .join(", ")}
-            </div>
-          )}
-
-          <div className="mt-6 flex items-center gap-3 flex-wrap">
-            <Button onClick={save} disabled={saving}>
-              {saving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-            <button
-              type="button"
-              className="text-sm text-text-muted hover:text-text flex items-center gap-1"
-              onClick={async () => {
-                if (!promptOpen && !promptPreview) await loadPromptPreview();
-                setPromptOpen((v) => !v);
-              }}
-            >
-              <ChevronRight className={`w-3.5 h-3.5 transition-transform ${promptOpen ? "rotate-90" : ""}`} />
-              Preview compiled prompt
-            </button>
-          </div>
-
-          {promptOpen && (
-            <div className="mt-4 p-3 rounded-md bg-surface-2 border border-border">
-              {promptLoading ? (
-                <Skeleton className="h-32" />
-              ) : (
-                <pre className="text-xs text-text-muted whitespace-pre-wrap font-mono leading-relaxed">
-                  {promptPreview}
-                </pre>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      </div>
-
-      {/* Deployment card */}
-      <Card className="gap-0 overflow-visible py-0 shadow-card">
-        <div className="border-b px-6 py-4">
-          <div className="font-medium">Deployment (ElevenLabs CAI)</div>
+            </TabsContent>
+          </Tabs>
         </div>
-        <CardContent className="px-6 py-5">
-          <div className="grid sm:grid-cols-2 gap-4 text-sm">
-            <Field label="Provider Agent ID">
-              <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs">
-                {agent.provider_ref || agent.provider_agent_id || "Not provisioned"}
-              </div>
-            </Field>
-            <Field label="Voice">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs truncate">
-                  {voiceName}
-                </div>
-                <Button variant="outline" onClick={() => setVoiceDrawerOpen(true)}>
-                  <Mic className="w-4 h-4 mr-1.5" />
-                  Change
-                </Button>
-              </div>
-            </Field>
-            <Field label="Conversation Config ID">
-              <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center font-mono text-xs">
-                {agent.conversation_config_id || "None"}
-              </div>
-            </Field>
-            <Field label="Sync Status">
-              <div className="h-10 px-3 rounded-md border border-border bg-surface-2 flex items-center gap-2">
-                {agent.sync_status === "synced" && <Badge variant="secondary" className="bg-success/15 text-success">Synced</Badge>}
-                {agent.sync_status === "pending" && <Badge variant="secondary" className="bg-warning/15 text-warning">Pending</Badge>}
-                {agent.sync_status === "failed" && <Badge variant="secondary" className="bg-danger/15 text-danger">Failed</Badge>}
-                {!agent.sync_status && <Badge variant="secondary" className="bg-muted text-foreground">Not synced</Badge>}
-              </div>
-            </Field>
-            <Field label="Linked Knowledge" full>
-              <div className="border border-border rounded-md divide-y divide-border bg-surface-2">
-                {knowledge.length === 0 ? (
-                  <div className="p-3 text-xs text-text-muted">
-                    No knowledge sources linked. Attach sources from the Integrations page.
-                  </div>
-                ) : (
-                  knowledge.map((k: any) => (
-                    <div key={k.source_id || k.id} className="p-3 flex items-center justify-between text-xs">
-                      <div>
-                        <div className="font-medium">{k.knowledge_sources?.title || "Source"}</div>
-                        <div className="text-text-muted capitalize">{k.knowledge_sources?.kind}</div>
-                      </div>
-                      <Badge variant="secondary" className={k.knowledge_sources?.status === "ready" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}>
-                        {k.knowledge_sources?.status || "pending"}
-                      </Badge>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Field>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Skills card */}
-      <Card className="gap-0 overflow-visible py-0 shadow-card">
-        <div className="border-b px-6 py-4">
-          <div className="flex items-center gap-2 font-medium">
-            <Zap className="w-4 h-4" />
-            Skills
-          </div>
-        </div>
-        <CardContent className="px-6 py-5">
-          <p className="text-sm text-text-muted mb-4">
-            Toggle capabilities for this agent. Changes sync to the provider on next save.
-          </p>
-          {allSkills.length === 0 ? (
-            <div className="text-xs text-text-muted">No skills available.</div>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-3">
-              {allSkills.map((skill: any) => {
-                const isActive = activeSkillIds.has(skill.id);
-                return (
-                  <button
-                    key={skill.id}
-                    type="button"
-                    disabled={skillsLoading}
-                    onClick={async () => {
-                      setSkillsLoading(true);
-                      setActiveSkillIds((prev) => {
-                        const next = new Set(prev);
-                        if (isActive) next.delete(skill.id);
-                        else next.add(skill.id);
-                        return next;
-                      });
-                      try {
-                        await api.post(`/v1/agents/${id}/skills/${skill.id}/toggle`, { enabled: !isActive });
-                      } catch (e: any) {
-                        setActiveSkillIds((prev) => {
-                          const next = new Set(prev);
-                          if (isActive) next.add(skill.id);
-                          else next.delete(skill.id);
-                          return next;
-                        });
-                        toast.error(e.message || "Failed to toggle skill.");
-                      } finally {
-                        setSkillsLoading(false);
-                      }
-                    }}
-                    className={`text-left p-3 rounded-lg border transition-colors ${
-                      isActive
-                        ? "border-text/20 bg-text/5"
-                        : "border-border bg-surface hover:bg-surface-2"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{skill.name}</span>
-                      <div className={`w-8 h-4.5 rounded-full transition-colors flex items-center px-0.5 ${
-                        isActive ? "bg-green-500 justify-end" : "bg-border justify-start"
-                      }`}>
-                        <div className="w-3.5 h-3.5 rounded-full bg-white shadow-sm" />
-                      </div>
-                    </div>
-                    <div className="text-xs text-text-muted line-clamp-2">{skill.description}</div>
-                    <Badge variant="secondary" className="mt-2 text-[10px] bg-muted text-foreground">{skill.category}</Badge>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Privacy card (Task 5) */}
-      <Card className="gap-0 overflow-visible py-0 shadow-card">
-        <div className="border-b px-6 py-4">
-          <div className="font-medium">Privacy &amp; data retention</div>
-          <p className="text-xs text-text-muted mt-1">Controls how ElevenLabs handles call recordings and data.</p>
-        </div>
-        <CardContent className="px-6 py-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">Record voice</div>
-              <p className="text-xs text-text-muted mt-0.5">Store call audio in ElevenLabs for transcript and analytics.</p>
-            </div>
-            <Switch
-              checked={recordVoice}
-              onCheckedChange={(v) => setRecordVoice(v)}
-              aria-label="Record voice"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">Zero retention mode</div>
-              <p className="text-xs text-text-muted mt-0.5">ElevenLabs retains no data from this agent's conversations.</p>
-            </div>
-            <Switch
-              checked={zeroRetentionMode}
-              onCheckedChange={(v) => setZeroRetentionMode(v)}
-              aria-label="Zero retention mode"
-            />
-          </div>
-          {zeroRetentionMode && (
-            <div className="flex items-start gap-2 p-3 rounded-md bg-warning/10 border border-warning/30 text-xs text-warning">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <span>Zero retention mode disables transcripts, recordings, and evaluation analysis. Ensure this complies with your legal obligations.</span>
-            </div>
-          )}
-          <div className="pt-2">
-            <Button onClick={save} disabled={saving} size="sm">
-              {saving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              {saving ? "Saving…" : "Save privacy settings"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Test call card */}
-      <Card className="gap-0 overflow-visible py-0 shadow-card">
-        <div className="border-b px-6 py-4">
-          <div className="font-medium">Test your agent</div>
-        </div>
-        <CardContent className="px-6 py-5 space-y-4">
-          {/* Browser test — primary */}
-          <div>
-            <p className="text-sm text-text-muted mb-3">
-              Talk to your agent directly in the browser. No phone needed.
-            </p>
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button
-                disabled={!agent.provider_ref}
-                onClick={() => setWebTestOpen(true)}
-                className="w-full sm:w-auto"
-              >
-                <Globe className="w-4 h-4 mr-2" />
-                Test in browser
-              </Button>
+        {/* ── Test rail (≥lg) ─────────────────────────────── */}
+        <div className="hidden lg:flex flex-col w-80 shrink-0 border-l border-border sticky top-[57px] h-[calc(100vh-57px)] overflow-y-auto">
+          <div className="p-5 space-y-4 flex-1">
+            <div className="flex items-center justify-between">
+              <p className="section-label">Test agent</p>
               {lastWebTestAt && (
-                <span className="text-xs text-text-muted">
-                  Last tested{" "}
-                  {new Date(lastWebTestAt).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+                <span className="text-[10px] text-muted-foreground">Last {formatRelative(lastWebTestAt)}</span>
               )}
             </div>
-          </div>
 
-          {/* Phone test — secondary */}
-          <div className="border-t pt-4">
-            <p className="text-xs text-text-muted mb-3">
-              Or call a phone number to hear your agent on a real line.
-            </p>
-            <div className="flex flex-wrap gap-3">
+            {agent.provider_ref ? (
+              <WebTestPanel
+                agentId={id!}
+                agentName={agent.name}
+                transcriptHeight="h-[180px]"
+                onSessionStart={() => setTestSessionStarted(true)}
+                onGoFix={(notes) => {
+                  setTestSessionStarted(false);
+                  setTab("behavior");
+                  setTimeout(() => objectiveRef.current?.focus(), 150);
+                  if (notes) toast.info("Notes captured — check behavior tab.");
+                }}
+              />
+            ) : (
+              <div className="text-xs text-muted-foreground p-4 rounded-lg border border-border bg-muted/30 text-center">
+                Save the agent first to enable browser testing.
+              </div>
+            )}
+
+            {/* Recent calls mini-list */}
+            {recentCalls.length > 0 && (
+              <div className="space-y-2">
+                <p className="section-label">Recent calls</p>
+                {recentCalls.slice(0, 3).map((call: any) => {
+                  const isSuccess = ["completed", "success"].includes(call.status);
+                  const isFailed = ["failed", "no_answer", "busy"].includes(call.status);
+                  return (
+                    <div key={call.id} className="flex items-center gap-2.5 text-xs">
+                      <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", isSuccess ? "bg-emerald-500" : isFailed ? "bg-red-400" : "bg-amber-400")} />
+                      <span className="text-muted-foreground capitalize flex-1 truncate">{call.status?.replace(/_/g, " ")}</span>
+                      <span className="text-muted-foreground/60 shrink-0">{call.created_at ? formatRelative(call.created_at) : "—"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Phone test */}
+            <div className="pt-3 border-t border-border space-y-2">
+              <p className="section-label">Phone test</p>
               <Input
                 value={testNumber}
                 onChange={(e) => setTestNumber(e.target.value)}
                 disabled={!agent.provider_ref || calling}
                 placeholder="+1 415 555 0199"
-                aria-label="Test call phone number"
-                className="flex-1 min-w-[240px] font-mono"
+                className="font-mono text-xs"
               />
               <Button
                 variant="outline"
+                size="sm"
+                className="w-full"
                 disabled={!agent.provider_ref || !testNumber.trim() || calling}
                 onClick={async () => {
                   setCalling(true);
@@ -1118,36 +1300,49 @@ export default function AgentDetail() {
                   }
                 }}
               >
-                {calling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Phone className="w-4 h-4 mr-2" />}
-                {calling ? "Calling..." : "Call phone"}
+                {calling ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Phone className="w-3.5 h-3.5 mr-1.5" />}
+                {calling ? "Calling…" : "Call phone"}
               </Button>
             </div>
           </div>
+        </div>
+      </div>
 
-          {!agent.provider_ref && (
-            <p className="mt-2 text-xs text-text-muted">
-              Agent not yet provisioned with ElevenLabs. Save the agent first to trigger provisioning.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Prompt history drawer */}
-      {historyOpen && (
-        <PromptHistoryDrawer
-          agentId={id!}
-          onRestore={load}
-          onClose={() => setHistoryOpen(false)}
-        />
+      {/* ── FAB for mobile test (<lg, hidden when save bar is visible) ── */}
+      {!isDirty && (
+        <button
+          onClick={() => setWebTestOpen(true)}
+          disabled={!agent.provider_ref}
+          className="lg:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-foreground text-background shadow-elevated flex items-center justify-center transition-transform active:scale-95 disabled:opacity-40"
+          aria-label="Test agent"
+        >
+          <Mic className="w-6 h-6" />
+        </button>
       )}
 
-      {/* Change Template modal */}
+      {/* ── Sticky save bar ─────────────────────────────────────────────── */}
+      {isDirty && (
+        <div className="fixed bottom-0 inset-x-0 z-40 flex items-center justify-between gap-4 px-6 py-3 bg-background/95 backdrop-blur-sm border-t border-border shadow-elevated animate-slide-up">
+          <span className="text-sm text-muted-foreground">Unsaved changes</span>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleDiscard} disabled={saving}>
+              Discard
+            </Button>
+            <Button size="sm" onClick={save} disabled={saving}>
+              {saving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
+              {saving ? "Saving…" : "Save & update agent"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modals & drawers ─────────────────────────────────────────────── */}
+      {historyOpen && (
+        <PromptHistoryDrawer agentId={id!} onRestore={load} onClose={() => setHistoryOpen(false)} />
+      )}
+
       {templateModalOpen && (
-        <ChangeTemplateModal
-          agent={agent}
-          onApply={handleApplyTemplate}
-          onClose={() => setTemplateModalOpen(false)}
-        />
+        <ChangeTemplateModal agent={agent} onApply={handleApplyTemplate} onClose={() => setTemplateModalOpen(false)} />
       )}
 
       {webTestOpen && (
@@ -1158,12 +1353,8 @@ export default function AgentDetail() {
           agentName={agent.name}
           onGoFix={(notes) => {
             setWebTestOpen(false);
-            setTimeout(() => {
-              personaCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              if (notes) {
-                objectiveRef.current?.focus();
-              }
-            }, 100);
+            setTab("behavior");
+            setTimeout(() => objectiveRef.current?.focus(), 150);
           }}
         />
       )}
@@ -1172,53 +1363,53 @@ export default function AgentDetail() {
         <TestCallDrawer callId={activeCallId} onClose={() => setActiveCallId(null)} />
       )}
 
-      {/* Voice selection overlay */}
       {voiceDrawerOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setVoiceDrawerOpen(false)}
-          />
-          <div className="relative bg-bg border border-border rounded-xl shadow-elevated w-full max-w-4xl max-h-[85vh] flex flex-col">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setVoiceDrawerOpen(false)} />
+          <div className="relative bg-background border border-border rounded-xl shadow-elevated w-full max-w-4xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
               <div className="font-semibold">Choose a voice</div>
-              <button
-                onClick={() => setVoiceDrawerOpen(false)}
-                className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2"
-              >
+              <button onClick={() => setVoiceDrawerOpen(false)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              <VoiceLibrary
-                onSelect={handleVoiceSelect}
-                selectedVoiceId={agent.voice_id || undefined}
-                filterLanguages={selectedLanguages}
-              />
+              <VoiceLibrary onSelect={handleVoiceSelect} selectedVoiceId={agent.voice_id || undefined} filterLanguages={selectedLanguages} />
             </div>
           </div>
         </div>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete agent?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the agent from your organization and de-provisions it from ElevenLabs. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting…" : "Delete agent"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-function LanguagePicker({
-  selected,
-  onChange,
-}: {
-  selected: string[];
-  onChange: (langs: string[]) => void;
-}) {
+// ── Sub-components ──────────────────────────────────────────────────────────
+
+function LanguagePicker({ selected, onChange }: { selected: string[]; onChange: (langs: string[]) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -1242,14 +1433,13 @@ function LanguagePicker({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm flex items-center justify-between gap-2 text-left"
+        className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm flex items-center justify-between gap-2 text-left"
       >
         <span className="truncate">{label}</span>
-        <ChevronDown className={`w-4 h-4 shrink-0 text-text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={cn("w-4 h-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
-
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-surface shadow-elevated overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-background shadow-elevated overflow-hidden">
           <ul className="max-h-56 overflow-y-auto py-1">
             {LANGUAGE_OPTIONS.map((l) => {
               const isSelected = selected.includes(l.code);
@@ -1258,13 +1448,13 @@ function LanguagePicker({
                   <button
                     type="button"
                     onClick={() => toggle(l.code)}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-surface-2 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
                   >
-                    <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected ? "bg-text border-text" : "border-border"}`}>
-                      {isSelected && <Check className="w-2.5 h-2.5 text-surface" />}
+                    <span className={cn("w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors", isSelected ? "bg-foreground border-foreground" : "border-border")}>
+                      {isSelected && <Check className="w-2.5 h-2.5 text-background" />}
                     </span>
                     <span className={isSelected ? "font-medium" : ""}>{l.label}</span>
-                    <span className="ml-auto font-mono text-xs text-text-muted">{l.code}</span>
+                    <span className="ml-auto font-mono text-xs text-muted-foreground">{l.code}</span>
                   </button>
                 </li>
               );
@@ -1276,18 +1466,10 @@ function LanguagePicker({
   );
 }
 
-function Field({
-  label,
-  children,
-  full,
-}: {
-  label: string;
-  children: React.ReactNode;
-  full?: boolean;
-}) {
+function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
   return (
     <div className={full ? "sm:col-span-2" : ""}>
-      <label className="block text-xs font-medium text-text-muted mb-1">{label}</label>
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5">{label}</label>
       {children}
     </div>
   );
@@ -1301,96 +1483,63 @@ function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => vo
   const startTime = useRef(Date.now());
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startTime.current) / 1000));
-    }, 1000);
+    const timer = setInterval(() => { setElapsed(Math.floor((Date.now() - startTime.current) / 1000)); }, 1000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
     const channel = supabase
       .channel(`call_events_${callId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "call_events",
-          filter: `call_id=eq.${callId}`,
-        },
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "call_events", filter: `call_id=eq.${callId}` },
         (payload: any) => {
           const event = payload.new;
           if (event.kind === "transcript") {
-            setTranscript((prev) => [
-              ...prev,
-              { role: event.metadata?.role || "agent", text: event.metadata?.text || "" },
-            ]);
+            setTranscript((prev) => [...prev, { role: event.metadata?.role || "agent", text: event.metadata?.text || "" }]);
           } else if (event.kind === "status_change") {
             setCallStatus(event.metadata?.status || event.metadata?.new_status || "in_progress");
           }
         }
-      )
-      .subscribe();
+      ).subscribe();
 
-    getCall(callId)
-      .then((data) => {
-        if (data?.status) setCallStatus(data.status);
-      })
-      .catch(() => {
-        toast.error("Failed to load call status");
-      });
-
+    getCall(callId).then((data) => { if (data?.status) setCallStatus(data.status); }).catch(() => {});
     return () => { supabase.removeChannel(channel); };
   }, [callId]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [transcript]);
 
-  const costPerSec = 0.14 / 60;
-  const estimatedCost = (elapsed * costPerSec).toFixed(3);
+  const isEnded = ["completed", "failed", "no_answer", "busy"].includes(callStatus);
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
-  const isEnded = ["completed", "failed", "no_answer", "busy"].includes(callStatus);
 
   return (
-    <Card className="gap-0 overflow-visible py-0 shadow-card">
-      <div className="border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 font-medium">
-            <Phone className="w-4 h-4" />
-            Test call
-            <Badge variant="secondary" className={`${isEnded ? "bg-muted text-foreground" : "bg-success/15 text-success"}`}>{isEnded ? null : <span className="size-1.5 rounded-full bg-current mr-1" />}
-              {callStatus.replace(/_/g, " ")}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-xs text-text-muted">
-              {minutes}:{seconds.toString().padStart(2, "0")} · ~${estimatedCost}
-            </span>
-            <button onClick={onClose} className="p-1 rounded hover:bg-surface-2">
-              <X className="w-4 h-4 text-text-muted" />
-            </button>
-          </div>
+    <Card className="gap-0 overflow-visible py-0 shadow-card mx-6 mt-4">
+      <div className="border-b px-5 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3 font-medium text-sm">
+          <Phone className="w-4 h-4" />
+          Test call
+          <Badge variant="secondary" className={isEnded ? "" : "bg-success/15 text-success"}>
+            {!isEnded && <span className="size-1.5 rounded-full bg-current mr-1" />}
+            {callStatus.replace(/_/g, " ")}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-xs text-muted-foreground num">{minutes}:{seconds.toString().padStart(2, "0")}</span>
+          <button onClick={onClose} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4 text-muted-foreground" /></button>
         </div>
       </div>
-      <CardContent className="px-6 py-5">
-        <div
-          ref={scrollRef}
-          className="h-48 overflow-y-auto space-y-2 bg-surface-2 rounded-md p-3 border border-border"
-        >
+      <CardContent className="px-5 py-4">
+        <div ref={scrollRef} className="h-44 overflow-y-auto space-y-2 bg-muted/30 rounded-md p-3 border border-border">
           {transcript.length === 0 ? (
-            <div className="text-xs text-text-muted flex items-center gap-2">
+            <div className="text-xs text-muted-foreground flex items-center gap-2">
               {!isEnded && <Loader2 className="w-3 h-3 animate-spin" />}
-              {isEnded ? "No transcript received." : "Waiting for conversation to start..."}
+              {isEnded ? "No transcript received." : "Waiting for conversation to start…"}
             </div>
           ) : (
             transcript.map((t, i) => (
-              <div key={i} className={`text-xs ${t.role === "agent" ? "text-text" : "text-text-muted"}`}>
-                <span className="font-medium capitalize">{t.role}:</span>{" "}
-                {t.text}
+              <div key={i} className={`text-xs ${t.role === "agent" ? "text-foreground" : "text-muted-foreground"}`}>
+                <span className="font-medium capitalize">{t.role}:</span> {t.text}
               </div>
             ))
           )}
@@ -1411,33 +1560,22 @@ function ChangeTemplateModal({ agent, onApply, onClose }: ChangeTemplateModalPro
   const [selectedPreset, setSelectedPreset] = useState<any | null>(null);
   const [mode, setMode] = useState<"replace" | "merge">("merge");
 
-  function handlePresetSelect(preset: any) {
-    setSelectedPreset(preset);
-    setStep("confirm");
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-bg border border-border rounded-xl shadow-elevated w-full max-w-3xl max-h-[85vh] flex flex-col">
+      <div className="relative bg-background border border-border rounded-xl shadow-elevated w-full max-w-3xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div className="font-semibold">
-            {step === "pick" ? "Change template" : "Apply template"}
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2"
-          >
+          <div className="font-semibold">{step === "pick" ? "Change template" : "Apply template"}</div>
+          <button onClick={onClose} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
             <X className="w-5 h-5" />
           </button>
         </div>
-
         {step === "pick" ? (
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <AgentPresetPicker
               verticalKey={agent?.vertical || undefined}
               showAllVerticals={true}
-              onSelect={handlePresetSelect}
+              onSelect={(preset) => { setSelectedPreset(preset); setStep("confirm"); }}
               onSkip={onClose}
             />
           </div>
@@ -1445,58 +1583,35 @@ function ChangeTemplateModal({ agent, onApply, onClose }: ChangeTemplateModalPro
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
             <div>
               <p className="text-sm font-medium">How do you want to apply "{selectedPreset?.name}"?</p>
-              <p className="text-xs text-text-muted mt-1">
-                This affects objective, guardrails, tone, opening message, and identity.
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">This affects objective, guardrails, tone, opening message, and identity.</p>
             </div>
-
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => setMode("merge")}
-                className={`w-full text-left p-4 rounded-md border transition-all ${
-                  mode === "merge"
-                    ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20"
-                    : "border-border bg-surface hover:border-text/20"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <WrapText className="w-4 h-4 text-primary shrink-0" />
-                  <span className="text-sm font-medium">Merge rules</span>
-                  {mode === "merge" && <Check className="w-3.5 h-3.5 text-primary ml-auto" />}
-                </div>
-                <p className="text-xs text-text-muted pl-6">
-                  Appends the template's guardrails to your existing ones. Preserves your objective, tone, and opening message.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMode("replace")}
-                className={`w-full text-left p-4 rounded-md border transition-all ${
-                  mode === "replace"
-                    ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20"
-                    : "border-border bg-surface hover:border-text/20"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <LayoutTemplate className="w-4 h-4 text-primary shrink-0" />
-                  <span className="text-sm font-medium">Replace prompt</span>
-                  {mode === "replace" && <Check className="w-3.5 h-3.5 text-primary ml-auto" />}
-                </div>
-                <p className="text-xs text-text-muted pl-6">
-                  Overwrites objective, guardrails, tone, opening message, and identity with the template's values. Your changes will be lost unless you save first.
-                </p>
-              </button>
+              {(["merge", "replace"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  className={cn(
+                    "w-full text-left p-4 rounded-md border transition-all",
+                    mode === m ? "border-foreground bg-foreground/[0.03] ring-1 ring-foreground/20" : "border-border bg-background hover:border-foreground/20"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {m === "merge" ? <WrapText className="w-4 h-4 shrink-0" /> : <LayoutTemplate className="w-4 h-4 shrink-0" />}
+                    <span className="text-sm font-medium capitalize">{m === "merge" ? "Merge rules" : "Replace prompt"}</span>
+                    {mode === m && <Check className="w-3.5 h-3.5 ml-auto" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    {m === "merge"
+                      ? "Appends the template's guardrails to your existing ones. Preserves your objective, tone, and opening message."
+                      : "Overwrites objective, guardrails, tone, opening message, and identity with the template's values."}
+                  </p>
+                </button>
+              ))}
             </div>
-
             <div className="flex justify-between gap-3 pt-2">
-              <Button variant="ghost" onClick={() => setStep("pick")}>
-                Back
-              </Button>
-              <Button onClick={() => onApply(selectedPreset, mode)}>
-                Apply template
-              </Button>
+              <Button variant="ghost" onClick={() => setStep("pick")}>Back</Button>
+              <Button onClick={() => onApply(selectedPreset, mode)}>Apply template</Button>
             </div>
           </div>
         )}

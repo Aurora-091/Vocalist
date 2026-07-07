@@ -215,6 +215,21 @@ body {
   font-family: var(--font-mono);
 }
 
+/* Tabular numeric rendering for stats, prices, counters */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Section label — 13px uppercase tracking-wide muted */
+.section-label {
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
 /* ─── Global interactive states ─── */
 
 input:not([type="checkbox"]):not([type="radio"]),
