@@ -113,17 +113,30 @@ In **Authentication > Email > SMTP Settings**, configure:
 | Password | Resend API key |
 
 ### Email Templates
-In **Authentication > Email > Email Templates**, ensure the Confirmation email template uses:
+In **Authentication > Email > Email Templates**, the Confirmation email template must include **both** the OTP token and the clickable confirmation link:
+
+| Placeholder | Purpose |
+|-------------|---------|
+| `{{ .Token }}` | The 6-digit OTP code the user enters on `/auth/verify` |
+| `{{ .ConfirmationURL }}` | Clickable link that redirects to `/auth/callback` with session tokens in the URL hash |
+| `{{ .RedirectTo }}` | (Used inside `{{ .ConfirmationURL }}`) Respects the `emailRedirectTo` parameter from the frontend `signUp()` call |
+
+**Example template body:**
+```html
+<h2>Confirm your email</h2>
+<p>Your verification code is: <strong>{{ .Token }}</strong></p>
+<p>Or click the link below to confirm automatically:</p>
+<p><a href="{{ .ConfirmationURL }}">Confirm my email</a></p>
 ```
-{{ .RedirectTo }}
-```
-as the redirect target (not a hardcoded URL). This respects the `emailRedirectTo` parameter passed from the frontend `signUp()` call, directing users to `/onboarding` after confirming their email.
+
+> **Important**: If `{{ .Token }}` is missing from the template, users will not be able to verify via the OTP screen (`/auth/verify`). If `{{ .ConfirmationURL }}` is missing, the clickable link path (`/auth/callback`) will not work. Both must be present for the dual-path verification flow.
 
 ### Email Confirmation Behavior
 - Email confirmation is **enabled** — new users receive a verification email after signup.
-- The frontend passes `emailRedirectTo: ${window.location.origin}/onboarding` in the signup options.
-- After clicking the confirmation link, Supabase redirects to the specified URL with auth tokens in the URL hash. The Supabase JS SDK's `onAuthStateChange` listener automatically picks up the session.
-- If the user is already on the site (e.g., they signed up and are waiting), `onAuthStateChange` will detect the new session and `RequireAuth` will grant access.
+- The frontend passes `emailRedirectTo: ${window.location.origin}/auth/callback` in the signup options.
+- **Path 1 — OTP code**: User stays on `/auth/verify` and enters the 6-digit code from the email. The frontend calls `supabase.auth.verifyOtp({ email, token, type: 'signup' })`. On success, redirects to `/dashboard?welcome=1`.
+- **Path 2 — Confirmation link**: User clicks the link in the email, which redirects to `/auth/callback` with auth tokens in the URL hash. The `AuthCallback` page detects the session via `onAuthStateChange` and redirects to `/dashboard?welcome=1`.
+- Both paths trigger the onboarding modal on first arrival at the dashboard.
 
 ---
 
@@ -134,7 +147,7 @@ as the redirect target (not a hardcoded URL). This respects the `emailRedirectTo
    supabase db lint
    supabase migration up
    ```
-2. **Supabase Auth — URL Configuration**: Verify Site URL, Redirect URLs, SMTP, and email templates are set per Section 4 above. Incorrect settings cause email confirmation links to redirect to Vercel default URLs or fail entirely.
+2. **Supabase Auth — URL Configuration**: Verify Site URL, Redirect URLs, SMTP, and email templates are set per Section 4 above. The Confirmation email template must include both `{{ .Token }}` (OTP) and `{{ .ConfirmationURL }}` (clickable link) for the dual-path verification flow to work. Incorrect settings cause email confirmation links to redirect to Vercel default URLs or fail entirely.
 3. **Supabase Auth — Leaked Password Protection**: In the Supabase Dashboard, go to Authentication > Providers > Email and enable the **Leaked Password Protection** toggle. This enables HaveIBeenPwned breach detection and cannot be set via SQL migration.
 4. **Supabase Auth — Connection Pool Strategy**: In the Supabase Dashboard, go to Database > Connection Pooling and switch the Auth pool from an absolute connection count to **percentage-based** allocation. This prevents Auth from consuming a fixed share of the connection pool under high load. This is a Dashboard-only setting and cannot be set via SQL migration.
 5. **Supabase — PITR (Point-in-Time Recovery)**: In the Supabase Dashboard, go to Database > Backups and enable PITR. Provides continuous WAL archiving with recovery to any second in the last 7 days. Critical for financial data integrity.

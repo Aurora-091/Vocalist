@@ -2,6 +2,54 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.15.0] — 2026-07-07
+
+### Email OTP Verification & Onboarding Modal Refactor
+
+#### Email Verification Screen (`/auth/verify`)
+- **`src/pages/auth/VerifyEmail.tsx`** (new): Full-page 6-digit OTP verification screen with split-panel layout matching Login/Signup pages. Features:
+  - Individual digit inputs with auto-advance on entry, backspace navigation, and full-code paste support
+  - Auto-submits on 6th digit via `supabase.auth.verifyOtp({ type: 'signup' })`
+  - Shake animation on invalid code, auto-clears and refocuses first input
+  - 30-second resend cooldown with `supabase.auth.resend({ type: 'signup' })`
+  - "Or open the link in the email" hint — both OTP and confirmation link flows are supported
+
+#### Auth Callback for Email Confirmation Links (`/auth/callback`)
+- **`src/pages/auth/AuthCallback.tsx`** (new): Landing page for email confirmation links. Listens for Supabase session via `onAuthStateChange` + `getSession()`. Navigates to `/dashboard?welcome=1` on session detection. Shows 15-second timeout error state with fallback link to sign in.
+
+#### Signup Flow Updated
+- **`src/pages/Signup.tsx`**: `emailRedirectTo` now points to `${origin}/auth/callback` (was `/onboarding`). On no-session after signup, navigates to `/auth/verify?email=...` for OTP entry. Google OAuth redirects to `/dashboard?welcome=1`.
+- **`src/pages/Login.tsx`**: Google OAuth `redirectTo` updated to `/dashboard?welcome=1`.
+
+#### Onboarding Modal (Replaces Full-Page Onboarding)
+- **`src/components/onboarding/OnboardingModal.tsx`** (new): 4-step responsive modal overlaying the Dashboard:
+  1. **Template** — vertical tabs with preset agent cards
+  2. **Business details** — pre-filled from org record
+  3. **Voice picker** — "Keep this voice" / "Choose different" pattern
+  4. **Test call** — embeds inline `ConversationPanel`
+  - Responsive: Dialog (`w-[70vw] max-w-4xl h-[70vh]`) on desktop, Drawer (`h-[95dvh]`) on mobile via `useIsMobile()` hook
+  - Progress dots + step label, "Skip for now" button, finish animation with "Your agent is ready" CTA
+  - Persists progress via `updateOnboardingStep()`
+
+- **`src/components/onboarding/ConversationPanel.tsx`** (new): Extracted conversation UI from `WebTestCallModal` for inline embedding. Props-driven (`agentId`, `agentName`, `onSessionStart`, `onSessionEnd`). Uses `@11labs/react` `useConversation` hook.
+
+#### Dashboard Integration
+- **`src/pages/Dashboard.tsx`**: Onboarding modal opens on `?welcome=1` query param OR incomplete onboarding with zero agents/calls. Strips `?welcome=1` after opening. Added "Resume setup" button in checklist card.
+
+#### Routing Changes
+- **`src/apps/customer/CustomerApp.tsx`**:
+  - Added routes: `/auth/verify` (PublicOnly), `/auth/callback`
+  - `/onboarding` → `<Navigate to="/dashboard?welcome=1" replace />` (backward compat)
+  - Removed `Onboarding` lazy import (old full-page flow tree-shaken from bundle)
+
+#### CSS Additions
+- **`src/index.css`**: Added `@keyframes shake` and `@keyframes scale-in` animations.
+
+#### Manual Configuration Required
+- **Supabase Email Template**: The Confirmation email template must include both `{{ .Token }}` (for 6-digit OTP) and `{{ .ConfirmationURL }}` (for clickable link). See `docs/DEPLOYMENT.md` Section 4 for details.
+
+---
+
 ## [1.14.0] — 2026-07-07
 
 ### Auth Simplification — Single-Domain Direct Supabase Auth

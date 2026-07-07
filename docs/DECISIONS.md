@@ -217,3 +217,26 @@ This document tracks all major product, architecture, and technology decisions m
   - `.env.example`
   - `supabase/migrations/20260707175447_fix_auth_trigger_use_org_name_directly.sql`
 
+---
+
+## DEC-017: OTP + Link Dual Email Verification with Onboarding Modal Overlay
+* **Date**: Monday, 2026-07-07
+* **Status**: Accepted
+* **Context**: The previous signup flow redirected users to a full-page onboarding wizard after email confirmation. This had two UX problems: (1) email confirmation relied solely on a clickable link, which fails if the user opens the email on a different device or browser — they'd be stuck on a loading screen; (2) the full-page 7-step onboarding was too long and blocked access to the main product. Users who abandoned mid-flow had no easy way to resume.
+* **Decision**: Implement dual-path email verification (OTP code + clickable link) and replace the full-page onboarding with a 4-step responsive modal:
+  1. **OTP Verification** (`/auth/verify`): After signup, users land on a 6-digit code entry screen. Supabase's `verifyOtp({ type: 'signup' })` validates the token client-side. Auto-submits on the 6th digit, supports paste, shows animated error feedback.
+  2. **Confirmation Link** (`/auth/callback`): The email also contains a clickable `{{ .ConfirmationURL }}` link that redirects to `/auth/callback`. This page detects the session via `onAuthStateChange` and redirects to the dashboard. Supports users who confirm on a different device.
+  3. **Onboarding Modal**: Instead of a blocking full-page wizard, a responsive Dialog/Drawer overlays the Dashboard. Opens automatically on first login (`?welcome=1`) or when onboarding is incomplete. Users can dismiss and access the full app at any time, resuming later via a "Resume setup" prompt.
+  4. **Backward Compatibility**: `/onboarding` route preserved as a redirect to `/dashboard?welcome=1`.
+* **Tradeoffs**:
+  - OTP requires the Supabase email template to include `{{ .Token }}` — a manual Dashboard configuration step
+  - The old full-page `Onboarding.tsx` is no longer imported but remains in the codebase (tree-shaken); can be deleted in a future cleanup
+  - Modal approach means users see the (empty) dashboard before completing setup — acceptable because the modal is prominent and the checklist card provides a resumption path
+* **Key Files**:
+  - `src/pages/auth/VerifyEmail.tsx`
+  - `src/pages/auth/AuthCallback.tsx`
+  - `src/components/onboarding/OnboardingModal.tsx`
+  - `src/components/onboarding/ConversationPanel.tsx`
+  - `src/pages/Dashboard.tsx`
+  - `src/pages/Signup.tsx`
+  - `src/apps/customer/CustomerApp.tsx`
