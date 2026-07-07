@@ -183,4 +183,37 @@ This document tracks all major product, architecture, and technology decisions m
   - `src/lib/api.ts`
   - `backend/src/tests/invariants/auth-middleware.test.js`
 
+---
+
+## DEC-016: Single-Domain Direct Supabase Auth (Backend Proxy & Multi-Domain Bridge Removed)
+* **Date**: Monday, 2026-07-07 18:00 IST
+* **Status**: Accepted
+* **Context**: The previous architecture used a three-domain setup (`weeber.ai` for marketing, `app.weeber.ai` for the authenticated app, `admin.weeber.ai` for platform admin). Authentication flowed through a backend Express proxy (`/v1/auth/login`, `/v1/auth/signup`) which called `supabase.auth.signInWithPassword()` server-side and returned tokens to the client. An `AuthBridge` component at `/auth/bridge?token=...` transferred sessions between domains via URL parameters. This multi-domain approach caused:
+  1. Cross-domain cookie issues and session desync
+  2. Token relay in URL query strings (security concern)
+  3. Email confirmation redirects landing on Vercel default URLs instead of the app
+  4. Unnecessary backend complexity wrapping Supabase auth calls that the client SDK already handles natively
+* **Decision**: Collapse to a single-domain architecture with direct Supabase client-side auth:
+  - Frontend calls `supabase.auth.signInWithPassword()`, `supabase.auth.signUp()`, and `supabase.auth.signInWithOAuth()` directly — no backend proxy
+  - `emailRedirectTo` passed in `signUp()` options ensures email confirmation links redirect to `${window.location.origin}/onboarding`
+  - `AuthBridge.tsx` deleted — no cross-domain token passing
+  - `RequireAuth` and `PublicOnly` simplified to single-domain redirects (`/login`, `/dashboard`)
+  - `api.ts` 401 handler redirects to `/login` instead of a marketing domain URL
+  - `.env.example` cleaned: removed `VITE_APP_HOST`, `VITE_MARKETING_HOST`, `VITE_DEMO_EMAIL`, `VITE_DEMO_PASSWORD`
+  - `isAdminApp` in `hostname.ts` still used by `main.tsx` to split admin vs customer routing
+  - Backend auth routes (`/v1/auth/*`) remain deployed but are unused by the frontend — kept for backward compat with any external integrations
+  - Database trigger `handle_new_oauth_user()` updated to use `raw_user_meta_data->>'org_name'` directly as the organization name (previously appended "'s Organization" suffix)
+* **Supabase Dashboard Configuration Required**:
+  - Site URL: `https://weeber.ai`
+  - Redirect URLs: `https://weeber.ai/**` (wildcard covers `/onboarding`, `/dashboard`, etc.)
+  - SMTP: Custom sender `hello@weeber.ai` via Resend
+  - Email Templates: Confirmation email uses `{{ .RedirectTo }}` to respect the `emailRedirectTo` parameter
+* **Key Files**:
+  - `src/pages/Login.tsx`
+  - `src/pages/Signup.tsx`
+  - `src/components/RequireAuth.tsx`
+  - `src/apps/customer/CustomerApp.tsx`
+  - `src/lib/api.ts`
+  - `.env.example`
+  - `supabase/migrations/20260707175447_fix_auth_trigger_use_org_name_directly.sql`
 

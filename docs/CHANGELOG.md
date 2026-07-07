@@ -2,6 +2,32 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.14.0] — 2026-07-07
+
+### Auth Simplification — Single-Domain Direct Supabase Auth
+
+#### Breaking Changes
+- **Removed** `AuthBridge.tsx` — cross-domain token relay page is no longer needed.
+- **Removed** multi-domain environment variables `VITE_APP_HOST` and `VITE_MARKETING_HOST` from `.env.example`.
+- **Removed** `VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` demo mode env vars.
+
+#### Auth Flow
+- **Login** (`Login.tsx`): Replaced backend `/v1/auth/login` API proxy with direct `supabase.auth.signInWithPassword()`. On success, navigates to `/dashboard` on the same origin.
+- **Signup** (`Signup.tsx`): Replaced backend `/v1/auth/signup` API proxy with direct `supabase.auth.signUp()`. Passes `emailRedirectTo` pointing to `${origin}/onboarding` so confirmation emails redirect correctly. Handles confirmation-pending state (no session) by sending users to the login page.
+- **Google OAuth**: Redirect URLs simplified to `${window.location.origin}/dashboard` (login) and `${window.location.origin}/onboarding` (signup). No more cross-domain AuthBridge relay.
+- **RequireAuth / PublicOnly** (`RequireAuth.tsx`): Removed multi-domain redirect logic (`isAppDomain`, `marketingUrl`, `appUrl`). Unauthenticated users simply redirect to `/login`; already-authenticated users on public pages redirect to `/dashboard`.
+- **CustomerApp routing** (`CustomerApp.tsx`): Merged the two separate route trees (one for `isAppDomain`, one for marketing domain) into a single unified route tree. All pages served from one domain.
+- **API client** (`api.ts`): Removed `hostname.ts` import. 401 session-expired redirect now goes to `/login` instead of `marketingUrl("/login")`.
+
+#### Database
+- **Migration** `fix_auth_trigger_use_org_name_directly`: Updated the `handle_new_oauth_user()` trigger to use the `org_name` value from `raw_user_meta_data` directly as the organization name (instead of appending "'s Organization" to the user's display name).
+
+#### Configuration
+- **Supabase Dashboard** (manual): Site URL must be set to `https://weeber.ai`. Redirect URLs allowlist must include `https://weeber.ai/**`.
+- **SMTP** (manual): Confirmation emails sent from `hello@weeber.ai` — configured in Supabase Dashboard > Authentication > SMTP Settings.
+
+---
+
 ## [1.13.0] — 2026-07-07
 
 ### Frontend Polish & Ergonomics (M1–M5, M11)
