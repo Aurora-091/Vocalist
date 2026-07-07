@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Megaphone, ChevronRight } from "lucide-react";
 import { listCampaigns } from "../lib/db";
+import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +49,7 @@ const FILTERS = ["all", "running", "paused", "draft", "completed"] as const;
 type Filter = (typeof FILTERS)[number];
 
 export default function Campaigns() {
+  usePageTitle("Campaigns");
   const { t } = useVertical();
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -56,6 +59,7 @@ export default function Campaigns() {
       try {
         setCampaigns(await listCampaigns());
       } catch {
+        toast.error("Failed to load campaigns");
         setCampaigns([]);
       }
     })();

@@ -25,6 +25,7 @@ import { WebTestCallModal } from "@/components/WebTestCallModal";
 import { VariablesPanel } from "@/components/VariablesPanel";
 import { AgentPresetPicker } from "@/components/AgentPresetPicker";
 import { PromptHistoryDrawer } from "@/components/PromptHistoryDrawer";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const TONE_PRESETS = [
   "warm and professional",
@@ -97,6 +98,7 @@ export default function AgentDetail() {
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
+  usePageTitle(agent?.name ? `${agent.name} · Agent` : "Agent");
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [knowledge, setKnowledge] = useState<any[]>([]);
@@ -135,6 +137,7 @@ export default function AgentDetail() {
   const [conversationStyle, setConversationStyle] = useState<"quick" | "balanced" | "patient">("balanced");
   const [recordVoice, setRecordVoice] = useState(true);
   const [zeroRetentionMode, setZeroRetentionMode] = useState(false);
+  const [showLanguageOverrides, setShowLanguageOverrides] = useState(false);
 
   // Textarea refs for variable insertion
   const objectiveRef = useRef<HTMLTextAreaElement>(null);
@@ -185,12 +188,24 @@ export default function AgentDetail() {
         .map((l: string) => l.trim().toLowerCase().slice(0, 5))
         .filter(Boolean);
       setSelectedLanguages(langs.length ? langs : ["en"]);
-      setLanguageMessages(a.persona?.language_messages || {});
+      setLanguageMessages(a.persona?.first_message_overrides || a.persona?.language_messages || {});
       setBoostKeywords(Array.isArray(a.persona?.boost_keywords) ? a.persona.boost_keywords : []);
       setConversationStyle(a.persona?.conversation_style || "balanced");
-      const privacyCfg = a.persona?.privacy_config || {};
-      setRecordVoice(typeof privacyCfg.record_voice === "boolean" ? privacyCfg.record_voice : true);
-      setZeroRetentionMode(typeof privacyCfg.zero_retention_mode === "boolean" ? privacyCfg.zero_retention_mode : false);
+      const privacyCfg = a.persona?.privacy || a.persona?.privacy_config || {};
+      setRecordVoice(
+        typeof privacyCfg.store_audio === "boolean"
+          ? privacyCfg.store_audio
+          : typeof privacyCfg.record_voice === "boolean"
+          ? privacyCfg.record_voice
+          : true
+      );
+      setZeroRetentionMode(
+        typeof privacyCfg.zero_retention === "boolean"
+          ? privacyCfg.zero_retention
+          : typeof privacyCfg.zero_retention_mode === "boolean"
+          ? privacyCfg.zero_retention_mode
+          : false
+      );
 
       // Resolve voice name
       if (a.voice_id) {
@@ -234,6 +249,7 @@ export default function AgentDetail() {
         // non-fatal
       }
     } catch {
+      toast.error("Failed to load agent");
       setAgent(null);
     } finally {
       setLoading(false);
@@ -284,9 +300,11 @@ export default function AgentDetail() {
         opening_message: firstMessage || undefined,
         guardrails: guardrailsValue.length ? guardrailsValue : undefined,
         identity: identity.trim() || undefined,
+        first_message_overrides: Object.keys(languageMessages).length > 0 ? languageMessages : undefined,
         language_messages: Object.keys(languageMessages).length > 0 ? languageMessages : undefined,
         boost_keywords: boostKeywords.length > 0 ? boostKeywords : undefined,
         conversation_style: conversationStyle,
+        privacy: { store_audio: recordVoice, zero_retention: zeroRetentionMode },
         privacy_config: { record_voice: recordVoice, zero_retention_mode: zeroRetentionMode },
       };
       await api.patch(`/v1/agents/${id}`, {
@@ -427,10 +445,11 @@ export default function AgentDetail() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/agents" className="inline-flex items-center text-sm text-text-muted hover:text-text">
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to agents
-        </Link>
+        <nav className="flex items-center gap-1.5 text-sm text-text-muted" aria-label="Breadcrumb">
+          <Link to="/agents" className="hover:text-text transition-colors">Agents</Link>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="text-text font-medium truncate max-w-[200px]">{agent.name}</span>
+        </nav>
         <div className="mt-3 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{agent.name}</h1>
@@ -674,23 +693,40 @@ export default function AgentDetail() {
               <LanguagePicker selected={selectedLanguages} onChange={setSelectedLanguages} />
             </Field>
             {selectedLanguages.length > 1 && (
-              <Field label="Per-language opening messages" full>
-                <div className="space-y-2">
-                  {selectedLanguages.map((lang) => {
-                    const opt = LANGUAGE_OPTIONS.find((l) => l.code === lang);
-                    return (
-                      <div key={lang} className="flex items-center gap-2">
-                        <span className="text-xs text-text-muted w-20 shrink-0">{opt?.label ?? lang}</span>
-                        <Input
-                          value={languageMessages[lang] ?? ""}
-                          onChange={(e) => setLanguageMessages((prev) => ({ ...prev, [lang]: e.target.value }))}
-                          placeholder={lang === "en" ? "Defaults to opening message above" : `Opening message in ${opt?.label ?? lang}`}
-                          className="font-mono text-xs"
-                        />
-                      </div>
-                    );
-                  })}
-                  <p className="text-xs text-text-muted">Leave blank to use the default opening message.</p>
+              <Field label="" full>
+                <div className="border border-border rounded-lg p-3 bg-surface-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowLanguageOverrides(!showLanguageOverrides)}
+                    className="flex items-center justify-between w-full text-xs font-semibold text-text hover:text-primary transition-colors"
+                  >
+                    <span>Opening message per language (Optional)</span>
+                    {showLanguageOverrides ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </button>
+                  
+                  {showLanguageOverrides && (
+                    <div className="mt-3 space-y-3 pt-3 border-t border-border">
+                      {selectedLanguages.slice(1).map((lang) => {
+                        const opt = LANGUAGE_OPTIONS.find((l) => l.code === lang);
+                        return (
+                          <div key={lang} className="space-y-1">
+                            <label className="text-[11px] font-medium text-text-muted">
+                              {opt?.label ?? lang} ({lang.toUpperCase()})
+                            </label>
+                            <Input
+                              value={languageMessages[lang] ?? ""}
+                              onChange={(e) => setLanguageMessages((prev) => ({ ...prev, [lang]: e.target.value }))}
+                              placeholder={firstMessage || "Hello!"}
+                              className="font-mono text-xs"
+                            />
+                          </div>
+                        );
+                      })}
+                      <p className="text-[10px] text-text-muted mt-1">
+                        Leave blank to use the default opening message.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </Field>
             )}
@@ -771,7 +807,7 @@ export default function AgentDetail() {
                     ))}
                   </div>
                 )}
-                <p className="text-xs text-text-muted">Words or phrases the speech recogniser should prioritise (max 50). The shop name is added automatically.</p>
+                <p className="text-xs text-text-muted">Brand or product names the agent should recognize accurately. (Max 50. The shop name is added automatically.)</p>
               </div>
             </Field>
             <Field label="Human transfer number">
@@ -1292,7 +1328,9 @@ function TestCallDrawer({ callId, onClose }: { callId: string; onClose: () => vo
       .then((data) => {
         if (data?.status) setCallStatus(data.status);
       })
-      .catch(() => {});
+      .catch(() => {
+        toast.error("Failed to load call status");
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, [callId]);

@@ -5,6 +5,8 @@ import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls } fro
 import { supabase } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
 import { toast } from "sonner";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { formatMoney, formatPhone } from "../lib/format";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,7 @@ const STEP_LINKS: Record<string, string> = {
 };
 
 export default function Dashboard() {
+  usePageTitle("Dashboard");
   const { config } = useVertical();
   const [overview, setOverview] = useState<any>(null);
   const [usage, setUsage] = useState<any>(null);
@@ -107,8 +110,8 @@ export default function Dashboard() {
     if (key === "carts_recovered" || key === "reservations") return overview.carts_recovered ?? overview.bookings ?? 0;
     if (key === "revenue_recovered") {
       const val = overview.revenue_recovered ?? 0;
-      const curr = overview.revenue_currency === "INR" ? "\u20B9" : "$";
-      return val ? `${curr}${Number(val).toLocaleString()}` : `${curr}0`;
+      const curr = overview.revenue_currency || "INR";
+      return formatMoney(val, curr);
     }
     if (key === "no_shows_prevented") return overview.no_shows_prevented ?? 0;
     if (key === "checkins_handled") return overview.checkins_handled ?? 0;
@@ -302,7 +305,7 @@ export default function Dashboard() {
                       <li key={call.id} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2.5">
                           <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span className="font-mono text-xs">{call.to_number || "Unknown"}</span>
+                          <span className="font-mono text-xs" title={call.to_number}>{formatPhone(call.to_number) || "Unknown"}</span>
                         </div>
                         <span className="text-xs text-text-muted capitalize">
                           {call.status?.replace("_", " ") || call.direction}
@@ -322,7 +325,7 @@ export default function Dashboard() {
                   <li key={call.id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2.5">
                       <Phone className="w-3.5 h-3.5 text-success" />
-                      <span className="font-mono text-xs">{call.to_number || "Unknown"}</span>
+                      <span className="font-mono text-xs" title={call.to_number}>{formatPhone(call.to_number) || "Unknown"}</span>
                     </div>
                     <span className="text-xs text-text-muted">
                       {call.direction === "inbound" ? "Inbound" : "Outbound"}

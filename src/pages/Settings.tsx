@@ -18,6 +18,7 @@ import {
 } from "../lib/db";
 import { supabase, getSession } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { VERTICAL_REGISTRY, listVerticals, type VerticalKey } from "../config/verticals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ const PANELS: Record<Tab, React.ComponentType> = {
 };
 
 export default function Settings() {
+  usePageTitle("Settings");
   return (
     <div className="flex flex-col gap-6">
       <div>

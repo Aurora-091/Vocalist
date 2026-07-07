@@ -4,6 +4,8 @@ import { listContacts, createContact, deleteContact as deleteContactDb } from ".
 import { api } from "../lib/api";
 import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { formatPhone } from "../lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +41,7 @@ type Contact = {
 };
 
 export default function Contacts() {
+  usePageTitle("Contacts");
   const { t } = useVertical();
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [q, setQ] = useState("");
@@ -53,6 +56,7 @@ export default function Contacts() {
     try {
       setContacts(await listContacts({ q: query || undefined, limit: 100 }));
     } catch {
+      toast.error("Failed to load contacts");
       setContacts([]);
     }
   }
@@ -164,7 +168,7 @@ export default function Contacts() {
                 {contacts.map((c) => (
                   <TableRow key={c.id} className="group">
                     <Td>{c.name || <span className="text-muted-foreground" aria-label="No name">—</span>}</Td>
-                    <Td className="font-mono">{c.e164}</Td>
+                    <Td className="font-mono"><span title={c.e164}>{formatPhone(c.e164)}</span></Td>
                     <Td>{c.email || <span className="text-muted-foreground" aria-label="No email">—</span>}</Td>
                     <Td className="text-muted-foreground">{c.source || "—"}</Td>
                     <Td>

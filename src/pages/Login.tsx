@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL || "";
 const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || "";
@@ -21,6 +22,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
+  usePageTitle("Login");
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);

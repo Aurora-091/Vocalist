@@ -5,6 +5,7 @@ import { listAgents, deleteAgent as deleteAgentDb } from "../lib/db";
 import { api } from "../lib/api";
 import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ type Agent = {
 type CreateMode = "idle" | "preset" | "manual";
 
 export default function AgentsList() {
+  usePageTitle("Agents");
   const { vertical } = useVertical();
   const [agents, setAgents] = useState<Agent[] | null>(null);
   const [mode, setMode] = useState<CreateMode>("idle");
@@ -50,6 +52,7 @@ export default function AgentsList() {
     try {
       setAgents(await listAgents());
     } catch {
+      toast.error("Failed to load agents");
       setAgents([]);
     }
   }

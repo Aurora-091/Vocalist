@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { getOverview, getOutcomesData } from "../lib/db";
+import { toast } from "sonner";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { formatMoney } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,12 +26,6 @@ const PIPELINE_COLORS: Record<string, string> = {
   busy: "bg-yellow-400",
 };
 
-function fmt(n: number, currency: string) {
-  const sym = currency === "INR" ? "₹" : "$";
-  if (n >= 100000) return `${sym}${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000) return `${sym}${(n / 1000).toFixed(1)}K`;
-  return `${sym}${n.toFixed(0)}`;
-}
 
 function pct(n: number) {
   return `${n.toFixed(1)}%`;
@@ -81,6 +78,7 @@ function MiniSparkline({ data }: { data: { date: string; total: number; complete
 }
 
 export default function Outcomes() {
+  usePageTitle("Results");
   const [overview, setOverview] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +89,7 @@ export default function Outcomes() {
       setOverview(o || {});
       setData(d);
     } catch {
+      toast.error("Failed to load results data");
       setOverview({});
       setData(null);
     } finally {
@@ -134,7 +133,7 @@ export default function Outcomes() {
             <StatCard
               icon={<TrendingUp className="h-4 w-4" />}
               label="Revenue recovered"
-              value={data ? fmt(data.totalRecovered, currency) : `${currencySym}0`}
+              value={data ? formatMoney(data.totalRecovered, currency) : `${currencySym}0`}
               hint="Attributed to outbound calls"
             />
             <StatCard
@@ -256,7 +255,7 @@ export default function Outcomes() {
                         {stats.scheduled > 0 ? pct((stats.recovered / stats.scheduled) * 100) : "—"}
                       </td>
                       <td className="py-3 text-right font-mono font-medium">
-                        {stats.revenue > 0 ? fmt(stats.revenue, currency) : "—"}
+                        {stats.revenue > 0 ? formatMoney(stats.revenue, currency) : "—"}
                       </td>
                     </tr>
                   ))}

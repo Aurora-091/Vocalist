@@ -2,6 +2,55 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.13.0] — 2026-07-07
+
+### Frontend Polish & Ergonomics (M1–M5, M11)
+
+#### M1 — Per-page Document Titles
+- **`src/hooks/usePageTitle.ts`** (new): React hook that sets `${title} · Weeber` on mount and restores the previous title on unmount.
+- Applied to all pages: Dashboard, Agents, Calls, Contacts, Campaigns, Settings, Onboarding, Login, Waitlist ("Join the waitlist"), AgentDetail (dynamic: agent name).
+
+#### M2 — Money Formatting Helper
+- **`src/lib/format.ts`** (new): `formatMoney(value, currency)` uses `Intl.NumberFormat("en-IN")` for correct Indian lakh grouping (e.g., ₹1,00,000).
+- Replaced inline currency rendering in `Dashboard.tsx` (`revenue_recovered`) and `Outcomes.tsx` (`fmt()` function removed).
+
+#### M3 — Relative Timestamps
+- **`src/lib/format.ts`**: `formatRelative(date)` returns "just now", "Xm ago", "Xh ago" for recent events; falls back to short absolute date. Applied to Calls page list and desktop table.
+- Timestamp cells retain full datetime in `title` tooltip on hover.
+
+#### M4 — Standardized Copy-to-Clipboard Feedback
+- **`src/hooks/useCopy.ts`** (new): Unified hook wrapping `navigator.clipboard.writeText` with transient `copied` boolean and automatic Sonner toast.
+- Replaced manual copy state in `Calls.tsx` (`CopyableId` component) and `Waitlist.tsx` (`ReferralCopyLink` component).
+
+#### M5 — .gitignore Hygiene
+- Added `vite.config.ts.timestamp-*.mjs`, `*.local`, `.DS_Store`, and `Thumbs.db` to `.gitignore`.
+
+#### M10 — Breadcrumb Navigation on AgentDetail
+- Replaced "← Back to agents" link with a proper `Agents / {name}` breadcrumb `<nav>` block with `aria-label="Breadcrumb"`.
+
+#### M11 — Phone Number Display Formatting
+- **`src/lib/format.ts`**: `formatPhone(e164)` formats "+919876543210" → "+91 98765 43210", "+14155552671" → "+1 415 555 2671".
+- Applied to Contacts page phone column and Dashboard live/recent call phone displays. Raw E.164 preserved in copy targets and forms.
+
+---
+
+## [1.12.0] — 2026-07-07
+
+### ElevenLabs Conversational Agent Improvements
+
+#### Integrations & Multi-Language
+- **Multi-language preset mapping** (`elevenlabs.provider.js`): Exclude primary language from `language_presets` and map secondary languages inside the request payload, enabling language overrides dynamically.
+- **Accordion language override controls** (`AgentDetail.tsx`): Render collapsible options showing language-specific first message text inputs for extra languages.
+- **ASR Keyword Boosting** (`elevenlabs.provider.js`): Auto-query active Shopify integrations for shop domains/names and up to 20 product titles, blending them with custom agent-specified boost keywords inside outgoing requests.
+
+#### Turn-Taking & Evaluation
+- **Pacing Control Knobs** (`AgentDetail.tsx` & `elevenlabs.provider.js`): Map segmented controls to `quick`, `balanced`, and `patient` turn configurations on ElevenLabs.
+- **Seeded Playbook Success Criteria** (`20260707000000_update_presets_evaluation_criteria.sql`): Add success evaluation criteria to shopify recovery, cod confirmation, and feedback collection presets.
+- **Post-Call Evaluation Webhooks** (`elevenlabs.handler.js`): Extract analysis success metrics and write to both `evaluation_results` column and `metadata.evaluation_criteria_results` on completed calls.
+
+#### Privacy
+- **Zero Retention Mode (ZRM) mapping** (`AgentDetail.tsx` & `elevenlabs.provider.js`): Normalize privacy switches (record_voice / store_audio, zero_retention) and map them to platform settings.
+
 ---
 
 ## [1.11.0] — 2026-07-06

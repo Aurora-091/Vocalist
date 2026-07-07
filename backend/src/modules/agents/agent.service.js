@@ -188,7 +188,35 @@ class AgentService {
 
     if (updateErr) throw updateErr;
 
-    // 4. Upsert organization_agents registry
+    // 4. Sync to Voice Provider
+    if (existing.provider_ref) {
+      try {
+        const systemPrompt = personaService.generateSystemPrompt(mergedPersona);
+        const agentPayload = {
+          ...updatedAgent,
+          org_id: orgId,
+          persona: mergedPersona,
+          provider: existing.provider || "elevenlabs",
+          voice_id
+        };
+        const voiceProvider = buildVoiceProvider({ agent: agentPayload });
+        if (voiceProvider && typeof voiceProvider.updateAgent === "function") {
+          await voiceProvider.updateAgent(existing.provider_ref, agentPayload, systemPrompt);
+        }
+      } catch (err) {
+        const logger = require("../../config/logger");
+        logger.error({ err: err.message, agentId }, "Failed to update agent on voice provider");
+        await supabase
+          .from("agents")
+          .update({
+            sync_status: "failed",
+            sync_error: err.message
+          })
+          .eq("id", agentId);
+      }
+    }
+
+    // 5. Upsert organization_agents registry
     await supabase
       .from("organization_agents")
       .upsert({

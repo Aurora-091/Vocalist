@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { VerticalProvider, useVertical } from "../lib/VerticalContext";
 import type { VerticalKey } from "../config/verticals";
 import { WebTestCallModal } from "../components/WebTestCallModal";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 type Preset = {
   id: string;
@@ -66,6 +67,7 @@ export default function Onboarding() {
 }
 
 function OnboardingInner() {
+  usePageTitle("Onboarding");
   const navigate = useNavigate();
   const { setVertical: persistVertical } = useVertical();
   const [step, setStep] = useState(0);

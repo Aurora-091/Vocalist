@@ -27,6 +27,7 @@ import {
 import { useState } from "react";
 import { listCalls, getCallsSummary, getCall, listAgents } from "../lib/db";
 import { supabase } from "../lib/supabase";
+import { toast } from "sonner";
 import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { useCopy } from "../hooks/useCopy";
+import { formatRelative, formatPhone } from "../lib/format";
 
 type Agent = { id: string; name: string };
 type ConversationRow = {
@@ -133,6 +137,7 @@ function defaultDateFrom() {
 }
 
 export default function Conversations() {
+  usePageTitle("Calls");
   const [searchParams, setSearchParams] = useSearchParams();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [conversations, setConversations] = useState<ConversationRow[] | null>(null);
@@ -210,6 +215,7 @@ export default function Conversations() {
       setTotalCount(result.count);
       setSummary(summaryResult);
     } catch {
+      toast.error("Failed to load calls");
       setConversations([]);
       setTotalCount(0);
       setSummary(null);
@@ -465,15 +471,8 @@ export default function Conversations() {
                       <Badge variant={STATUS_VARIANT[c.status] || "outline"} className="capitalize text-xs">
                         {c.status.replace(/_/g, " ")}
                       </Badge>
-                      <span className="text-[11px] text-muted-foreground">
-                        {c.started_at
-                          ? new Date(c.started_at).toLocaleString(undefined, {
-                              month: "short",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "—"}
+                      <span className="text-[11px] text-muted-foreground" title={c.started_at ? new Date(c.started_at).toLocaleString() : undefined}>
+                        {c.started_at ? formatRelative(c.started_at) : "—"}
                       </span>
                     </div>
                   </div>
@@ -527,15 +526,9 @@ export default function Conversations() {
                           {c.hangup_by || "—"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {c.started_at
-                            ? new Date(c.started_at).toLocaleString(undefined, {
-                                month: "short",
-                                day: "2-digit",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "—"}
+                          <span title={c.started_at ? new Date(c.started_at).toLocaleString() : undefined}>
+                            {c.started_at ? formatRelative(c.started_at) : "—"}
+                          </span>
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {c.cost_usd != null ? `$${Number(c.cost_usd).toFixed(3)}` : "—"}
@@ -605,22 +598,15 @@ export default function Conversations() {
 }
 
 function CopyableId({ id }: { id: string }) {
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy(e: React.MouseEvent) {
-    e.stopPropagation();
-    navigator.clipboard.writeText(id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
+  const { copied, copy } = useCopy({ message: "ID copied" });
 
   return (
     <span className="inline-flex items-center gap-1">
       <span>{id.slice(0, 7)}…</span>
       <button
-        onClick={handleCopy}
+        onClick={(e) => { e.stopPropagation(); copy(id); }}
         className="text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Copy ID"
+        aria-label="Copy full ID"
       >
         {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
       </button>

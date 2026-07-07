@@ -371,3 +371,86 @@ test("remediation: elevenlabs provider complies with agent payload structure req
   assert.deepEqual(schema.required, ["patient_id", "severity"]);
 });
 
+test("remediation: elevenlabs provider language presets, ASR keyword boosting, conversation style, and privacy mappings", () => {
+  const ElevenLabsProvider = require("../../providers/voice/elevenlabs.provider");
+  const provider = new ElevenLabsProvider({ orgId: "org-123", config: { api_key: "test-api-key" } });
+
+  // Define an agent with multi-language (Task 1), boost keywords (Task 2), conversation style (Task 3), and privacy config (Task 5)
+  const mockAgent = {
+    name: "Multilingual Assistant",
+    first_message: "Hello patient!",
+    language: "en-US",
+    languages: ["en-US", "hi-IN", "es-ES"],
+    voice_id: "voice-cai-uuid",
+    persona: {
+      boost_keywords: ["brandname", "customkeyword"],
+      first_message_overrides: {
+        "hi-IN": "Namaste!",
+        "es-ES": "Hola!"
+      },
+      conversation_style: "quick",
+      privacy: {
+        store_audio: false,
+        zero_retention: true
+      }
+    },
+    // Mock shopify integration config
+    shopify_config: {
+      shop_name: "Mock Shop",
+      products: [
+        { title: "Product A" },
+        { title: "Product B" }
+      ]
+    }
+  };
+
+  const payload = provider._buildAgentPayload(mockAgent, "Greet and help");
+  assert.ok(payload);
+
+  // Task 1: Multi-language mapping checks
+  assert.equal(payload.conversation_config.agent.language, "en-US");
+  assert.ok(payload.conversation_config.language_presets);
+  assert.ok(payload.conversation_config.language_presets["hi-IN"]);
+  assert.equal(payload.conversation_config.language_presets["hi-IN"].overrides.agent.language, "hi-IN");
+  assert.equal(payload.conversation_config.language_presets["hi-IN"].overrides.agent.first_message, "Namaste!");
+  assert.ok(payload.conversation_config.language_presets["es-ES"]);
+  assert.equal(payload.conversation_config.language_presets["es-ES"].overrides.agent.first_message, "Hola!");
+  // The primary language must not be in presets
+  assert.equal("en-US" in payload.conversation_config.language_presets, false);
+
+  // Task 2: ASR keyword boosting checks
+  assert.ok(payload.conversation_config.asr);
+  assert.ok(Array.isArray(payload.conversation_config.asr.keywords));
+  // Deduplicated list should contain brandname, customkeyword, Mock Shop, Product A, Product B
+  const keywords = payload.conversation_config.asr.keywords;
+  assert.ok(keywords.includes("brandname"));
+  assert.ok(keywords.includes("customkeyword"));
+  assert.ok(keywords.includes("Mock Shop"));
+  assert.ok(keywords.includes("Product A"));
+  assert.ok(keywords.includes("Product B"));
+
+  // Task 3: Conversation style turn-taking checks
+  assert.ok(payload.conversation_config.turn);
+  assert.equal(payload.conversation_config.turn.turn_timeout, 4);
+  assert.equal(payload.conversation_config.turn.turn_eagerness, "eager");
+  assert.equal(payload.conversation_config.turn.silence_end_call_timeout, 15);
+
+  // Task 5: Privacy configuration checks
+  assert.ok(payload.platform_settings?.privacy);
+  assert.equal(payload.platform_settings.privacy.record_voice, false);
+  assert.equal(payload.platform_settings.privacy.zero_retention_mode, true);
+  
+  // Test fallback conversation style to balanced
+  const fallbackAgent = {
+    name: "Fallback Agent",
+    language: "en",
+    persona: {
+      conversation_style: "unknown-style"
+    }
+  };
+  const fallbackPayload = provider._buildAgentPayload(fallbackAgent, "Greet");
+  assert.ok(fallbackPayload.conversation_config.turn);
+  assert.equal(fallbackPayload.conversation_config.turn.turn_eagerness, "normal"); // balanced eager mapping
+  assert.equal(fallbackPayload.conversation_config.turn.silence_end_call_timeout, -1);
+});
+

@@ -173,11 +173,30 @@ class ElevenLabsProvider extends VoiceProvider {
       },
     };
 
-    // ASR keyword boosting: user-defined boost_keywords + shop_name as one phrase (capped at 50, deduped)
-    // TODO(G6): extend to include product titles when a product-title caching mechanism is available
-    const rawKeywords = Array.isArray(agent.persona?.boost_keywords) ? [...agent.persona.boost_keywords] : [];
-    const shopName = this.config?.shop_name || agent.integration_config?.shop_name || agent.persona?.shop_name;
-    if (shopName) rawKeywords.push(shopName);
+    // ASR keyword boosting: shop_name + up to 20 product titles + boost_keywords (deduped, capped at 50)
+    const rawKeywords = [];
+    if (Array.isArray(agent.persona?.boost_keywords)) {
+      rawKeywords.push(...agent.persona.boost_keywords);
+    }
+    if (Array.isArray(agent.boost_keywords)) {
+      rawKeywords.push(...agent.boost_keywords);
+    }
+
+    const shopifyConfig = agent.shopify_config || this.config || null;
+    if (shopifyConfig) {
+      const shopName = shopifyConfig.shop_name || shopifyConfig.shop_domain;
+      if (shopName) rawKeywords.push(shopName);
+
+      const rawProducts = shopifyConfig.products || shopifyConfig.enrichment?.products || shopifyConfig.enrichment?.top_products || [];
+      if (Array.isArray(rawProducts)) {
+        const productTitles = rawProducts
+          .map((p) => (typeof p === "object" && p !== null ? p.title : p))
+          .filter((p) => typeof p === "string" && p.trim().length > 0)
+          .slice(0, 20);
+        rawKeywords.push(...productTitles);
+      }
+    }
+
     const dedupedKeywords = [...new Set(rawKeywords.map((k) => String(k).trim()).filter(Boolean))].slice(0, 50);
     if (dedupedKeywords.length > 0) {
       conversationConfig.asr = { keywords: dedupedKeywords };
@@ -185,11 +204,11 @@ class ElevenLabsProvider extends VoiceProvider {
 
     // Multi-language: build language_presets for secondary languages
     const languages = agent.languages && Array.isArray(agent.languages) ? agent.languages : [language];
-    const langMessages = agent.persona?.language_messages || {};
+    const firstMessageOverrides = agent.persona?.first_message_overrides || agent.persona?.language_messages || {};
     if (languages.length > 1) {
       const presets = {};
-      for (const lang of languages) {
-        const langOverrideMsg = langMessages[lang];
+      for (const lang of languages.slice(1)) {
+        const langOverrideMsg = firstMessageOverrides[lang];
         presets[lang] = {
           overrides: {
             agent: {
@@ -209,10 +228,8 @@ class ElevenLabsProvider extends VoiceProvider {
       balanced: { turn_timeout: 7,  turn_eagerness: "normal",  silence_end_call_timeout: -1 },
       patient:  { turn_timeout: 12, turn_eagerness: "patient", silence_end_call_timeout: 45 },
     };
-    const conversationStyle = agent.persona?.conversation_style || agent.conversation_style;
-    if (conversationStyle && TURN_MAP[conversationStyle]) {
-      conversationConfig.turn = TURN_MAP[conversationStyle];
-    }
+    const conversationStyle = agent.persona?.conversation_style || agent.conversation_style || "balanced";
+    conversationConfig.turn = TURN_MAP[conversationStyle] || TURN_MAP.balanced;
 
     const payload = {
       name: agent.name,
@@ -322,7 +339,7 @@ class ElevenLabsProvider extends VoiceProvider {
 
   _buildPlatformSettings(agent) {
     const analysisConfig = agent.analysis_config || agent.persona?.analysis_config;
-    const privacyConfig = agent.privacy_config || agent.persona?.privacy_config;
+    const privacyConfig = agent.privacy_config || agent.persona?.privacy_config || agent.persona?.privacy;
     if (!analysisConfig && !privacyConfig) return null;
 
     const settings = {};
@@ -360,26 +377,56 @@ class ElevenLabsProvider extends VoiceProvider {
       }
     }
 
-    // privacy: Task 5 — persisted per-agent as privacy_config
-    if (privacyConfig) {
+    // privacy: Task 5 — support both persona.privacy and privacy_config formats
+    const privacyCfg = agent.privacy_config || agent.persona?.privacy_config || agent.persona?.privacy;
+    if (privacyCfg) {
       settings.privacy = {};
-      if (typeof privacyConfig.record_voice === "boolean") {
-        settings.privacy.record_voice = privacyConfig.record_voice;
-      }
-      if (typeof privacyConfig.zero_retention_mode === "boolean") {
-        settings.privacy.zero_retention_mode = privacyConfig.zero_retention_mode;
-      }
-      if (Object.keys(settings.privacy).length === 0) {
-        delete settings.privacy;
-      }
+      
+      const recordVoice = typeof privacyCfg.store_audio === "boolean"
+        ? privacyCfg.store_audio
+        : typeof privacyCfg.record_voice === "boolean"
+        ? privacyCfg.record_voice
+        : true;
+        
+      const zeroRetention = typeof privacyCfg.zero_retention === "boolean"
+        ? privacyCfg.zero_retention
+        : typeof privacyCfg.zero_retention_mode === "boolean"
+        ? privacyCfg.zero_retention_mode
+        : false;
+        
+      settings.privacy.record_voice = recordVoice;
+      settings.privacy.zero_retention_mode = zeroRetention;
     }
 
     return Object.keys(settings).length > 0 ? settings : null;
   }
 
+  async _getShopifyConfig() {
+    if (!this.orgId) return null;
+    try {
+      const { requireAdmin } = require("../../config/supabase");
+      const admin = requireAdmin();
+      const { data: intRow } = await admin
+        .from("integrations")
+        .select("config, status")
+        .eq("org_id", this.orgId)
+        .eq("type", "shopify")
+        .maybeSingle();
+      if (intRow && intRow.status === "active") {
+        return intRow.config || null;
+      }
+    } catch (err) {
+      const logger = require("../../config/logger");
+      logger.error({ err: err.message, orgId: this.orgId }, "Failed to load Shopify integration config in ElevenLabs provider");
+    }
+    return null;
+  }
+
   // Agent Management
   async createAgent(agent, systemPrompt) {
-    const payload = this._buildAgentPayload(agent, systemPrompt);
+    const shopifyConfig = await this._getShopifyConfig();
+    const agentWithShopify = { ...agent, shopify_config: shopifyConfig };
+    const payload = this._buildAgentPayload(agentWithShopify, systemPrompt);
     const result = await this._call("POST", "/v1/convai/agents/create", payload);
     return { provider_ref: result.agent_id, provider_meta: result };
   }
@@ -389,7 +436,9 @@ class ElevenLabsProvider extends VoiceProvider {
       const { BadRequest } = require("../../utils/errors");
       throw BadRequest("Missing providerRef");
     }
-    const payload = this._buildAgentPayload(agent, systemPrompt);
+    const shopifyConfig = await this._getShopifyConfig();
+    const agentWithShopify = { ...agent, shopify_config: shopifyConfig };
+    const payload = this._buildAgentPayload(agentWithShopify, systemPrompt);
     const result = await this._call("PATCH", `/v1/convai/agents/${providerRef}`, payload);
     return { provider_ref: providerRef, provider_meta: result };
   }

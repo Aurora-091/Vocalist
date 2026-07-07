@@ -18,3 +18,13 @@ build/
 # Supabase CLI State
 supabase/.temp/
 supabase/.branches/
+
+# Vite timestamps (created by --watch mode)
+vite.config.ts.timestamp-*.mjs
+
+# Local override files
+*.local
+
+# OS junk
+.DS_Store
+Thumbs.db

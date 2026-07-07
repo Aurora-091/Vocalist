@@ -267,10 +267,16 @@ async function handle(payload) {
       .maybeSingle();
 
     if (scRow) {
-      const scUpdate = { outcome, status: "completed" };
+      const elEvaluation = data?.analysis?.evaluation || data?.evaluation || data?.analysis?.evaluation_criteria_results || null;
+      const scUpdate = {
+        outcome,
+        status: "completed",
+        metadata: {
+          ...(scRow.metadata || {}),
+          evaluation_criteria_results: elEvaluation,
+        }
+      };
 
-      // Persist evaluation results from ElevenLabs post-call analysis
-      const elEvaluation = data?.analysis?.evaluation || data?.evaluation;
       if (elEvaluation && typeof elEvaluation === "object") {
         scUpdate.evaluation_results = elEvaluation;
       }

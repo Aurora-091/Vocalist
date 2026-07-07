@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowRight, CircleCheck as CheckCircle2, Circle as XCircle, Mail, Shield, Lock, SlidersHorizontal, Copy, Check, Sparkles, Phone } from "lucide-react";
+import { useCopy } from "../hooks/useCopy";
 import { MarketingNav } from "../components/marketing/MarketingNav";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { joinWaitlist } from "../lib/api";
 import { useWaitlistCount } from "../lib/useWaitlistCount";
 import { trackFormSubmit, trackFormSuccess, trackSignupConversion } from "../lib/analytics";
+import { usePageTitle } from "../hooks/usePageTitle";
 import {
   STATS,
   HOW_IT_WORKS,
@@ -162,16 +164,9 @@ function HeroBadge() {
 }
 
 function ReferralCopyLink({ referralCode }: { referralCode: string }) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopy({ message: "Referral link copied!", timeout: 2000 });
   const referralUrl = `https://weeber.ai/?ref=${referralCode}`;
   const shareText = `I just joined the Weeber waitlist — AI voice agents that book, recover carts, and follow up. 24/7, no code. Join here:`;
-
-  function handleCopy() {
-    navigator.clipboard.writeText(referralUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
 
   function handleNativeShare() {
     if (navigator.share) {
@@ -189,7 +184,7 @@ function ReferralCopyLink({ referralCode }: { referralCode: string }) {
         <span className="flex-1 text-[13px] font-mono text-[var(--m-text-muted)] truncate select-all">{referralUrl}</span>
         <button
           type="button"
-          onClick={handleCopy}
+          onClick={() => copy(referralUrl)}
           className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-md bg-[var(--m-text)] text-[var(--m-bg)] hover:opacity-90 transition-opacity flex-shrink-0"
         >
           {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -443,6 +438,7 @@ function HeroForm() {
 }
 
 export default function Waitlist() {
+  usePageTitle("Join the waitlist");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const revealRef = useReveal();
