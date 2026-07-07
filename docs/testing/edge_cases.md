@@ -31,6 +31,9 @@ This document catalogs critical system boundaries, fail-modes, and security inte
 | **M-4** | UI/UX | Unified Copy-to-Clipboard Feedback | 1. Copy a call ID from the Calls table.<br>2. Copy a referral link from the Waitlist confirmation panel. | Both copy actions show a green ✓ icon, trigger a Sonner toast ("ID copied" / "Referral link copied!"), and reset after ~1.5s. No silent failures. | `[ ] Pending` |
 | **M-5** | Dev/Config | .gitignore Junk Patterns | 1. Run `git status` after a Vite watch-mode session.<br>2. Check if `vite.config.ts.timestamp-*.mjs` or any `*.local` files appear as untracked. | Those files are silently ignored. `git status` shows a clean working tree for those patterns. | `[ ] Pending` |
 | **M-11** | UI/UX | Phone Number Display Formatting | 1. Open the Contacts page.<br>2. Check the Phone column for Indian (+91) numbers.<br>3. Hover a number to see the raw E.164 value. | Displayed format is "+91 98765 43210". Hover tooltip shows raw E.164. Copy actions and forms retain raw value. | `[ ] Pending` |
+| **M-7** | UI/UX | Button Loading Discipline | 1. Click save on settings or agent details.<br>2. Inspect button icon and clickability during the API roundtrip. | Button shows animated Loader2 spinner icon, is disabled during request, and correctly re-enables on success/failure. | `[ ] Pending` |
+| **M-8** | UI/UX | Destructive Actions Confirmation | 1. Attempt to delete an agent, contact, knowledge source, or active session. | Standard modal AlertDialog appears requesting explicit confirmation before executing the deletion. | `[ ] Pending` |
+| **M-9** | UI/UX | Form Ergonomics and Focus | 1. Press Enter in onboarding or waitlist text inputs.<br>2. Submit waitlist form with invalid fields. | Form submits on Enter key press. On failed waitlist submit, the first invalid input automatically receives focus. | `[ ] Pending` |
 
 ---
 

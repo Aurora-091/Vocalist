@@ -32,6 +32,19 @@ All notable changes to the Weeber platform will be documented in this file. This
 - **`src/lib/format.ts`**: `formatPhone(e164)` formats "+919876543210" → "+91 98765 43210", "+14155552671" → "+1 415 555 2671".
 - Applied to Contacts page phone column and Dashboard live/recent call phone displays. Raw E.164 preserved in copy targets and forms.
 
+#### M7 — Button Loading Discipline
+- Added animated `Loader2` spinner indicators to save setting actions when a transaction is in progress.
+- Applied to settings profile save, password change, organization details save, create campaign button, and agent detail save settings.
+
+#### M8 — Destructive Actions Confirmation
+- Replaced custom inline card/row confirmation overlays with modal `AlertDialog` components.
+- Applied to agent deletions (`AgentsList.tsx`), contact deletions (`Contacts.tsx`), knowledge base source deletions (`Knowledge.tsx`), and active session revocations (`Settings.tsx`).
+
+#### M9 — Form Keyboard and Input Ergonomics
+- Wrapped onboarding step 2 business info in a proper `<form>` element enabling native Enter-key submission.
+- Added `autoFocus` to onboarding business name field.
+- Implemented automatic invalid field focus focusing on failed waitlist submit.
+
 ---
 
 ## [1.12.0] — 2026-07-07

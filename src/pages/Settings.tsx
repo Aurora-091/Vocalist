@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor, Trash2, LogOut } from "lucide-react";
+import { Sun, Moon, Monitor, Trash2, LogOut, Loader as Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import {
   getOrg,
@@ -23,6 +23,17 @@ import { VERTICAL_REGISTRY, listVerticals, type VerticalKey } from "../config/ve
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Field, FieldLabel, FieldGroup, FieldDescription } from "@/components/ui/field";
@@ -164,6 +175,7 @@ function ProfilePanel() {
             </Select>
           </Field>
           <Button onClick={save} disabled={busy}>
+            {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {busy ? "Saving..." : "Save profile"}
           </Button>
         </FieldGroup>
@@ -306,6 +318,7 @@ function SecurityPanel() {
               </Field>
               <div className="flex gap-2">
                 <Button onClick={changePassword} disabled={pwBusy || newPw.length < 8}>
+                  {pwBusy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {pwBusy ? "Updating..." : "Update password"}
                 </Button>
                 <Button variant="outline" onClick={() => setChangingPw(false)}>Cancel</Button>
@@ -320,12 +333,30 @@ function SecurityPanel() {
           <div className="flex items-center justify-between">
             <div className="font-medium">Active Sessions</div>
             {sessions && sessions.length > 1 && (
-              <button
-                onClick={revokeAllOthers}
-                className="text-xs text-danger hover:text-danger/80 font-medium"
-              >
-                Revoke all others
-              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button className="text-xs text-danger hover:text-danger/80 font-medium">
+                    Revoke all others
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Revoke all other sessions?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will immediately sign out all other active devices. You will remain signed in on this device.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={revokeAllOthers}
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    >
+                      Revoke all others
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         </div>
@@ -350,12 +381,34 @@ function SecurityPanel() {
                     </div>
                   </div>
                   {i !== 0 && (
-                    <button
-                      onClick={() => handleRevokeSession(s.id)}
-                      className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                          aria-label={`Revoke session on ${s.device_info || "Unknown device"}`}
+                          title="Revoke session"
+                        >
+                          <LogOut className="w-4 h-4" />
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Revoke session?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to sign out of the session on "{s.device_info || "Unknown device"}" ({s.ip_address || "Unknown IP"})?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleRevokeSession(s.id)}
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                          >
+                            Revoke session
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               ))}
@@ -445,6 +498,7 @@ function OrgPanel() {
             </Field>
             <div className="flex items-center gap-3">
               <Button onClick={save} disabled={busy || !name}>
+                {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {busy ? "Saving..." : "Save"}
               </Button>
               {saved && <span className="text-sm text-success">Saved.</span>}

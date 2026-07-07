@@ -7,6 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type KnowledgeSource = {
   id: string;
@@ -167,30 +178,35 @@ export default function Knowledge() {
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                     </button>
-                    {confirmDeleteId === s.id ? (
-                      <div className="flex items-center gap-1">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
                         <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-xs px-2 py-0.5 rounded border border-border text-text-muted hover:text-text"
-                        >
-                          No
-                        </button>
-                        <button
-                          onClick={() => deleteSource(s.id)}
+                          className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
                           disabled={deletingId === s.id}
-                          className="text-xs px-2 py-0.5 rounded border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20 disabled:opacity-50"
+                          aria-label={`Delete ${s.title}`}
+                          title="Delete source"
                         >
-                          {deletingId === s.id ? "…" : "Yes"}
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDeleteId(s.id)}
-                        className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete source?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete knowledge source "{s.title}"? Your AI agents will no longer have access to this source. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteSource(s.id)}
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                          >
+                            {deletingId === s.id ? "Deleting…" : "Delete"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </CardContent>

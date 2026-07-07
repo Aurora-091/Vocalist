@@ -248,25 +248,36 @@ function OnboardingInner() {
             )}
 
             {currentKey === "business" && (
-              <div className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (businessName.trim()) next();
+                }}
+                className="space-y-4"
+              >
                 <p className="text-sm text-text-muted">
                   Tell us about your business. This personalizes the agent's opening message and identity.
                 </p>
                 <div>
-                  <label className="block text-xs font-medium text-text-muted mb-1">Business name</label>
+                  <label className="block text-xs font-medium text-[#475569] mb-1">Business name</label>
                   <input
+                    autoFocus
+                    required
+                    id="onboarding-business-name"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     placeholder="Bloom Dental Clinic"
-                    className="h-10 px-3 rounded-md border border-border bg-surface w-full max-w-md text-sm"
+                    className="h-10 px-3 rounded-md border border-border bg-surface w-full max-w-md text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-text-muted mb-1">Timezone</label>
+                  <label className="block text-xs font-medium text-[#475569] mb-1">Timezone</label>
                   <input
+                    required
+                    id="onboarding-timezone"
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="h-10 px-3 rounded-md border border-border bg-surface w-full max-w-md text-sm"
+                    className="h-10 px-3 rounded-md border border-border bg-surface w-full max-w-md text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 {selectedPreset && (
@@ -276,7 +287,7 @@ function OnboardingInner() {
                     <div className="text-xs text-text-muted mt-0.5">{selectedPreset.description}</div>
                   </div>
                 )}
-              </div>
+              </form>
             )}
 
             {currentKey === "voice" && (

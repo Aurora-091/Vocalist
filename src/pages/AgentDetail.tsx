@@ -840,7 +840,11 @@ export default function AgentDetail() {
 
           <div className="mt-6 flex items-center gap-3 flex-wrap">
             <Button onClick={save} disabled={saving}>
-              <Save className="w-4 h-4 mr-2" />
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
               {saving ? "Saving…" : "Save changes"}
             </Button>
             <button
@@ -1038,7 +1042,11 @@ export default function AgentDetail() {
           )}
           <div className="pt-2">
             <Button onClick={save} disabled={saving} size="sm">
-              <Save className="w-4 h-4 mr-2" />
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
               {saving ? "Saving…" : "Save privacy settings"}
             </Button>
           </div>

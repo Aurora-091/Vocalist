@@ -17,6 +17,17 @@ import {
   EmptyDescription,
   EmptyContent,
 } from "@/components/ui/empty";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { AgentPresetPicker } from "../components/AgentPresetPicker";
 import VoiceLibrary from "./VoiceLibrary";
 
@@ -302,34 +313,43 @@ export default function AgentsList() {
                 >
                   <Copy className="w-3.5 h-3.5" />
                 </button>
-                <button
-                  onClick={(e) => { e.preventDefault(); setConfirmId(a.id); }}
-                  className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all"
-                  aria-label="Delete agent"
-                  title="Delete"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Delete confirmation overlay */}
-              {confirmId === a.id && (
-                <div className="absolute inset-0 bg-surface/95 rounded-md border border-danger/30 flex flex-col items-center justify-center gap-3 p-4 z-10">
-                  <p className="text-sm font-medium text-center">Delete "{a.name}"?</p>
-                  <p className="text-xs text-text-muted text-center">This cannot be undone.</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setConfirmId(null)}>Cancel</Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
                       disabled={deletingId === a.id}
-                      onClick={() => deleteAgent(a.id)}
+                      aria-label="Delete agent"
+                      title="Delete"
                     >
-                      {deletingId === a.id ? "Deleting…" : "Delete"}
-                    </Button>
-                  </div>
-                </div>
-              )}
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete agent?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{a.name}"? This will permanently delete this agent and all associated call history. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteAgent(a.id);
+                        }}
+                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                      >
+                        {deletingId === a.id ? "Deleting…" : "Delete"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
           )})}
 

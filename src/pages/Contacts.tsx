@@ -12,6 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableHeader,
   TableBody,
@@ -189,36 +200,34 @@ export default function Contacts() {
                       )}
                     </Td>
                     <Td>
-                      {confirmDeleteId === c.id ? (
-                        <div className="flex items-center gap-1.5" role="group" aria-label={`Confirm delete ${c.name || c.e164}`}>
-                          <span className="text-xs text-muted-foreground">Sure?</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setConfirmDeleteId(null)}
-                            aria-label="Cancel delete"
-                          >
-                            No
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteContact(c.id)}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button
+                            className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
                             disabled={deletingId === c.id}
-                            aria-label={`Confirm delete ${c.name || c.e164}`}
+                            aria-label={`Delete ${c.name || c.e164}`}
                           >
-                            {deletingId === c.id ? "…" : "Yes"}
-                          </Button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmDeleteId(c.id)}
-                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                          aria-label={`Delete ${c.name || c.e164}`}
-                        >
-                          <Trash2 className="size-3.5" aria-hidden="true" />
-                        </button>
-                      )}
+                            <Trash2 className="size-3.5" aria-hidden="true" />
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete contact?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete contact {c.name ? `"${c.name}" (${c.e164})` : c.e164}? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteContact(c.id)}
+                              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                            >
+                              {deletingId === c.id ? "Deleting…" : "Delete"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </Td>
                   </TableRow>
                 ))}
@@ -252,31 +261,34 @@ export default function Contacts() {
                         <span className="size-1.5 rounded-full bg-current mr-1" />none
                       </Badge>
                     )}
-                    {confirmDeleteId === c.id ? (
-                      <div className="flex items-center gap-1">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
                         <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-xs px-2 py-0.5 rounded border border-border text-text-muted"
-                        >
-                          No
-                        </button>
-                        <button
-                          onClick={() => deleteContact(c.id)}
+                          className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
                           disabled={deletingId === c.id}
-                          className="text-xs px-2 py-0.5 rounded border border-danger/40 bg-danger/10 text-danger disabled:opacity-50"
+                          aria-label={`Delete ${c.name || c.e164}`}
                         >
-                          {deletingId === c.id ? "…" : "Yes"}
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDeleteId(c.id)}
-                        className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
-                        aria-label={`Delete ${c.name || c.e164}`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete contact?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete contact {c.name ? `"${c.name}" (${c.e164})` : c.e164}? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteContact(c.id)}
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                          >
+                            {deletingId === c.id ? "Deleting…" : "Delete"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </div>

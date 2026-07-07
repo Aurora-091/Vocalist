@@ -246,6 +246,14 @@ function HeroForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTouched({ name: true, email: true });
+    if (!nameValid) {
+      document.getElementById("waitlist-name")?.focus();
+      return;
+    }
+    if (!emailValid) {
+      document.getElementById("waitlist-email")?.focus();
+      return;
+    }
     if (!canSubmit) return;
     setState("loading");
     setErrorMsg("");
