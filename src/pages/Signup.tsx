@@ -41,18 +41,26 @@ export default function Signup() {
   });
 
   async function submit(data: SignupFormValues) {
-    const { error } = await supabase.auth.signUp({
+    const { data: result, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
-      options: { data: { org_name: data.orgName } },
+      options: {
+        data: { org_name: data.orgName },
+        emailRedirectTo: `${window.location.origin}/onboarding`,
+      },
     });
     if (error) {
       toast.error(error.message);
       return;
     }
     trackSignupConversion();
-    toast.success("Account created successfully!");
-    navigate("/onboarding");
+    if (result.session) {
+      toast.success("Account created successfully!");
+      navigate("/onboarding");
+    } else {
+      toast.success("Check your email to confirm your account, then sign in.");
+      navigate("/login");
+    }
   }
 
   async function signUpWithGoogle() {
