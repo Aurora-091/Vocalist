@@ -46,7 +46,7 @@ export default function Signup() {
       password: data.password,
       options: {
         data: { org_name: data.orgName },
-        emailRedirectTo: `${window.location.origin}/onboarding`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (error) {
@@ -55,11 +55,9 @@ export default function Signup() {
     }
     trackSignupConversion();
     if (result.session) {
-      toast.success("Account created successfully!");
-      navigate("/onboarding");
+      navigate("/dashboard?welcome=1");
     } else {
-      toast.success("Check your email to confirm your account, then sign in.");
-      navigate("/login");
+      navigate(`/auth/verify?email=${encodeURIComponent(data.email)}`);
     }
   }
 
@@ -67,7 +65,7 @@ export default function Signup() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/onboarding`,
+        redirectTo: `${window.location.origin}/dashboard?welcome=1`,
         queryParams: { prompt: "select_account" },
       },
     });

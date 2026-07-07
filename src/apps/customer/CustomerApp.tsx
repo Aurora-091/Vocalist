@@ -10,7 +10,8 @@ import Terms from "@/pages/Terms";
 
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
-const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const VerifyEmail = lazy(() => import("@/pages/auth/VerifyEmail"));
+const AuthCallback = lazy(() => import("@/pages/auth/AuthCallback"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const AgentsList = lazy(() => import("@/pages/AgentsList"));
 const AgentDetail = lazy(() => import("@/pages/AgentDetail"));
@@ -61,17 +62,12 @@ export default function CustomerApp() {
         {/* Auth */}
         <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
         <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
+        <Route path="/auth/verify" element={<PublicOnly><VerifyEmail /></PublicOnly>} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/auth/callback/:provider" element={<OAuthCallback />} />
 
-        {/* Onboarding */}
-        <Route
-          path="/onboarding"
-          element={
-            <RequireAuth>
-              <Onboarding />
-            </RequireAuth>
-          }
-        />
+        {/* Onboarding redirects to dashboard (modal opens automatically) */}
+        <Route path="/onboarding" element={<Navigate to="/dashboard?welcome=1" replace />} />
 
         {/* App (authenticated) */}
         <Route

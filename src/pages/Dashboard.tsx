@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Check, Sparkles, Phone, Bot, Megaphone } from "lucide-react";
 import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls } from "../lib/db";
 import { supabase } from "../lib/supabase";
@@ -11,6 +11,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 
 const STEP_LABELS: Record<string, string> = {
   pick_vertical: "Pick your business",
@@ -33,12 +34,14 @@ const STEP_LINKS: Record<string, string> = {
 export default function Dashboard() {
   usePageTitle("Dashboard");
   const { config } = useVertical();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [overview, setOverview] = useState<any>(null);
   const [usage, setUsage] = useState<any>(null);
   const [steps, setSteps] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
   const [liveCalls, setLiveCalls] = useState<any[]>([]);
   const [recentCalls, setRecentCalls] = useState<any[]>([]);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -51,6 +54,18 @@ export default function Dashboard() {
         setOverview(o);
         setUsage(u);
         setSteps(s);
+
+        const hasWelcome = searchParams.get("welcome") === "1";
+        const isIncomplete = s && !Object.values(s).every(Boolean);
+        const hasNoAgents = (o?.calls_total ?? 0) === 0;
+
+        if ((hasWelcome || isIncomplete) && hasNoAgents) {
+          setOnboardingOpen(true);
+        }
+        if (hasWelcome) {
+          searchParams.delete("welcome");
+          setSearchParams(searchParams, { replace: true });
+        }
       } catch {
         toast.error("Failed to load dashboard data");
         setOverview({ calls_total: 0, calls_completed: 0, opt_outs: 0, bookings: 0 });
@@ -58,6 +73,7 @@ export default function Dashboard() {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -195,6 +211,11 @@ export default function Dashboard() {
                 </li>
               ))}
             </ul>
+            <div className="mt-4 pt-3 border-t border-border">
+              <Button variant="outline" size="sm" onClick={() => setOnboardingOpen(true)}>
+                Resume setup
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -364,6 +385,15 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <OnboardingModal
+        open={onboardingOpen}
+        onOpenChange={setOnboardingOpen}
+        onComplete={() => {
+          const el = document.querySelector("[data-checklist]");
+          el?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
     </div>
   );
 }
