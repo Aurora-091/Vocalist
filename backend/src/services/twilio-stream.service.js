@@ -1,10 +1,40 @@
 const WebSocket = require("ws");
 const logger = require("../config/logger");
 const { requireAdmin } = require("../config/supabase");
+const metrics = require("../utils/metrics");
 
-// Handles the upgrade stream connection from server.js
+const TERMINAL_STATUSES = ["completed", "failed", "no_answer"];
+const EL_CONNECT_TIMEOUT_MS = 10_000;
+const EL_PING_INTERVAL_MS = 20_000;
+const MAX_BUFFERED_BYTES = 64 * 1024;
+
+async function connectElevenLabsWs(agentRef, apiKey, callId) {
+  const socket = new WebSocket(
+    `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentRef}`,
+    { headers: { "xi-api-key": apiKey } }
+  );
+
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      socket.terminate();
+      reject(new Error("ElevenLabs WebSocket connection timed out"));
+    }, EL_CONNECT_TIMEOUT_MS);
+
+    socket.on("open", () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    socket.on("error", (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+  });
+
+  logger.info({ callId, agentRef }, "ElevenLabs WebSocket connected");
+  return socket;
+}
+
 async function handleTwilioStream(ws, req) {
-  // Extract call ID from URL: /v1/twilio/stream/:callId
   const urlParts = req.url.split("/");
   const callId = urlParts[urlParts.length - 1];
 
@@ -16,15 +46,13 @@ async function handleTwilioStream(ws, req) {
   let elevenLabsSocket = null;
   let isClosed = false;
 
-  // Heartbeat ping-pong to keep connection alive
   const pingInterval = setInterval(() => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.ping();
-    }
+    if (ws.readyState === WebSocket.OPEN) ws.ping();
   }, 15000);
 
+  let elPingInterval = null;
+
   const setupPromise = (async () => {
-    // 1. Fetch Call & Agent metadata
     const { data, error } = await admin
       .from("calls")
       .select("*, agents(*)")
@@ -36,74 +64,62 @@ async function handleTwilioStream(ws, req) {
     }
     callRow = data;
 
-    // 2. Decide if we connect to ElevenLabs or use Mock Mode
     const elApiKey = process.env.ELEVENLABS_API_KEY;
     const agentRef = callRow.agents?.provider_ref;
     const useRealElevenLabs = elApiKey && agentRef && process.env.VOICE_PROVIDER_FORCE_MOCK !== "1";
 
     if (useRealElevenLabs) {
-      logger.info({ agentRef }, "Initializing ElevenLabs Conversational AI WebSocket connection");
-
+      // Connect with one retry on transient failure
       try {
-        elevenLabsSocket = new WebSocket(
-          `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentRef}`,
-          {
-            headers: {
-              "xi-api-key": elApiKey
-            }
-          }
-        );
+        elevenLabsSocket = await connectElevenLabsWs(agentRef, elApiKey, callId);
+      } catch (firstErr) {
+        logger.warn({ err: firstErr.message, callId, agentRef }, "ElevenLabs WS first attempt failed — retrying in 1s");
+        await new Promise((r) => setTimeout(r, 1000));
+        try {
+          elevenLabsSocket = await connectElevenLabsWs(agentRef, elApiKey, callId);
+        } catch (retryErr) {
+          logger.error({ err: retryErr.message, callId, agentRef }, "ElevenLabs WS retry FAILED — call cannot proceed");
+          metrics.increment("elevenlabs.stream_connect_failed", 1, { retry: "true" });
 
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error("ElevenLabs WebSocket connection timed out after 10s"));
-          }, 10000);
+          await admin.from("webhook_dlq").insert({
+            org_id: callRow.org_id,
+            source: "elevenlabs_stream",
+            event_type: "connection_failed",
+            payload: { call_id: callId, agent_ref: agentRef, error: retryErr.message },
+            error_message: retryErr.message,
+            next_retry_at: null,
+          }).catch(() => {});
 
-          elevenLabsSocket.on("open", () => {
-            clearTimeout(timeout);
-            logger.info({ callId }, "ElevenLabs WebSocket connection opened");
-            resolve();
-          });
-          elevenLabsSocket.on("error", (err) => {
-            clearTimeout(timeout);
-            reject(err);
-          });
-        });
-      } catch (err) {
-        logger.error({ err: err.message, callId, agentRef }, "ElevenLabs WebSocket connection FAILED - call cannot proceed");
-        elevenLabsSocket = null;
-
-        // Write to dead letter queue for investigation
-        await admin.from("webhook_dlq").insert({
-          org_id: callRow.org_id,
-          source: "elevenlabs_stream",
-          event_type: "connection_failed",
-          payload: { call_id: callId, agent_ref: agentRef, error: err.message },
-          error_message: err.message,
-          next_retry_at: null,
-        }).catch(() => {});
-
-        throw new Error(`Voice provider unavailable: ${err.message}`);
+          throw new Error(`Voice provider unavailable: ${retryErr.message}`);
+        }
       }
+
+      metrics.increment("elevenlabs.stream_connected", 1);
+
+      // Periodic ping to detect silent ElevenLabs disconnects
+      elPingInterval = setInterval(() => {
+        if (elevenLabsSocket && elevenLabsSocket.readyState === WebSocket.OPEN) {
+          elevenLabsSocket.ping();
+        }
+      }, EL_PING_INTERVAL_MS);
 
       elevenLabsSocket.on("message", (data) => {
         if (isClosed || ws.readyState !== WebSocket.OPEN) return;
         try {
           const msg = JSON.parse(data.toString());
-          logger.info({ callId, event: msg.event }, "Received event from ElevenLabs");
-          // If ElevenLabs returns audio, send it back to Twilio
           if (msg.event === "audio" && msg.audio?.chunk && streamSid) {
-            logger.info({ callId, payloadLength: msg.audio.chunk.length }, "Forwarding ElevenLabs audio chunk to Twilio");
-            ws.send(JSON.stringify({
-              event: "media",
-              streamSid,
-              media: {
-                payload: msg.audio.chunk
-              }
-            }));
+            if (ws.bufferedAmount < MAX_BUFFERED_BYTES) {
+              ws.send(JSON.stringify({
+                event: "media",
+                streamSid,
+                media: { payload: msg.audio.chunk }
+              }));
+            }
+          } else if (msg.event !== "audio") {
+            logger.debug({ callId, event: msg.event }, "ElevenLabs non-audio event");
           }
         } catch (err) {
-          logger.error({ err: err.message }, "Error processing ElevenLabs message");
+          logger.error({ err: err.message, callId }, "Error processing ElevenLabs message");
         }
       });
 
@@ -116,7 +132,7 @@ async function handleTwilioStream(ws, req) {
         cleanup();
       });
     } else {
-      logger.info({ callId }, "Running in Mock/Echo streaming mode (no real voice provider connected)");
+      logger.info({ callId }, "Running in Mock/Echo streaming mode");
     }
     return { useRealElevenLabs };
   })();
@@ -126,14 +142,11 @@ async function handleTwilioStream(ws, req) {
     cleanup();
   });
 
-  // 3. Handle messages from Twilio
   ws.on("message", async (message) => {
     if (isClosed) return;
     try {
       const data = JSON.parse(message.toString());
-      logger.info({ event: data.event, callId }, "Received event from Twilio");
 
-      // Await setup to ensure callRow and elevenLabsSocket are populated before handling message
       const setup = await setupPromise;
       if (!setup || isClosed) return;
 
@@ -142,7 +155,6 @@ async function handleTwilioStream(ws, req) {
           streamSid = data.start.streamSid;
           logger.info({ streamSid, callId }, "Twilio stream started");
 
-          // Update call record status to in_progress
           const { error: upErr1 } = await admin
             .from("calls")
             .update({ status: "in_progress" })
@@ -151,30 +163,26 @@ async function handleTwilioStream(ws, req) {
             logger.error({ err: upErr1.message, callId }, "Failed to update call status to in_progress");
           }
 
-          const { error: evErr1 } = await admin.from("call_events").insert({
+          await admin.from("call_events").insert({
             org_id: callRow.org_id,
             call_id: callId,
             kind: "twilio.in_progress",
             payload: data
-          });
-          if (evErr1) {
-            logger.error({ err: evErr1.message, callId }, "Failed to insert call event twilio.in_progress");
-          }
+          }).catch((e) => logger.warn({ err: e.message, callId }, "Failed to insert call_event"));
 
-          // Send initial greeting in Mock mode
           if (!setup.useRealElevenLabs) {
             sendMockAudio(ws, streamSid);
           }
           break;
 
         case "media":
-          // Twilio sends 20ms base64 mulaw audio chunks in data.media.payload
           if (setup.useRealElevenLabs && elevenLabsSocket && elevenLabsSocket.readyState === WebSocket.OPEN) {
-            logger.info({ callId, payloadLength: data.media.payload ? data.media.payload.length : 0 }, "Forwarding Twilio audio chunk to ElevenLabs");
-            elevenLabsSocket.send(JSON.stringify({
-              event: "user_audio_chunk",
-              user_audio_chunk: data.media.payload
-            }));
+            if (elevenLabsSocket.bufferedAmount < MAX_BUFFERED_BYTES) {
+              elevenLabsSocket.send(JSON.stringify({
+                event: "user_audio_chunk",
+                user_audio_chunk: data.media.payload
+              }));
+            }
           }
           break;
 
@@ -184,7 +192,7 @@ async function handleTwilioStream(ws, req) {
           break;
       }
     } catch (err) {
-      logger.error({ err: err.message }, "Error parsing Twilio media stream message");
+      logger.error({ err: err.message, callId }, "Error parsing Twilio media stream message");
     }
   });
 
@@ -198,26 +206,31 @@ async function handleTwilioStream(ws, req) {
     cleanup();
   });
 
-  // Helper to cleanup sockets and update DB
   async function cleanup() {
     if (isClosed) return;
     isClosed = true;
     clearInterval(pingInterval);
+    if (elPingInterval) clearInterval(elPingInterval);
 
-    try {
-      logger.info({ callId }, "Closing Twilio stream WebSocket client connection");
-      ws.close();
-    } catch {}
+    try { ws.close(); } catch {}
 
     if (elevenLabsSocket) {
-      try {
-        logger.info({ callId }, "Closing ElevenLabs WebSocket connection");
-        elevenLabsSocket.close();
-      } catch {}
+      try { elevenLabsSocket.close(); } catch {}
     }
 
     if (callRow) {
-      // Update Call state to completed
+      // Only update if call is not already in a terminal state (webhook may have arrived first)
+      const { data: currentCall } = await admin
+        .from("calls")
+        .select("status")
+        .eq("id", callId)
+        .maybeSingle();
+
+      if (currentCall && TERMINAL_STATUSES.includes(currentCall.status)) {
+        logger.debug({ callId, status: currentCall.status }, "Call already terminal — skipping stream cleanup update");
+        return;
+      }
+
       const endTime = new Date();
       const startTime = callRow.started_at ? new Date(callRow.started_at) : endTime;
       const duration = Math.max(0, Math.floor((endTime - startTime) / 1000));
@@ -234,30 +247,23 @@ async function handleTwilioStream(ws, req) {
         logger.error({ err: upErr2.message, callId }, "Failed to update call status to completed");
       }
 
-      const { error: evErr2 } = await admin.from("call_events").insert({
+      await admin.from("call_events").insert({
         org_id: callRow.org_id,
         call_id: callId,
         kind: "twilio.completed",
         payload: { duration_sec: duration }
-      });
-      if (evErr2) {
-        logger.error({ err: evErr2.message, callId }, "Failed to insert call event twilio.completed");
-      }
+      }).catch((e) => logger.warn({ err: e.message, callId }, "Failed to insert call_event"));
     }
   }
 }
 
-// Sends a short silent or simple static tone to simulate audio output in mock/test runs
 function sendMockAudio(ws, streamSid) {
-  // 1 second of G.711 mu-law silence is 8000 bytes of 0xFF values
   const silence = Buffer.alloc(800, 0xFF).toString("base64");
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({
       event: "media",
       streamSid,
-      media: {
-        payload: silence
-      }
+      media: { payload: silence }
     }));
   }
 }

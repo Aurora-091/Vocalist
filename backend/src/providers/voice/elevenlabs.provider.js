@@ -5,6 +5,11 @@ const metrics = require("../../utils/metrics");
 const ELEVENLABS_BASE = "https://api.elevenlabs.io";
 const REQUEST_TIMEOUT_MS = 30_000;
 
+// In-memory cache for phone number IDs to avoid per-call API lookups.
+// Key: phone_number (e164), Value: { id: string, ts: number }
+const phoneNumberIdCache = new Map();
+const PHONE_CACHE_TTL_MS = 10 * 60 * 1000;
+
 function replacePlaceholders(text, variables) {
   if (typeof text !== "string" || !variables || typeof variables !== "object") return text;
   let result = text;
@@ -131,11 +136,19 @@ class ElevenLabsProvider extends VoiceProvider {
       return "sandbox-phone-number-id";
     }
 
+    // Check in-memory cache first
+    const cached = phoneNumberIdCache.get(phone_number);
+    if (cached && Date.now() - cached.ts < PHONE_CACHE_TTL_MS) {
+      return cached.id;
+    }
+
     const res = await this._call("GET", "/v1/convai/phone-numbers");
     const matched = res.phone_numbers?.find((p) => p.phone_number === phone_number);
-    if (matched) return matched.phone_number_id;
+    if (matched) {
+      phoneNumberIdCache.set(phone_number, { id: matched.phone_number_id, ts: Date.now() });
+      return matched.phone_number_id;
+    }
 
-    // Import it
     if (!credentials.accountSid || !credentials.authToken) {
       const { BadRequest } = require("../../utils/errors");
       throw BadRequest("Twilio credentials missing, cannot import number to ElevenLabs");
@@ -149,6 +162,7 @@ class ElevenLabsProvider extends VoiceProvider {
       token: credentials.authToken,
     });
 
+    phoneNumberIdCache.set(phone_number, { id: importRes.phone_number_id, ts: Date.now() });
     return importRes.phone_number_id;
   }
 

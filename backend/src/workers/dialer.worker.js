@@ -93,6 +93,27 @@ async function dispatchOne(admin, { campaign, agent, target }) {
   const integrationConfig = await loadIntegrationConfig(admin, campaign.org_id, agent.provider);
   const provider = buildVoiceProvider({ agent, integrationConfig });
 
+  // Insert call row BEFORE placing the call so the webhook handler can always correlate
+  const crypto = require("crypto");
+  const callId = crypto.randomUUID();
+  const { error: callInsertErr } = await admin
+    .from("calls")
+    .insert({
+      id: callId,
+      org_id: campaign.org_id,
+      agent_id: agent.id,
+      campaign_id: campaign.id,
+      contact_id: contact.id,
+      direction: "outbound",
+      status: "queued",
+      provider: agent.provider,
+    });
+  if (callInsertErr) {
+    logger.error({ err: callInsertErr.message }, "Failed to insert call row before dispatch");
+    await admin.rpc("release_spend", spendArgs).catch(() => {});
+    return { failed: true, reason: "call_insert_failed" };
+  }
+
   let providerCall;
   try {
     const dynamicVars = {
@@ -106,15 +127,16 @@ async function dispatchOne(admin, { campaign, agent, target }) {
       toE164: contact.e164,
       fromE164: agent.inbound_number,
       leaseToken: target.lease_token,
-      metadata: { campaign_id: campaign.id, target_id: target.target_id },
+      metadata: { campaign_id: campaign.id, target_id: target.target_id, call_id: callId },
       dynamicVars,
     });
   } catch (err) {
     logger.error({ err: err.message, agentProvider: agent.provider }, "Provider startCall failed");
 
-    // Release the reserved spend since the call never happened
     await admin.rpc("release_spend", spendArgs)
       .catch((e) => logger.warn({ err: e.message, orgId: campaign.org_id }, "release_spend failed"));
+
+    await admin.from("calls").update({ status: "failed", ended_at: new Date().toISOString() }).eq("id", callId);
 
     await transition(admin, {
       targetId: target.target_id,
@@ -126,33 +148,24 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     return { failed: true, reason: "provider_error" };
   }
 
-  const { data: callRow, error: callErr } = await admin
+  const { error: callUpdateErr } = await admin
     .from("calls")
-    .insert({
-      org_id: campaign.org_id,
-      agent_id: agent.id,
-      campaign_id: campaign.id,
-      contact_id: contact.id,
-      direction: "outbound",
-      status: providerCall.status === "in_progress" ? "in_progress" : "queued",
-      provider: agent.provider,
+    .update({
       provider_call_id: providerCall.provider_call_id,
+      status: providerCall.status === "in_progress" ? "in_progress" : "queued",
     })
-    .select("id")
-    .single();
-  if (callErr) {
-    logger.error({ err: callErr.message }, "Failed to insert call row after dispatch");
-    await admin.rpc("release_spend", spendArgs).catch(() => {});
-    return { failed: true, reason: "call_insert_failed" };
+    .eq("id", callId);
+  if (callUpdateErr) {
+    logger.error({ err: callUpdateErr.message, callId }, "Failed to update call row after dispatch");
   }
 
   await admin
     .from("campaign_targets")
-    .update({ last_call_id: callRow.id })
+    .update({ last_call_id: callId })
     .eq("id", target.target_id);
 
   metrics.increment("call.dispatched", 1, { direction: "outbound", provider: agent.provider });
-  return { ok: true, call_id: callRow.id, provider_call_id: providerCall.provider_call_id };
+  return { ok: true, call_id: callId, provider_call_id: providerCall.provider_call_id };
 }
 
 async function maybeCompleteCampaign(admin, campaignId) {

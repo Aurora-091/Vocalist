@@ -169,8 +169,9 @@ async function handle(payload) {
       update.transcript = data.transcript;
     }
 
+    update.outcome = deriveOutcome(data, eventType);
     if (data?.analysis) {
-      update.outcome = data.analysis;
+      update.analysis = data.analysis;
     }
   }
 
