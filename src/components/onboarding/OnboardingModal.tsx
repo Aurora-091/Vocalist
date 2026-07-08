@@ -220,13 +220,13 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
 
     if (currentKey === "template") {
       return (
-        <div className="flex flex-col gap-4 h-full">
+        <div className="flex flex-col gap-5 h-full">
           {/* Pill filter row */}
           <div className="flex flex-wrap gap-2 shrink-0">
             <button
               onClick={() => setActiveVerticalTab("all")}
               className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
+                "px-3 py-1.5 rounded-full text-xs font-medium transition-colors border",
                 activeVerticalTab === "all"
                   ? "bg-foreground text-background border-foreground"
                   : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
@@ -239,7 +239,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                 key={v}
                 onClick={() => setActiveVerticalTab(v)}
                 className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium transition-colors border flex items-center gap-1.5",
+                  "px-3 py-1.5 rounded-full text-xs font-medium transition-colors border flex items-center gap-1.5",
                   activeVerticalTab === v
                     ? "bg-foreground text-background border-foreground"
                     : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
@@ -262,7 +262,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                 <p className="text-sm text-muted-foreground">No templates available.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4">
                 {visiblePresets.map((p) => (
                   <button
                     key={p.id}
@@ -286,7 +286,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                       )}
                     </div>
                     <p className="text-sm font-semibold text-foreground leading-snug">{p.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
+                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">
                       {p.description}
                     </p>
                   </button>
@@ -497,7 +497,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
     }
 
     return (
-      <div className="flex items-center justify-between pt-4 border-t border-border shrink-0">
+      <div className="flex items-center justify-between pt-5 border-t border-border shrink-0">
         {backBtn}
         {primaryBtn}
       </div>
@@ -507,8 +507,8 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   // ── Left step rail ────────────────────────────────────────────────────────
 
   const stepRail = (
-    <div className="w-52 shrink-0 flex flex-col border-r border-border bg-muted/20 px-5 py-6">
-      <div className="mb-8">
+    <div className="w-60 shrink-0 flex flex-col border-r border-border bg-muted/20 px-6 py-8">
+      <div className="mb-10">
         <WeeberLogo className="h-6 w-auto" />
       </div>
 
@@ -576,10 +576,10 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   // ── Right content panel ───────────────────────────────────────────────────
 
   const contentPanel = (
-    <div className="flex flex-col flex-1 overflow-hidden px-8 py-7">
+    <div className="flex flex-col flex-1 overflow-hidden px-10 py-8">
       {!finished && (
-        <div className="mb-6 shrink-0">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">
+        <div className="mb-8 shrink-0">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-2">
             Step {step + 1} of {STEP_KEYS.length}
           </p>
           <h2 className="text-2xl font-semibold text-foreground leading-tight">
@@ -666,7 +666,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[85vw] max-w-5xl h-[78vh] min-h-[580px] p-0 gap-0 flex flex-col overflow-hidden"
+        className="w-[90vw] max-w-5xl h-[85vh] min-h-[640px] p-0 gap-0 flex flex-col overflow-hidden"
         showCloseButton={false}
       >
         {desktopLayout}
