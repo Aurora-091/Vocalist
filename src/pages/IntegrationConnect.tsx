@@ -5,8 +5,8 @@ import {
   GitBranch, Sparkles, Database, Cloud, Stethoscope,
   HeartPulse, Activity, CalendarCheck, Plug,
 } from "lucide-react";
-import { getIntegrationCatalogEntry, getBridgeConfig, upsertBridgeConfig } from "../lib/db";
-import { supabase } from "../lib/supabase";
+import { getIntegrationCatalogEntry, getBridgeConfig } from "../lib/db";
+import { api } from "../lib/api";
 import { IntegrationConnectWizard, type FieldConfig, type WizardStep } from "../components/IntegrationConnectWizard";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -121,48 +121,11 @@ export default function IntegrationConnect() {
 
   async function handleSubmit(values: Record<string, string>): Promise<{ success: boolean; error?: string }> {
     try {
-      const config: Record<string, any> = {};
-      const secretFields = ["api_key", "auth_token", "api_token"];
-      let secretValue = "";
-
-      for (const [key, val] of Object.entries(values)) {
-        if (!secretFields.includes(key)) {
-          config[key] = val;
-        } else {
-          secretValue = val;
-        }
-      }
-
-      const secretRef = `vault_${provider}_${Date.now()}`;
-      if (secretValue) {
-        const { error: vaultError } = await supabase.rpc("vault_store", {
-          name: secretRef,
-          secret: secretValue,
-        });
-        if (vaultError) throw vaultError;
-      }
-
-      if (provider === "whatsapp") {
-        const { error } = await supabase.functions.invoke("agent-bridge", {
-          body: {
-            provider: "whatsapp",
-            action: "send_message",
-            params: { to: values.whatsapp_number, body: "Weeber connection test" },
-          },
-        });
-
-        if (error && !error.message?.includes("not configured")) {
-          // Ignore — we're just setting up
-        }
-      }
-
-      await upsertBridgeConfig(provider!, {
-        status: "active",
-        config,
-        secret_ref: secretValue ? secretRef : undefined,
+      await api.post("/v1/integrations/connect", {
+        provider: provider!,
+        credentials: values,
         scopes_granted: catalogEntry.scopes || [],
       });
-
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message || "Connection failed" };

@@ -61,7 +61,57 @@ router.get(
   })
 );
 
-const { vaultifyConfig } = require("../../utils/credential.helper");
+const { vaultifyConfig, writeSecret } = require("../../utils/credential.helper");
+
+const connectSchema = z.object({
+  provider: z.string().min(1),
+  credentials: z.record(z.string(), z.string()).default({}),
+  scopes_granted: z.array(z.string()).default([]),
+});
+
+router.post(
+  "/connect",
+  requireRole("owner", "admin"),
+  validate({ body: connectSchema }),
+  asyncHandler(async (req, res) => {
+    const { provider, credentials, scopes_granted } = req.body;
+    const orgId = req.auth.orgId;
+
+    const secretFields = ["api_key", "auth_token", "api_token"];
+    const config = {};
+    let secretRef = null;
+
+    for (const [key, val] of Object.entries(credentials)) {
+      if (secretFields.includes(key) && val) {
+        const vaultKey = `vault:integrations:${provider}:${key}:${orgId}`;
+        await writeSecret(vaultKey, val);
+        secretRef = vaultKey;
+      } else {
+        config[key] = val;
+      }
+    }
+
+    const { data, error } = await req.supabase
+      .from("integration_bridge_config")
+      .upsert(
+        {
+          org_id: orgId,
+          provider_key: provider,
+          status: "active",
+          config,
+          secret_ref: secretRef,
+          scopes_granted,
+          connected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "org_id,provider_key" }
+      )
+      .select("id, provider_key, status, connected_at")
+      .single();
+    if (error) throw error;
+    res.json({ integration: data });
+  })
+);
 
 router.put(
   "/",
