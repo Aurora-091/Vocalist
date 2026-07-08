@@ -8,14 +8,12 @@
  *   - retell      → compiled but NOT registered (kept for parity)
  *   - mock        → registered (tests + VOICE_PROVIDER_FORCE_MOCK=1)
  *
- * Current state (PR #8 / Phase 0): vapi + retell are still registered
- * here so existing call paths (call.service / agent.service) and the
- * dialer worker keep working while we migrate them. PR #9 (workstream
- * 1.1 of the Phase-1 plan) finishes the consolidation:
- *   - adds ElevenLabsProvider to PROVIDERS
- *   - removes vapi + retell from PROVIDERS
- *   - migrates call.service + agent.service to use this factory
- *   - deletes the duplicate backend/src/services/providers/ tree
+ * Current state (post PR #9): consolidation is complete. Registered
+ * providers are elevenlabs + mock, plus a `pipecat` alias that routes
+ * to mock so legacy agent.provider='pipecat' rows do not crash.
+ * vapi.provider.js and retell.provider.js remain compiled but
+ * unregistered for the Phase-4 swap option. call.service and
+ * agent.service build providers exclusively through this factory.
  *
  * See backend/src/providers/voice/README.md for the full architecture.
  */

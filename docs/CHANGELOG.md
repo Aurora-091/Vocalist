@@ -2,6 +2,23 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.1] — Wednesday, 2026-07-08 13:05 IST
+
+### Documentation Sync & Docs-Drift Pre-Push Hook
+
+#### Docs brought back in line with the implementation
+- **`README.md`**: Renamed Aurora → Weeber in title/intro, noted Exotel/VoBiz telephony adapters, documented the separate worker process (`npm run start:workers`) and the new git-hooks setup step.
+- **`docs/Weeber-Cursor-Rules.md`**: §3 tree updated — added 9 missing modules (admin, analytics, auth, enterprise, gdpr, playbooks, segments, skills, waitlist), added `providers/telephony/` (twilio, plivo, exotel, vobiz), corrected integration provider count (12 → 11), test-file count (19 → 21), replaced the stale "dialer worker must be built here" note with the 6 shipped workers, added `worker-entry.js`. §7 status — Stripe Subscriptions Webhook Sync marked ✅ Implemented (handled in `stripe.handler.js`).
+- **`docs/README.md`**: Frontend architecture section re-dated to 2026-07-08; page count 39 → 40; `db.ts` function count 30+ → 60+.
+- **`backend/src/providers/voice/factory.js`** + **`backend/src/providers/voice/README.md`**: Removed stale pre-PR-#9 statements ("vapi + retell still registered", "duplicate `services/providers/` tree exists") — consolidation is complete; registered providers are elevenlabs + mock (+ pipecat alias). Fixed dead links to archived scope/plan docs.
+- **`CLAUDE.md`** (new): Repository guide for Claude Code — commands, the 13 Non-Negotiables, architecture overview, conventions.
+
+#### Docs-drift guard
+- **`scripts/check-doc-drift.mjs`** (new): Dependency-free checker — validates all relative markdown links resolve and numeric doc claims (invariant test count) match the codebase.
+- **`.githooks/pre-push`** (new): Runs the drift check on every push; enabled per clone via `git config core.hooksPath .githooks`.
+
+---
+
 ## [1.16.0] — 2026-07-08
 
 ### Twilio Webhook Hardening & Phone Number Purchasing UI/UX Wizard

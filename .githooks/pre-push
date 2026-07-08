@@ -1,0 +1,8 @@
+#!/bin/sh
+# Pre-push hook: fast deterministic docs-drift check (broken doc links,
+# stale counts). Full AI-driven regeneration is manual — see the message
+# printed on failure. Bypass once with: git push --no-verify
+#
+# Enabled via: git config core.hooksPath .githooks
+
+node "$(git rev-parse --show-toplevel)/scripts/check-doc-drift.mjs" || exit 1
