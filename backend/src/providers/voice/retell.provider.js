@@ -42,7 +42,7 @@ class RetellProvider extends VoiceProvider {
   }
 
   async endCall(providerCallId) {
-    await this._call("POST", `/v2/end-call`, { call_id: providerCallId });
+    await this._call("POST", `/v2/stop-call/${providerCallId}`);
     return { ok: true };
   }
 

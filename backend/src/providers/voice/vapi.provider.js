@@ -56,7 +56,7 @@ class VapiProvider extends VoiceProvider {
   }
 
   async endCall(providerCallId) {
-    await this._call("PATCH", `/call/${providerCallId}`, { status: "ended" });
+    await this._call("DELETE", `/call/${providerCallId}`);
     return { ok: true };
   }
 
