@@ -6,7 +6,9 @@ import { supabase } from "./supabase";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
-  throw new Error("VITE_API_BASE_URL is required in production builds but was not set.");
+  console.error(
+    "[api] VITE_API_BASE_URL is not set. API calls will use relative paths which may fail if the backend is on a separate domain."
+  );
 }
 
 const TIMEOUT_MS = 15_000;

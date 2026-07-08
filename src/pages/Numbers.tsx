@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Phone, Plus, Trash2, Unlink, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { listPhoneNumbers, listAgents, unlinkPhoneNumberAgent, deletePhoneNumber } from "../lib/db";
+import { api } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,6 +24,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -48,6 +59,9 @@ export default function Numbers() {
   const [numbers, setNumbers] = useState<PhoneNumber[] | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [buyOpen, setBuyOpen] = useState(false);
+  const [buyPhone, setBuyPhone] = useState("");
+  const [buySubmitting, setBuySubmitting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -95,6 +109,25 @@ export default function Numbers() {
     }
   }
 
+  async function handleBuyNumber() {
+    if (!buyPhone.trim()) {
+      toast.error("Please enter a phone number");
+      return;
+    }
+    setBuySubmitting(true);
+    try {
+      await api.post("/v1/numbers/byo", { phone_number: buyPhone.trim() });
+      toast.success("Phone number added successfully");
+      setBuyOpen(false);
+      setBuyPhone("");
+      load();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to add phone number");
+    } finally {
+      setBuySubmitting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -105,11 +138,41 @@ export default function Numbers() {
             Manage your phone numbers, assign agents, and track renewals.
           </p>
         </div>
-        <Button size="sm">
+        <Button size="sm" onClick={() => setBuyOpen(true)}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Buy Phone Number
         </Button>
       </div>
+
+      {/* Buy Number Dialog */}
+      <Dialog open={buyOpen} onOpenChange={setBuyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Phone Number</DialogTitle>
+            <DialogDescription>
+              Enter a phone number in E.164 format (e.g. +14155551234) to add it to your account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <Label htmlFor="buy-phone">Phone Number</Label>
+            <Input
+              id="buy-phone"
+              placeholder="+14155551234"
+              value={buyPhone}
+              onChange={(e) => setBuyPhone(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleBuyNumber(); }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBuyOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBuyNumber} disabled={buySubmitting}>
+              {buySubmitting ? "Adding..." : "Add Number"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Table */}
       {loading || numbers === null ? (
@@ -122,7 +185,7 @@ export default function Numbers() {
           <CardContent className="py-16 text-center">
             <Phone className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground mb-4">No phone numbers yet.</p>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setBuyOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Buy Phone Number
             </Button>

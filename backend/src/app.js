@@ -61,8 +61,16 @@ function buildCorsOptions() {
       if (allowed.some((o) => origin === o || (o.startsWith("*.") && origin.endsWith(o.slice(1))))) {
         return callback(null, true);
       }
-      // Only allow this project's own Vercel preview deployments, not every *.vercel.app site.
+      // Allow this project's own Vercel preview deployments
       if (/^https:\/\/vocalist(-[a-z0-9]+)*(-[a-z0-9-]+)?\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+      // Allow Railway deployments
+      if (/^https:\/\/[a-z0-9-]+\.railway\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+      // Allow weeber.ai subdomains
+      if (/^https:\/\/([a-z0-9-]+\.)?weeber\.ai$/.test(origin)) {
         return callback(null, true);
       }
       callback(new Error(`CORS: origin ${origin} not allowed`));
@@ -87,11 +95,16 @@ function createApp() {
     next();
   });
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    })
+  );
   app.use(cors(buildCorsOptions()));
 
   app.use(
-    morgan(env.NODE_ENV === "production" ? "combined" : "dev", {
+    morgan(":method :url :status :response-time ms", {
       stream: { write: (msg) => logger.info(msg.trim()) },
     })
   );
