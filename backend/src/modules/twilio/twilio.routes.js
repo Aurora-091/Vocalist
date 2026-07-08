@@ -175,7 +175,16 @@ router.get(
       return res.json({ results: cached.results, cached: true });
     }
 
-    await getOrCreateSubaccount(req.auth.orgId);
+    const { data: sub } = await req.supabase
+      .from("twilio_subaccounts")
+      .select("status")
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+
+    if (!sub || sub.status !== "active") {
+      throw BadRequest("No active Twilio account linked. Link your account or provision a sub-account first.");
+    }
+
     const client = await getTenantClient(req.auth.orgId);
     const opts = { limit: 10 };
     if (areaCode) opts.areaCode = areaCode;
@@ -238,9 +247,16 @@ router.post(
         .is("deleted_at", null)
         .maybeSingle();
       if (!agent) throw NotFound("agent not found");
+    const { data: sub } = await req.supabase
+      .from("twilio_subaccounts")
+      .select("status")
+      .eq("org_id", req.auth.orgId)
+      .maybeSingle();
+
+    if (!sub || sub.status !== "active") {
+      throw BadRequest("No active Twilio account linked. Link your account or provision a sub-account first.");
     }
 
-    await getOrCreateSubaccount(req.auth.orgId);
     const client = await getTenantClient(req.auth.orgId);
 
     const { voiceUrl, statusCallback } = buildTwilioWebhookUrls();
