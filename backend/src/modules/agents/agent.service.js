@@ -190,29 +190,67 @@ class AgentService {
 
     // 4. Sync to Voice Provider
     if (existing.provider_ref) {
+      const systemPrompt = personaService.generateSystemPrompt(mergedPersona);
+      const agentPayload = {
+        ...updatedAgent,
+        org_id: orgId,
+        persona: mergedPersona,
+        provider: existing.provider || "elevenlabs",
+        voice_id
+      };
+      const voiceProvider = buildVoiceProvider({ agent: agentPayload });
+      
       try {
-        const systemPrompt = personaService.generateSystemPrompt(mergedPersona);
-        const agentPayload = {
-          ...updatedAgent,
-          org_id: orgId,
-          persona: mergedPersona,
-          provider: existing.provider || "elevenlabs",
-          voice_id
-        };
-        const voiceProvider = buildVoiceProvider({ agent: agentPayload });
         if (voiceProvider && typeof voiceProvider.updateAgent === "function") {
           await voiceProvider.updateAgent(existing.provider_ref, agentPayload, systemPrompt);
         }
       } catch (err) {
         const logger = require("../../config/logger");
-        logger.error({ err: err.message, agentId }, "Failed to update agent on voice provider");
-        await supabase
-          .from("agents")
-          .update({
-            sync_status: "failed",
-            sync_error: err.message
-          })
-          .eq("id", agentId);
+        if (err.message && err.message.includes("failed: 404")) {
+          logger.info({ agentId }, "Agent 404 on voice provider during update, attempting to recreate/provision a new one");
+          try {
+            const createRes = await voiceProvider.createAgent(agentPayload, systemPrompt);
+            const newProviderRef = createRes.provider_ref;
+
+            // Save new provider ref to DB
+            const { data: healedAgent, error: healErr } = await supabase
+              .from("agents")
+              .update({
+                provider_ref: newProviderRef,
+                provider_agent_id: newProviderRef,
+                sync_status: "synced",
+                last_synced_at: new Date().toISOString(),
+                sync_error: null
+              })
+              .eq("id", agentId)
+              .select("*")
+              .single();
+
+            if (healErr) throw healErr;
+            
+            // Update local state so it's returned and used in subsequent queries/responses
+            updatedAgent = healedAgent;
+            existing.provider_ref = newProviderRef;
+          } catch (recreateErr) {
+            logger.error({ err: recreateErr.message, agentId }, "Failed to recreate agent on voice provider after 404");
+            await supabase
+              .from("agents")
+              .update({
+                sync_status: "failed",
+                sync_error: recreateErr.message
+              })
+              .eq("id", agentId);
+          }
+        } else {
+          logger.error({ err: err.message, agentId }, "Failed to update agent on voice provider");
+          await supabase
+            .from("agents")
+            .update({
+              sync_status: "failed",
+              sync_error: err.message
+            })
+            .eq("id", agentId);
+        }
       }
     }
 

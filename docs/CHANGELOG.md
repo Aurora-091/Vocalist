@@ -2,6 +2,15 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.13] — Thursday, 2026-07-09 00:10 IST
+
+### ElevenLabs Agent Auto-Recreation (Self-Healing on 404) & Signed URL Authentication Fix
+
+- **`backend/src/providers/voice/elevenlabs.provider.js`**: Added `auth: { enable_auth: true }` to the agent configuration payload. This explicitly enables authenticated sessions on the ElevenLabs agent side, preventing the browser WebSocket from immediately closing/terminating with a `WebSocket is already in CLOSING or CLOSED state` error when connecting via a signed URL.
+- **`backend/src/modules/agents/agents.routes.js`**: `POST /:id/web-session` was modified to perform a full `select("*")` on the agent table. If the subsequent `/get_signed_url` request to ElevenLabs returns a `404 Not Found` (which happens if the local database references an ElevenLabs Agent ID that does not exist in the configured ElevenLabs account), the server automatically triggers the self-healing recreation flow. It provisions a new agent on ElevenLabs with the same configuration, updates both the `agents` and `organization_agents` tables with the new `provider_ref`, and retries the signed URL request.
+- **`src/main.tsx`**: Wrapped the React application root in `<ConversationProvider>` from `@elevenlabs/react`. This is required by the updated SDK for the `useConversation` hook to function correctly and access the shared conversation context.
+- **`backend/src/modules/agents/agent.service.js`**: Modified `updateAgent` to capture `404` errors thrown by ElevenLabs during sync. If a `404` is caught, it triggers the same auto-recreation flow to provision a new agent on the ElevenLabs account, saving the new ID to the database before completing the update.
+
 ## [1.16.12] — Tuesday, 2026-07-08 20:30 IST
 
 ### Twilio ↔ ElevenLabs Integration Reliability + Audit Fixes
@@ -28,10 +37,6 @@ Following a comprehensive technical audit of the Twilio ↔ ElevenLabs Conversat
 #### `backend/src/modules/webhooks/handlers/elevenlabs.handler.js` — Outcome field consistency
 
 - `calls.outcome` was being set to `data.analysis` (a raw JSON object from ElevenLabs) instead of the string enum produced by `deriveOutcome()`. If the column is `text`, this would store `[object Object]`. The outcome field now always stores a consistent string (`answered` / `voicemail` / `declined` / `no_answer` / `failed`). The raw ElevenLabs analysis object is stored separately in `calls.analysis` for downstream use.
-
----
-
-
 
 ### Vault RPCs Fixed — Twilio Subaccount Provisioning Was Storing Nothing (Non-Negotiable #4)
 

@@ -47,20 +47,24 @@ import { AnalyticsLoader } from "@/components/AnalyticsLoader";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Analytics } from "@vercel/analytics/react";
 
+import { ConversationProvider } from "@elevenlabs/react";
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider attribute="class" defaultTheme="system" storageKey="weeber-theme">
         <TooltipProvider delayDuration={150}>
-          <AnalyticsLoader />
-          <ErrorBoundary>
-            <Suspense fallback={<AppLoader />}>
-              {isAdminApp ? <AdminApp /> : <CustomerApp />}
-            </Suspense>
-          </ErrorBoundary>
-          <Toaster richColors closeButton position="top-right" />
-          <SpeedInsights />
-          <Analytics />
+          <ConversationProvider>
+            <AnalyticsLoader />
+            <ErrorBoundary>
+              <Suspense fallback={<AppLoader />}>
+                {isAdminApp ? <AdminApp /> : <CustomerApp />}
+              </Suspense>
+            </ErrorBoundary>
+            <Toaster richColors closeButton position="top-right" />
+            <SpeedInsights />
+            <Analytics />
+          </ConversationProvider>
         </TooltipProvider>
       </ThemeProvider>
     </BrowserRouter>

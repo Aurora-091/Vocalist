@@ -283,6 +283,9 @@ class ElevenLabsProvider extends VoiceProvider {
     const payload = {
       name: agent.name,
       conversation_config: conversationConfig,
+      auth: {
+        enable_auth: true
+      }
     };
 
     const platformSettings = this._buildPlatformSettings(agent);

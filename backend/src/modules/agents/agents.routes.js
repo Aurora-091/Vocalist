@@ -367,7 +367,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const { data: agent, error: agentErr } = await req.supabase
       .from("agents")
-      .select("id, name, provider, provider_ref, org_id")
+      .select("*")
       .eq("id", req.params.id)
       .is("deleted_at", null)
       .maybeSingle();
@@ -383,10 +383,63 @@ router.post(
       throw BadRequest("ElevenLabs API key not configured");
     }
 
-    const response = await fetch(
+    let response = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agent.provider_ref}`,
       { method: "GET", headers: { "xi-api-key": apiKey } }
     );
+
+    if (response.status === 404) {
+      const logger = require("../../config/logger");
+      logger.info({ agentId: agent.id }, "Agent 404 on ElevenLabs when getting signed URL, attempting self-healing recreation");
+      try {
+        const { buildVoiceProvider } = require("../../providers/voice/factory");
+        const personaService = require("../../services/persona.service");
+
+        const systemPrompt = personaService.generateSystemPrompt(agent.persona || {});
+        const voiceProvider = buildVoiceProvider({ agent });
+        const createRes = await voiceProvider.createAgent(agent, systemPrompt);
+        const newProviderRef = createRes.provider_ref;
+
+        // Save new provider ref to DB
+        const { error: updateErr } = await req.supabase
+          .from("agents")
+          .update({
+            provider_ref: newProviderRef,
+            provider_agent_id: newProviderRef,
+            sync_status: "synced",
+            last_synced_at: new Date().toISOString(),
+            sync_error: null
+          })
+          .eq("id", agent.id);
+
+        if (updateErr) throw updateErr;
+
+        // Update organization_agents registry as well
+        await req.supabase
+          .from("organization_agents")
+          .upsert({
+            org_id: agent.org_id,
+            agent_id: agent.id,
+            provider: agent.provider || "elevenlabs",
+            provider_agent_id: newProviderRef,
+            voice_id: agent.voice_id,
+            sync_status: "synced",
+            updated_at: new Date().toISOString()
+          }, { onConflict: "org_id,agent_id" });
+
+        // Update agent.provider_ref reference for subsequent fetch and logging
+        agent.provider_ref = newProviderRef;
+
+        // Re-try fetching the signed URL with the newly created agent ID
+        response = await fetch(
+          `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${newProviderRef}`,
+          { method: "GET", headers: { "xi-api-key": apiKey } }
+        );
+      } catch (healErr) {
+        logger.error({ err: healErr.message, agentId: agent.id }, "Failed to auto-heal agent on ElevenLabs");
+        throw BadRequest("Failed to start web session: ElevenLabs agent not found and recreation failed", healErr.message);
+      }
+    }
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
@@ -412,6 +465,7 @@ router.post(
       .single();
 
     if (callErr) throw callErr;
+    console.log("Test Agent Response:", { signed_url, agent_id: agent.provider_ref, call_id: callRow.id })
 
     res.json({ signed_url, agent_id: agent.provider_ref, call_id: callRow.id });
   })
