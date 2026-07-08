@@ -1,15 +1,10 @@
 import { supabase } from "./supabase";
 
-// In dev, an empty base URL means requests are relative and handled by the Vite
-// proxy (see vite.config.ts). In production the var must be set explicitly so we
-// never silently fall back to a hardcoded environment.
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
-
-if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
-  console.error(
-    "[api] VITE_API_BASE_URL is not set. API calls will use relative paths which may fail if the backend is on a separate domain."
-  );
-}
+// In dev with Vite proxy, relative paths work (/v1/... → localhost:3000).
+// In production, VITE_API_BASE_URL must point to the Railway backend (e.g. https://api.weeber.ai).
+// The proxy in vite.config.ts intercepts /v1 requests in dev even when BASE_URL is set,
+// so we always clear it in dev mode to avoid double-prefixing.
+const BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_BASE_URL ?? "");
 
 const TIMEOUT_MS = 15_000;
 
