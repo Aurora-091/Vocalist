@@ -32,7 +32,10 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
     .eq("org_id", orgId)
     .maybeSingle();
 
-  if (existing && existing.status === "active") return existing;
+  if (existing && existing.status === "active") {
+    await healMissingSecret(admin, existing);
+    return existing;
+  }
 
   if (isSandbox()) {
     const sid = `ACsandbox${orgId.replace(/-/g, "").slice(0, 24)}`;
@@ -75,6 +78,25 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
   if (vaultErr) throw new Error(`Failed to store subaccount credentials: ${vaultErr.message}`);
 
   return { ...row, _authToken: sub.authToken };
+}
+
+// Rows can end up "active" with no stored token when vault_store fails after the
+// upsert (as with the broken pre-20260708190000 vault RPCs). For managed
+// subaccounts the master account can re-fetch the auth token, so repair in place.
+async function healMissingSecret(admin, sub) {
+  if (isSandbox() || sub.account_type !== "aurora_managed") return;
+
+  const { data: secret } = await admin.rpc("vault_read", { p_name: sub.auth_token_ref });
+  if (secret) return;
+
+  const account = await masterClient().api.v2010.accounts(sub.subaccount_sid).fetch();
+  const { error: vaultErr } = await admin.rpc("vault_store", {
+    p_name: sub.auth_token_ref,
+    p_secret: account.authToken,
+  });
+  if (vaultErr) throw new Error(`Failed to store subaccount credentials: ${vaultErr.message}`);
+  logger.info({ orgId: sub.org_id, sid: sub.subaccount_sid }, "Re-stored missing Twilio subaccount secret");
+  tenantClientCache.delete(sub.org_id);
 }
 
 async function linkByoAccount(orgId, { accountSid, authToken, friendlyName }) {
@@ -145,14 +167,18 @@ async function getTenantClient(orgId) {
   const admin = requireAdmin();
   const { data: sub } = await admin
     .from("twilio_subaccounts")
-    .select("subaccount_sid, auth_token_ref, status")
+    .select("org_id, subaccount_sid, auth_token_ref, status, account_type")
     .eq("org_id", orgId)
     .maybeSingle();
   if (!sub || sub.status !== "active") {
     throw new Error("twilio_subaccount_not_provisioned");
   }
 
-  const { data: secret } = await admin.rpc("vault_read", { p_name: sub.auth_token_ref });
+  let { data: secret } = await admin.rpc("vault_read", { p_name: sub.auth_token_ref });
+  if (!secret) {
+    await healMissingSecret(admin, sub);
+    ({ data: secret } = await admin.rpc("vault_read", { p_name: sub.auth_token_ref }));
+  }
   if (!secret) throw new Error("twilio_secret_missing");
 
   const client = twilio(sub.subaccount_sid, secret);

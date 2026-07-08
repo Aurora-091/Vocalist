@@ -2,6 +2,25 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.11] — Wednesday, 2026-07-08 18:48 IST
+
+### Vault RPCs Fixed — Twilio Subaccount Provisioning Was Storing Nothing (Non-Negotiable #4)
+
+#### `vault_store` / `vault_read` rewritten to use the Supabase Vault API
+
+- **`supabase/migrations/20260708190000_fix_vault_rpcs_use_vault_api.sql`** (applied): The `20260704000001` versions were broken in production — `vault_store` did `INSERT INTO vault.decrypted_secrets`, but that is a **read-only view** (no INSTEAD OF trigger; the `postgres` definer holds no INSERT privilege on it), so every call failed with `permission denied for view decrypted_secrets` (`POST /v1/twilio/subaccount`, Sentry/Railway 2026-07-08 13:02 UTC). `vault.secrets` was empty: **no secret had ever been stored**. `vault_read` had a second latent bug — it selected the ciphertext `secret` column instead of `decrypted_secret`, so even successful writes would have been unreadable. Both now go through `vault.create_secret()` / `vault.update_secret()` and read `decrypted_secret`; `CREATE OR REPLACE` without `DROP` preserves the `20260705214515` grants (service_role only). Verified round-trip (create/update/read) against production and cleaned up the test secret.
+
+#### Self-heal for subaccounts stranded "active" without a stored token
+
+- **`backend/src/modules/twilio/twilio.client.js`**: `getOrCreateSubaccount` upserts the row as `active` *before* `vault_store`, so the vault failure left one org (`157e486d…`) with an active subaccount whose auth token was never stored — and the early-return on existing active rows meant it could never recover. New `healMissingSecret()` re-fetches the auth token from the Twilio master account (`aurora_managed`, non-sandbox only) and re-vaults it; invoked from both `getOrCreateSubaccount` and `getTenantClient`, so the stranded org repairs itself on its next provisioning request *or* call-path use.
+
+#### Known follow-ups (not fixed here)
+
+- **`src/pages/IntegrationConnect.tsx:138`** calls `supabase.rpc("vault_store")` directly from the browser as `authenticated` — that role's EXECUTE was revoked by `20260705214515`, so this flow fails with permission denied; it must route through the backend (also a Non-Negotiable #13 concern).
+- Migration-version drift: `20260708174500`/`20260708175500` exist locally but were registered remotely as `20260708121100`/`20260708121244` (applied via MCP with different version stamps) — harmless, but `supabase` CLI diff tooling will warn until the local filenames are aligned.
+
+---
+
 ## [1.16.10] — Wednesday, 2026-07-08 18:05 IST
 
 ### Full-Stack Error Monitoring with Sentry
