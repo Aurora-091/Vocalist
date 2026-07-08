@@ -2,6 +2,7 @@ const { HttpError } = require("../utils/errors");
 const logger = require("../config/logger");
 const env = require("../config/env");
 const Sentry = require("@sentry/node");
+const metrics = require("../utils/metrics");
 
 function notFound(_req, _res, next) {
   next(new HttpError(404, "not_found", "Route not found"));
@@ -9,6 +10,7 @@ function notFound(_req, _res, next) {
 
 function errorHandler(err, req, res, _next) {
   if (err instanceof HttpError) {
+    metrics.increment("http.error", 1, { status: String(err.status), code: err.code });
     if (err.status >= 500) {
       logger.error({ err, path: req.path, method: req.method, requestId: req.id }, "Request failed");
       if (process.env.SENTRY_DSN) {
@@ -43,6 +45,7 @@ function errorHandler(err, req, res, _next) {
   }
 
   logger.error({ err, path: req.path, method: req.method, requestId: req.id }, "Unhandled error");
+  metrics.increment("http.error", 1, { status: "500", code: "internal" });
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(err, { extra: { path: req.path, method: req.method, requestId: req.id } });
   }

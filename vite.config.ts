@@ -2,8 +2,14 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
+import { readFileSync } from "node:fs";
+
+const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     react(),
     sentryVitePlugin({
@@ -11,6 +17,9 @@ export default defineConfig({
       project: process.env.SENTRY_PROJECT || "vocalist",
       authToken: process.env.SENTRY_AUTH_TOKEN,
       disable: !process.env.SENTRY_AUTH_TOKEN,
+      release: {
+        name: `weeber-frontend@${pkg.version}`,
+      },
     }),
   ],
   resolve: {

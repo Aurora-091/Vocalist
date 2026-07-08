@@ -1,5 +1,6 @@
 const { buildIdempotencyKey } = require("../../utils/idempotency");
 const billingService = require("./billing.service");
+const metrics = require("../../utils/metrics");
 
 async function recordVoiceMinutes(supabase, { orgId, callId, durationSec, providerCallId }) {
   if (!durationSec || durationSec <= 0) return { skipped: true };
@@ -19,6 +20,11 @@ async function recordVoiceMinutes(supabase, { orgId, callId, durationSec, provid
   });
 
   if (error && error.code !== "23505") throw error;
+  if (!error) {
+    metrics.increment("call.billed", 1, { kind: "voice_minutes" });
+    metrics.distribution("call.cost_usd", cost_usd, "dollar", { kind: "voice_minutes" });
+    metrics.distribution("call.duration_minutes", minutes, "minute");
+  }
   return { recorded: !error, minutes, cost_usd };
 }
 
@@ -33,6 +39,7 @@ async function recordCampaignCall(supabase, { orgId, callId, providerCallId }) {
     idempotency_key,
   });
   if (error && error.code !== "23505") throw error;
+  if (!error) metrics.increment("call.billed", 1, { kind: "campaign_call" });
   return { recorded: !error };
 }
 

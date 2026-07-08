@@ -4,6 +4,7 @@ const { transition, STATES } = require("../modules/campaigns/state-machine");
 const { buildVoiceProvider } = require("../providers/voice/factory");
 const billingService = require("../modules/billing/billing.service");
 const { DEFAULT_PROJECTED_MINUTES } = require("../modules/billing/billing.constants");
+const metrics = require("../utils/metrics");
 
 const LEASE_SECONDS = 90;
 
@@ -72,6 +73,7 @@ async function dispatchOne(admin, { campaign, agent, target }) {
   // check must not dial. The lease expires and the sweeper retries the target.
   if (spendCheckErr) throw spendCheckErr;
   if (canSpend === false) {
+    metrics.increment("spend_guard.blocked", 1, { scope: "campaign" });
     await transition(admin, {
       targetId: target.target_id,
       fromState: STATES.DIALING,
@@ -149,6 +151,7 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     .update({ last_call_id: callRow.id })
     .eq("id", target.target_id);
 
+  metrics.increment("call.dispatched", 1, { direction: "outbound", provider: agent.provider });
   return { ok: true, call_id: callRow.id, provider_call_id: providerCall.provider_call_id };
 }
 

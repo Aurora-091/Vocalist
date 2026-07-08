@@ -3,10 +3,12 @@ const logger = require("./src/config/logger");
 const Sentry = require("@sentry/node");
 
 if (process.env.SENTRY_DSN) {
+  const pkg = require("./package.json");
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
+    release: `weeber-backend@${pkg.version}`,
     environment: env.NODE_ENV || "development",
-    tracesSampleRate: 1.0,
+    tracesSampleRate: env.NODE_ENV === "production" ? 0.2 : 1.0,
   });
 }
 

@@ -62,6 +62,7 @@ router.get(
 );
 
 const { vaultifyConfig, writeSecret } = require("../../utils/credential.helper");
+const metrics = require("../../utils/metrics");
 
 const connectSchema = z.object({
   provider: z.string().min(1),
@@ -109,6 +110,7 @@ router.post(
       .select("id, provider_key, status, connected_at")
       .single();
     if (error) throw error;
+    metrics.increment("integration.connected", 1, { provider });
     res.json({ integration: data });
   })
 );

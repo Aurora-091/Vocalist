@@ -14,11 +14,13 @@ const SENTRY_DSN = (import.meta.env.VITE_SENTRY_DSN as string | undefined) || "h
 if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
+    release: import.meta.env.VITE_SENTRY_RELEASE || `weeber-frontend@${__APP_VERSION__}`,
+    environment: import.meta.env.MODE,
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration(),
     ],
-    tracesSampleRate: 1.0,
+    tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
   });
