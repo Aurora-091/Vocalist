@@ -2,6 +2,18 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.3] — Wednesday, 2026-07-08 18:30 IST
+
+### DB Cleanup: Drop pgvector `knowledge_chunks` + Live Spend/Inbound Gate Audit
+
+#### Dropped dead pgvector objects (Non-Negotiable #10)
+- **`supabase/migrations/20260708103000_drop_knowledge_chunks_and_vector.sql`** (new, applied to live DB via MCP): Dropped `public.knowledge_chunks` (with its HNSW index) and the `vector` extension. Verified against the live database first: 0 rows, no code/function/view/FK/cron references, and `knowledge_chunks.embedding` was the only vector-typed column. The KB remains CAI-native via `knowledge_sources` (untouched). Note: `docs/database-guide.md` still describes `knowledge_chunks` and needs a follow-up sync.
+
+#### Live audit finding — spend guard & inbound admission gate broken (NOT yet fixed)
+- Migration `20260629000000_resolve_schema_and_verticals_gaps.sql` dropped `spend_guards` and `inbound_rate_counters` as "unused", but `can_spend()`, `reserve_spend()`, `release_spend()`, and `check_inbound_rate()` still reference them and now throw `42P01` at runtime (confirmed by calling them live). Consequences: outbound dialer fail-opens past the spend cap (`dialer.worker.js` "allowing call" path — violates Non-Negotiable #9); inbound voice webhook fail-closes with a 500 before TwiML (violates #11 by outage). Additionally, `dialer.worker.js` and `campaigns.routes.js` call `can_spend`/`reserve_spend` with parameter names that never matched the DB signature (`p_amount_usd`, `p_org_id`). Fix pending owner decision — see audit summary in session notes.
+
+---
+
 ## [1.16.2] — Wednesday, 2026-07-08 13:40 IST
 
 ### CSP Fix for ElevenLabs AudioWorklets + Supabase MCP Config
