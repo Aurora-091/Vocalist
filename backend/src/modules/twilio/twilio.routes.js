@@ -247,6 +247,8 @@ router.post(
         .is("deleted_at", null)
         .maybeSingle();
       if (!agent) throw NotFound("agent not found");
+    }
+
     const { data: sub } = await req.supabase
       .from("twilio_subaccounts")
       .select("status")
