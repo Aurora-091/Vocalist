@@ -55,11 +55,11 @@ function makeMockDatabase() {
     },
     rpc: async (fn, args) => {
       if (fn === "vault_store") {
-        store.vault[args.name] = args.secret;
+        store.vault[args.p_name] = args.p_secret;
         return { error: null };
       }
       if (fn === "vault_read") {
-        return { data: store.vault[args.name] || null, error: null };
+        return { data: store.vault[args.p_name] || null, error: null };
       }
       return { error: new Error(`unknown RPC: ${fn}`) };
     },

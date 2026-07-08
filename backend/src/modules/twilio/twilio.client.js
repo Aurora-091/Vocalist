@@ -69,8 +69,8 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
   if (upsertErr) throw upsertErr;
 
   const { error: vaultErr } = await admin.rpc("vault_store", {
-    name: row.auth_token_ref,
-    secret: sub.authToken,
+    p_name: row.auth_token_ref,
+    p_secret: sub.authToken,
   });
   if (vaultErr) throw new Error(`Failed to store subaccount credentials: ${vaultErr.message}`);
 
@@ -94,7 +94,7 @@ async function linkByoAccount(orgId, { accountSid, authToken, friendlyName }) {
   const admin = requireAdmin();
   const secretRef = `vault:twilio:byo:${orgId}:auth_token`;
 
-  const { error: vaultErr } = await admin.rpc("vault_store", { name: secretRef, secret: authToken });
+  const { error: vaultErr } = await admin.rpc("vault_store", { p_name: secretRef, p_secret: authToken });
   if (vaultErr) throw new Error(`Failed to store credentials: ${vaultErr.message}`);
 
   const row = {
@@ -152,7 +152,7 @@ async function getTenantClient(orgId) {
     throw new Error("twilio_subaccount_not_provisioned");
   }
 
-  const { data: secret } = await admin.rpc("vault_read", { name: sub.auth_token_ref });
+  const { data: secret } = await admin.rpc("vault_read", { p_name: sub.auth_token_ref });
   if (!secret) throw new Error("twilio_secret_missing");
 
   const client = twilio(sub.subaccount_sid, secret);

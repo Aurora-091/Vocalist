@@ -2,6 +2,19 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.4] — Wednesday, 2026-07-08 19:30 IST
+
+### Twilio Integrations Fix: Vault RPC Parameter Matching
+
+#### Aligned Vault RPC parameters with PostgreSQL definitions
+- **`backend/src/utils/credential.helper.js`**: Updated `vault_read` and `vault_store` RPC parameters to pass `p_name` and `p_secret` instead of `name` and `secret`, matching the PostgreSQL signature.
+- **`backend/src/modules/webhooks/webhook.routes.js`**: Aligned parameter names in `vault_read` call.
+- **`backend/src/modules/twilio/twilio.client.js`**: Aligned parameter names in `vault_read` and `vault_store` calls.
+- **`backend/src/providers/voice/elevenlabs.provider.js`**: Aligned parameter names in `vault_read` call.
+- **`backend/src/tests/invariants/`**: Updated test assertions in `webhook-sig.test.js`, `remediation.test.js`, and `integrations.test.js` to match the corrected `p_name` and `p_secret` parameter names.
+
+---
+
 ## [1.16.3] — Wednesday, 2026-07-08 18:30 IST
 
 ### DB Cleanup: Drop pgvector `knowledge_chunks` + Live Spend/Inbound Gate Audit

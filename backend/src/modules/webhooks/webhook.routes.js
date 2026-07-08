@@ -170,7 +170,7 @@ async function verifyRequestSignature(req, url, sig) {
       if (sub.auth_token_ref.startsWith("sandbox:")) {
         return true;
       }
-      const { data: secret } = await admin.rpc("vault_read", { name: sub.auth_token_ref });
+      const { data: secret } = await admin.rpc("vault_read", { p_name: sub.auth_token_ref });
       if (secret) {
         authToken = secret;
       }

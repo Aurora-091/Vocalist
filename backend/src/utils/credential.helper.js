@@ -5,7 +5,7 @@ async function readSecret(ref) {
   if (!ref || typeof ref !== "string" || !ref.startsWith("vault:")) return ref;
   const admin = requireAdmin();
   try {
-    const { data, error } = await admin.rpc("vault_read", { name: ref });
+    const { data, error } = await admin.rpc("vault_read", { p_name: ref });
     if (error) {
       logger.error({ err: error.message, ref }, "Failed to read secret from vault via RPC");
       throw new Error(`vault_read failed for ${ref}: ${error.message}`);
@@ -23,7 +23,7 @@ async function writeSecret(name, value) {
   }
   const admin = requireAdmin();
   try {
-    const { error } = await admin.rpc("vault_store", { name, secret: value });
+    const { error } = await admin.rpc("vault_store", { p_name: name, p_secret: value });
     if (error) {
       logger.error({ err: error.message, name }, "Failed to store secret in vault via RPC");
       throw new Error(`vault_store failed for ${name}: ${error.message}`);

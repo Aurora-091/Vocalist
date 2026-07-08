@@ -93,7 +93,7 @@ test("verifyRequestSignature looks up subaccount from database & Vault", async (
     },
     rpc: async (fn, args) => {
       assert.equal(fn, "vault_read");
-      assert.equal(args.name, "vault:token_ref");
+      assert.equal(args.p_name, "vault:token_ref");
       return { data: "resolved-subaccount-token", error: null };
     }
   };

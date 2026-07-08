@@ -82,7 +82,7 @@ class ElevenLabsProvider extends VoiceProvider {
     let authToken = process.env.TWILIO_AUTH_TOKEN;
     if (sub && sub.auth_token_ref) {
       try {
-        const { data: secret } = await admin.rpc("vault_read", { name: sub.auth_token_ref });
+        const { data: secret } = await admin.rpc("vault_read", { p_name: sub.auth_token_ref });
         if (secret) {
           authToken = secret;
         }
