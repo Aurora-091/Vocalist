@@ -619,9 +619,10 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   // ── Desktop layout ────────────────────────────────────────────────────────
 
   const desktopLayout = (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col flex-1 w-full h-full overflow-hidden">
       {progressBar}
-      <div className="flex flex-1 overflow-hidden">
+      {/* FIX: Explicitly set flex-row, w-full, and h-full so children map side-by-side correctly */}
+      <div className="flex flex-1 flex-row w-full h-full overflow-hidden">
         {stepRail}
         {contentPanel}
       </div>
@@ -685,7 +686,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[94vw] max-w-5xl h-[85vh] max-h-[780px] p-0 gap-0 flex flex-col overflow-hidden"
+        className="w-[94vw] sm:max-w-5xl h-[85vh] max-h-[780px] p-0 gap-0 flex flex-col overflow-hidden"
         showCloseButton={false}
       >
         {desktopLayout}
