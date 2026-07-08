@@ -22,7 +22,7 @@ import {
   History,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getAgent, listVoices, listAgentKnowledge, getCall, listCalls } from "../lib/db";
+import { getAgent, listVoices, listAgentKnowledge, getCall, listCalls, listPhoneNumbers, unlinkPhoneNumberAgent } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -226,6 +226,10 @@ export default function AgentDetail() {
   const [lastWebTestAt, setLastWebTestAt] = useState<string | null>(null);
   const [testSessionStarted, setTestSessionStarted] = useState(false);
 
+  // Phone Numbers
+  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
+  const [selectedNumberId, setSelectedNumberId] = useState<string>("none");
+
   // Skills
   const [allSkills, setAllSkills] = useState<any[]>([]);
   const [activeSkillIds, setActiveSkillIds] = useState<Set<string>>(new Set());
@@ -304,6 +308,15 @@ export default function AgentDetail() {
 
       const kb = await listAgentKnowledge(id!);
       setKnowledge(kb);
+
+      const numbers = await listPhoneNumbers();
+      setPhoneNumbers(numbers);
+      const assigned = numbers.find((n: any) => n.agent_id === a.id);
+      if (assigned) {
+        setSelectedNumberId(assigned.id);
+      } else {
+        setSelectedNumberId("none");
+      }
 
       const [skillsRes, activeRes] = await Promise.all([
         api.get<{ skills: any[] }>("/v1/skills"),
@@ -433,6 +446,28 @@ export default function AgentDetail() {
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleNumberChange(numberId: string) {
+    setSelectedNumberId(numberId);
+    try {
+      if (numberId === "none") {
+        const currentAssigned = phoneNumbers.find((n: any) => n.agent_id === id);
+        if (currentAssigned) {
+          await unlinkPhoneNumberAgent(currentAssigned.id);
+          await supabase.from("agents").update({ inbound_number: null }).eq("id", id);
+          await supabase.from("organization_agents").update({ phone_number_id: null }).eq("agent_id", id);
+          toast.success("Phone number unassigned from agent");
+        }
+      } else {
+        await api.post(`/v1/agents/${id}/assign-number`, { phone_number_id: numberId });
+        toast.success("Phone number assigned to agent");
+      }
+      const updatedNumbers = await listPhoneNumbers();
+      setPhoneNumbers(updatedNumbers);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update phone number assignment");
     }
   }
 
@@ -1156,13 +1191,39 @@ export default function AgentDetail() {
                   </div>
                 </div>
 
-                {/* Timezone + Transfer */}
+                {/* Telephony & Routing */}
+                <div>
+                  <p className="section-label mb-3">Telephony &amp; Routing</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <Field label="Inbound Phone Number">
+                      <Select value={selectedNumberId} onValueChange={handleNumberChange}>
+                        <SelectTrigger className="bg-background text-sm">
+                          <SelectValue placeholder="Select a phone number" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None (Inbound disabled)</SelectItem>
+                          {phoneNumbers.map((num) => (
+                            <SelectItem key={num.id} value={num.id}>
+                              {num.e164} {num.agent_id && num.agent_id !== id ? `(assigned)` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Incoming calls to this number will be routed to this agent.
+                      </p>
+                    </Field>
+                    
+                    <Field label="Human transfer number">
+                      <Input value={transferNumber} onChange={(e) => setTransferNumber(e.target.value)} placeholder="+14155551234" className="font-mono" />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Timezone */}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <Field label="Timezone">
                     <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} />
-                  </Field>
-                  <Field label="Human transfer number">
-                    <Input value={transferNumber} onChange={(e) => setTransferNumber(e.target.value)} placeholder="+14155551234" className="font-mono" />
                   </Field>
                 </div>
 

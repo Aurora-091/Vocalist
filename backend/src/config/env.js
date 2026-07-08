@@ -25,7 +25,15 @@ const schema = z.object({
   TWILIO_ACCOUNT_SID: runWorkers ? z.string().min(1) : z.string().optional(),
   TWILIO_REGION: z.string().default("us1"),
   TWILIO_VOICE_BASE_URL: z.string().optional(),
-  TWILIO_SANDBOX_MODE: z.coerce.boolean().default(false),
+  TWILIO_SANDBOX_MODE: z
+    .preprocess((val) => {
+      if (typeof val === "string") {
+        if (val.toLowerCase() === "false") return false;
+        if (val.toLowerCase() === "true") return true;
+      }
+      return val;
+    }, z.boolean())
+    .default(false),
 
   ELEVENLABS_API_KEY: runWorkers ? z.string().min(1) : z.string().optional(),
   ELEVENLABS_WEBHOOK_SECRET: z.string().optional(),

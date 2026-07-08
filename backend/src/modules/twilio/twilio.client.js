@@ -45,7 +45,8 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
       region: env.TWILIO_REGION,
       account_type: "aurora_managed",
     };
-    await admin.from("twilio_subaccounts").upsert(row);
+    const { error: upsertErr } = await admin.from("twilio_subaccounts").upsert(row);
+    if (upsertErr) throw upsertErr;
     return row;
   }
 
@@ -64,7 +65,8 @@ async function getOrCreateSubaccount(orgId, friendlyName) {
     account_type: "aurora_managed",
     friendly_name: friendlyName || null,
   };
-  await admin.from("twilio_subaccounts").upsert(row);
+  const { error: upsertErr } = await admin.from("twilio_subaccounts").upsert(row);
+  if (upsertErr) throw upsertErr;
 
   const { error: vaultErr } = await admin.rpc("vault_store", {
     name: row.auth_token_ref,

@@ -33,7 +33,7 @@ _No active phase plans. Historical plans are in `archive/`._
 
 ---
 
-## 4. Frontend Architecture (as of 2026-06-18)
+## 4. Frontend Architecture (as of 2026-07-08)
 
 ```
 src/
@@ -46,7 +46,7 @@ src/
 │   └── marketing.ts        ← Public site content
 ├── lib/
 │   ├── VerticalContext.tsx  ← React context provider + t() glossary helper
-│   ├── db.ts               ← Supabase data access layer (30+ functions)
+│   ├── db.ts               ← Supabase data access layer (60+ functions)
 │   ├── api.ts              ← Backend HTTP client with auth retry
 │   ├── admin-api.ts        ← Admin panel API client
 │   └── supabase.ts         ← Supabase client initialization
@@ -55,7 +55,7 @@ src/
 │   ├── ui/                 ← shadcn/ui components
 │   ├── marketing/          ← Public site components
 │   └── AnalyticsLoader.tsx ← Dynamic Google & Facebook analytics script loader
-├── pages/                  ← Route-level page components (39 pages)
+├── pages/                  ← Route-level page components (40 pages, incl. admin/ + auth/ subfolders)
 └── apps/
     ├── admin/              ← Admin panel sub-app
     └── customer/           ← Customer-facing sub-app

@@ -57,13 +57,23 @@ class ElevenLabsProvider extends VoiceProvider {
   }
 
   async _getTwilioCredentials() {
+    const env = require("../../config/env");
+    if (env.TWILIO_SANDBOX_MODE === true) {
+      const sid = `ACsandbox${(this.orgId || "").replace(/-/g, "").slice(0, 24)}`;
+      return { accountSid: sid, authToken: `sandbox:${this.orgId}` };
+    }
+
     const { requireAdmin } = require("../../config/supabase");
     const admin = requireAdmin();
-    const { data: sub } = await admin
+    const { data: sub, error: subErr } = await admin
       .from("twilio_subaccounts")
       .select("subaccount_sid, auth_token_ref")
       .eq("org_id", this.orgId)
       .maybeSingle();
+
+    if (subErr) {
+      logger.error({ err: subErr.message, orgId: this.orgId }, "Failed to fetch Twilio subaccount in ElevenLabs provider");
+    }
 
     if (!sub) {
       logger.warn({ orgId: this.orgId }, "No Twilio subaccount found for org");

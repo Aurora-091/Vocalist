@@ -2,6 +2,66 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.3] — Wednesday, 2026-07-08 18:30 IST
+
+### DB Cleanup: Drop pgvector `knowledge_chunks` + Live Spend/Inbound Gate Audit
+
+#### Dropped dead pgvector objects (Non-Negotiable #10)
+- **`supabase/migrations/20260708103000_drop_knowledge_chunks_and_vector.sql`** (new, applied to live DB via MCP): Dropped `public.knowledge_chunks` (with its HNSW index) and the `vector` extension. Verified against the live database first: 0 rows, no code/function/view/FK/cron references, and `knowledge_chunks.embedding` was the only vector-typed column. The KB remains CAI-native via `knowledge_sources` (untouched). Note: `docs/database-guide.md` still describes `knowledge_chunks` and needs a follow-up sync.
+
+#### Live audit finding — spend guard & inbound admission gate broken (NOT yet fixed)
+- Migration `20260629000000_resolve_schema_and_verticals_gaps.sql` dropped `spend_guards` and `inbound_rate_counters` as "unused", but `can_spend()`, `reserve_spend()`, `release_spend()`, and `check_inbound_rate()` still reference them and now throw `42P01` at runtime (confirmed by calling them live). Consequences: outbound dialer fail-opens past the spend cap (`dialer.worker.js` "allowing call" path — violates Non-Negotiable #9); inbound voice webhook fail-closes with a 500 before TwiML (violates #11 by outage). Additionally, `dialer.worker.js` and `campaigns.routes.js` call `can_spend`/`reserve_spend` with parameter names that never matched the DB signature (`p_amount_usd`, `p_org_id`). Fix pending owner decision — see audit summary in session notes.
+
+---
+
+## [1.16.2] — Wednesday, 2026-07-08 13:40 IST
+
+### CSP Fix for ElevenLabs AudioWorklets + Supabase MCP Config
+
+#### Content-Security-Policy — unblock voice AI audio worklets
+- **`vercel.json`**: Added `blob:` to `script-src` and a new `worker-src 'self' blob:` directive. The `@elevenlabs/client` SDK registers AudioWorklet processors via `audioWorklet.addModule(blobURL)`, which is governed by `worker-src` (falling back to `script-src`); neither previously allowed `blob:`, so worklet registration was blocked.
+- **`index.html`**: Mirrored the change on the `<meta http-equiv="Content-Security-Policy">` tag (added `blob:` to `script-src`, added `worker-src 'self' blob:`). Both policies must allow it because the browser enforces the intersection. Analytics allowances (GTM/GA/Ads/Facebook/HubSpot) left untouched. jsDelivr/LiveKit URLs deliberately omitted until a runtime console error proves they are needed.
+
+#### Supabase MCP
+- **`.mcp.json`** (new): Configures the Supabase MCP server (`https://mcp.supabase.com/mcp`) scoped to `project_ref=mhklmtayjkvkbwvcnhwj`. Requires per-user OAuth via `/mcp`.
+
+---
+
+## [1.16.1] — Wednesday, 2026-07-08 13:05 IST
+
+### Documentation Sync & Docs-Drift Pre-Push Hook
+
+#### Docs brought back in line with the implementation
+- **`README.md`**: Renamed Aurora → Weeber in title/intro, noted Exotel/VoBiz telephony adapters, documented the separate worker process (`npm run start:workers`) and the new git-hooks setup step.
+- **`docs/Weeber-Cursor-Rules.md`**: §3 tree updated — added 9 missing modules (admin, analytics, auth, enterprise, gdpr, playbooks, segments, skills, waitlist), added `providers/telephony/` (twilio, plivo, exotel, vobiz), corrected integration provider count (12 → 11), test-file count (19 → 21), replaced the stale "dialer worker must be built here" note with the 6 shipped workers, added `worker-entry.js`. §7 status — Stripe Subscriptions Webhook Sync marked ✅ Implemented (handled in `stripe.handler.js`).
+- **`docs/README.md`**: Frontend architecture section re-dated to 2026-07-08; page count 39 → 40; `db.ts` function count 30+ → 60+.
+- **`backend/src/providers/voice/factory.js`** + **`backend/src/providers/voice/README.md`**: Removed stale pre-PR-#9 statements ("vapi + retell still registered", "duplicate `services/providers/` tree exists") — consolidation is complete; registered providers are elevenlabs + mock (+ pipecat alias). Fixed dead links to archived scope/plan docs.
+- **`CLAUDE.md`** (new): Repository guide for Claude Code — commands, the 13 Non-Negotiables, architecture overview, conventions.
+
+#### Docs-drift guard
+- **`scripts/check-doc-drift.mjs`** (new): Dependency-free checker — validates all relative markdown links resolve and numeric doc claims (invariant test count) match the codebase.
+- **`.githooks/pre-push`** (new): Runs the drift check on every push; enabled per clone via `git config core.hooksPath .githooks`.
+
+---
+
+## [1.16.0] — 2026-07-08
+
+### Twilio Webhook Hardening & Phone Number Purchasing UI/UX Wizard
+
+#### Twilio Webhook Hardening
+- **`backend/src/modules/webhooks/webhook.routes.js`**: Added dynamic webhook signature verification logic using subaccount-specific auth tokens from the database and Vault (via `vault_read` RPC query) based on `AccountSid` parameter in incoming requests. Implements a secure fallback to `TWILIO_AUTH_TOKEN` and automated bypasses in sandbox environments.
+- **`backend/src/tests/invariants/webhook-sig.test.js`**: Added unit tests validating sandbox webhook bypasses, mock accounts, and database/vault resolved auth token signature validation.
+
+#### Phone Number Purchasing UI/UX Wizard
+- **`src/components/BuyNumberDialog.tsx`** (new): Created a dual-tabbed phone number provisioning interface matching modern Weeber design guidelines:
+  - **Search & Buy Managed**: Searches available Twilio numbers by country (US, CA, GB), type (local, tollfree), and area code, showing pricing and capabilities.
+  - **Link BYO Number**: Enables merchants to bring their own number via E.164 linking.
+  - **Auto-Assign Agent**: Prompts the user to auto-assign the number to an active voice agent directly on purchase/linking.
+- **`src/pages/Numbers.tsx`**: Integrated the new purchasing modal, replacing the simple BYO input.
+- **`src/pages/SetupNumber.tsx`**: Integrated `BuyNumberDialog` directly into onboarding steps with active status checks.
+
+---
+
 ## [1.15.0] — 2026-07-07
 
 ### Email OTP Verification & Onboarding Modal Refactor

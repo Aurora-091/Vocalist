@@ -27,7 +27,7 @@ The voice runtime is **ElevenLabs Conversational AI (CAI)** — rented, not rebu
 | Frontend | Vite + React + TypeScript + **Tailwind v4** + **shadcn/ui** |
 | Database | **Supabase** (Postgres + RLS + Auth + Realtime + Storage + Edge Functions) |
 | Voice runtime | **ElevenLabs CAI** — registered in `VoiceProvider` factory; Vapi compiled but NOT registered (Phase-4 swap) |
-| Telephony | **Twilio** — per-tenant subaccounts (not one master account); secrets stored in Supabase Vault |
+| Telephony | **Twilio** — per-tenant subaccounts (not one master account); secrets stored in Supabase Vault. Adapter abstraction in `providers/telephony/` also covers Plivo + Exotel/VoBiz (Indian telephony) |
 | Billing | **Stripe** — subscriptions + metered usage from `usage_ledger` |
 | Queue / cache | Upstash Redis (dialer job queue + rate limits) — not yet implemented |
 | Package manager | npm (backend), npm (frontend) |
@@ -40,42 +40,56 @@ The voice runtime is **ElevenLabs Conversational AI (CAI)** — rented, not rebu
 ```
 Vocalist/
 ├── backend/                    Node + Express API (CommonJS)
-│   ├── server.js               Entry point
+│   ├── server.js               API entry point
+│   ├── worker-entry.js         Worker process entry point (separate Railway service)
 │   ├── src/
 │   │   ├── app.js              Express app + route mounting
 │   │   ├── config/             env.js · logger.js · supabase.js
-│   │   ├── middleware/         auth · error · rate-limit · validation
+│   │   ├── middleware/         auth · admin · error · rate-limit · validation
 │   │   ├── modules/            Feature modules (one folder = one domain)
+│   │   │   ├── admin/          admin.service.js · admin.routes.js (admin panel API)
 │   │   │   ├── agents/         agent.service.js · agents.routes.js
+│   │   │   ├── analytics/      analytics.routes.js
+│   │   │   ├── auth/           auth.routes.js · auth.validator.js
 │   │   │   ├── billing/        billing.service.js · metering.js · billing.routes.js
 │   │   │   ├── calls/          call.service.js · calls.routes.js
 │   │   │   ├── campaigns/      campaigns.routes.js · state-machine.js
 │   │   │   ├── consent/        consent-gate.js · consent.routes.js
 │   │   │   ├── contacts/       contacts.routes.js · contacts.validator.js
-│   │   │   ├── integrations/   integration.service.js · providers/ (12 providers: shopify, hubspot, calcom, cliniko, drchrono, freshsales, jane_app, pipedrive, salesforce, whatsapp, zoho_crm + shopify.internal.routes.js)
+│   │   │   ├── enterprise/     enterprise inquiries
+│   │   │   ├── gdpr/           GDPR/DPDP export + erasure
+│   │   │   ├── integrations/   integration.service.js · shopify.oauth.js · shopify.internal.routes.js · providers/ (11 providers: calcom, cliniko, drchrono, freshsales, hubspot, jane_app, pipedrive, salesforce, shopify, whatsapp, zoho_crm)
 │   │   │   ├── knowledge/      knowledge.routes.js
 │   │   │   ├── notifications/  notifications.routes.js
 │   │   │   ├── numbers/        numbers.routes.js
 │   │   │   ├── onboarding/     onboarding.routes.js
 │   │   │   ├── organizations/  organizations.routes.js
+│   │   │   ├── playbooks/      playbooks.routes.js (Shopify v2 playbooks)
+│   │   │   ├── segments/       contact segments
 │   │   │   ├── settings/       settings.routes.js
+│   │   │   ├── skills/         skills.routes.js (agent skills catalog)
 │   │   │   ├── twilio/         twilio.client.js · twilio.routes.js
 │   │   │   ├── users/          users.routes.js
 │   │   │   ├── verticals/      verticals.routes.js
+│   │   │   ├── waitlist/       waitlist.routes.js · waitlist.ws.js
 │   │   │   ├── webhooks/       webhook.routes.js · webhook.service.js
 │   │   │   │   └── handlers/   elevenlabs.handler.js · twilio.handler.js · stripe.handler.js · vapi.handler.js
 │   │   │   └── webhooks-out/   webhooks-out.routes.js
 │   │   ├── providers/voice/    VOICE PROVIDER ABSTRACTION
 │   │   │   ├── interface.js    VoiceProvider base class — ALL voice goes through here
-│   │   │   ├── factory.js      buildVoiceProvider() — only elevenlabs + mock registered
+│   │   │   ├── factory.js      buildVoiceProvider() — registered: elevenlabs + mock (+ pipecat alias → mock)
 │   │   │   ├── elevenlabs.provider.js  ← ACTIVE
 │   │   │   ├── vapi.provider.js        ← compiled, NOT registered
 │   │   │   ├── retell.provider.js      ← compiled, NOT registered
 │   │   │   └── mock.provider.js        ← tests only
-│   │   ├── services/           persona.service.js · twilio-stream.service.js
-│   │   ├── tests/invariants/   19 test files covering critical invariants
-│   │   ├── utils/              asyncHandler · errors · idempotency · phone · credential.helper
-│   │   └── workers/            ← dialer worker must be built here
+│   │   ├── providers/telephony/  TELEPHONY ABSTRACTION
+│   │   │   ├── interface.js · factory.js
+│   │   │   ├── twilio.adapter.js · plivo.adapter.js
+│   │   │   └── exotel.adapter.js · vobiz.adapter.js  ← Indian telephony
+│   │   ├── services/           persona.service.js · twilio-stream.service.js · email.service.js
+│   │   ├── tests/invariants/   21 test files covering critical invariants
+│   │   ├── utils/              asyncHandler · errors · idempotency · phone · signature · retry · credential.helper
+│   │   └── workers/            dialer · retry · billing-rollup · lease-sweeper · webhooks-out · call-scheduler
 │   └── package.json
 │
 ├── src/                        Vite + React frontend (TypeScript + Tailwind v4)
@@ -155,4 +169,4 @@ Make sure environment variables are declared in server config. Core variables:
 | Shopify v2 (Playbooks + Scheduled Calls) | ✅ Implemented |
 | Web Test Call (in-browser via ElevenLabs) | ✅ Implemented |
 | Indian Telephony (Exotel, VoBiz) | ✅ Implemented |
-| **Stripe Subscriptions Webhook Sync** | ❌ MISSING (P1) |
+| Stripe Subscriptions Webhook Sync | ✅ Implemented (`stripe.handler.js`: `checkout.session.completed`, `customer.subscription.created/updated/deleted`) |
