@@ -2,6 +2,19 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.2] — Wednesday, 2026-07-08 13:40 IST
+
+### CSP Fix for ElevenLabs AudioWorklets + Supabase MCP Config
+
+#### Content-Security-Policy — unblock voice AI audio worklets
+- **`vercel.json`**: Added `blob:` to `script-src` and a new `worker-src 'self' blob:` directive. The `@elevenlabs/client` SDK registers AudioWorklet processors via `audioWorklet.addModule(blobURL)`, which is governed by `worker-src` (falling back to `script-src`); neither previously allowed `blob:`, so worklet registration was blocked.
+- **`index.html`**: Mirrored the change on the `<meta http-equiv="Content-Security-Policy">` tag (added `blob:` to `script-src`, added `worker-src 'self' blob:`). Both policies must allow it because the browser enforces the intersection. Analytics allowances (GTM/GA/Ads/Facebook/HubSpot) left untouched. jsDelivr/LiveKit URLs deliberately omitted until a runtime console error proves they are needed.
+
+#### Supabase MCP
+- **`.mcp.json`** (new): Configures the Supabase MCP server (`https://mcp.supabase.com/mcp`) scoped to `project_ref=mhklmtayjkvkbwvcnhwj`. Requires per-user OAuth via `/mcp`.
+
+---
+
 ## [1.16.1] — Wednesday, 2026-07-08 13:05 IST
 
 ### Documentation Sync & Docs-Drift Pre-Push Hook
