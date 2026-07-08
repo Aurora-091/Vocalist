@@ -9,7 +9,7 @@ import { isAdminApp } from "@/lib/hostname";
 import * as Sentry from "@sentry/react";
 import "./index.css";
 
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+const SENTRY_DSN = (import.meta.env.VITE_SENTRY_DSN as string | undefined) || "https://99e6a4a1148f9d7b9fc9e7157d9b4c68@o4511590961840128.ingest.us.sentry.io/4511699508068352";
 
 if (SENTRY_DSN) {
   Sentry.init({

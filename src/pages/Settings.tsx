@@ -206,32 +206,54 @@ function AppearancePanel() {
   }
 
   return (
-    <Card className="gap-0 overflow-visible py-0 shadow-card">
-      <div className="border-b px-6 py-4">
-        <div className="font-medium">Appearance</div>
-      </div>
-      <CardContent className="px-6 py-5">
-        <p className="text-sm text-text-muted mb-4">
-          Choose how Weeber looks for you. This syncs across devices.
-        </p>
-        <div className="grid grid-cols-3 gap-3 max-w-sm">
-          {themes.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => saveTheme(key)}
-              className={`flex flex-col items-center gap-2 p-4 rounded-md border transition-colors ${
-                theme === key
-                  ? "border-text bg-surface-2 text-text"
-                  : "border-border hover:border-text/30 text-text-muted hover:text-text"
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-xs font-medium">{label}</span>
-            </button>
-          ))}
+    <div className="space-y-6">
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
+          <div className="font-medium">Appearance</div>
         </div>
-      </CardContent>
-    </Card>
+        <CardContent className="px-6 py-5">
+          <p className="text-sm text-text-muted mb-4">
+            Choose how Weeber looks for you. This syncs across devices.
+          </p>
+          <div className="grid grid-cols-3 gap-3 max-w-sm">
+            {themes.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => saveTheme(key)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-md border transition-colors ${
+                  theme === key
+                    ? "border-text bg-surface-2 text-text"
+                    : "border-border hover:border-text/30 text-text-muted hover:text-text"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs font-medium">{label}</span>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <div className="border-b px-6 py-4">
+          <div className="font-medium text-danger">Diagnostics & Telemetry</div>
+        </div>
+        <CardContent className="px-6 py-5">
+          <p className="text-sm text-text-muted mb-4">
+            Test and verify your Sentry error tracking integration. Clicking this button will trigger an intentional JavaScript exception.
+          </p>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              toast.info("Triggering Sentry test error...");
+              throw new Error("This is your first error!");
+            }}
+          >
+            Break the world
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
