@@ -262,33 +262,35 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                 <p className="text-sm text-muted-foreground">No templates available.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4">
                 {visiblePresets.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setSelectedPreset(p)}
                     className={cn(
-                      "text-left p-4 rounded-lg border transition-all",
+                      "text-left p-5 rounded-xl border transition-all flex flex-col justify-between h-full shadow-sm hover:shadow",
                       selectedPreset?.id === p.id
                         ? "ring-2 ring-foreground border-transparent bg-muted/60"
                         : "border-border bg-background hover:border-foreground/30 hover:bg-muted/30"
                     )}
                   >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-muted-foreground">
-                        {VERTICAL_ICON[p.vertical_key] ?? <Phone className="w-3.5 h-3.5" />}
-                      </span>
-                      <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                        {p.vertical_key}
-                      </span>
-                      {selectedPreset?.id === p.id && (
-                        <Check className="w-3.5 h-3.5 text-emerald-500 ml-auto" />
-                      )}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-muted-foreground">
+                          {VERTICAL_ICON[p.vertical_key] ?? <Phone className="w-3.5 h-3.5" />}
+                        </span>
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          {p.vertical_key}
+                        </span>
+                        {selectedPreset?.id === p.id && (
+                          <Check className="w-3.5 h-3.5 text-emerald-500 ml-auto" />
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-foreground leading-snug">{p.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">
+                        {p.description}
+                      </p>
                     </div>
-                    <p className="text-sm font-medium text-foreground leading-snug">{p.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
-                      {p.description}
-                    </p>
                   </button>
                 ))}
               </div>
@@ -683,7 +685,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[92vw] max-w-4xl h-[80vh] max-h-[700px] p-0 gap-0 flex flex-col overflow-hidden"
+        className="w-[94vw] max-w-5xl h-[85vh] max-h-[780px] p-0 gap-0 flex flex-col overflow-hidden"
         showCloseButton={false}
       >
         {desktopLayout}

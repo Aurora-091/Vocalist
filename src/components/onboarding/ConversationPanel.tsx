@@ -138,9 +138,9 @@ export function ConversationPanel({
   const remaining = MAX_DURATION_SEC - elapsed;
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col flex-1 h-full min-h-0 space-y-4">
       {phase === "active" && (
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 border border-border">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 border border-border shrink-0">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -166,7 +166,7 @@ export function ConversationPanel({
 
       <div
         ref={transcriptRef}
-        className="h-[200px] overflow-y-auto rounded-lg border border-border bg-background p-3 space-y-2"
+        className="flex-1 min-h-[250px] overflow-y-auto rounded-lg border border-border bg-background p-4 space-y-2"
       >
         {phase === "idle" && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2">
@@ -216,10 +216,10 @@ export function ConversationPanel({
       </div>
 
       {error && (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-destructive shrink-0">{error}</p>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {phase === "idle" && (
           <Button onClick={handleStart} className="flex-1">
             <Mic className="w-4 h-4 mr-2" />
