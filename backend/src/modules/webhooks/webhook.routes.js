@@ -147,17 +147,51 @@ router.post(
   })
 );
 
+async function verifyRequestSignature(req, url, sig) {
+  const accountSid = req.body?.AccountSid;
+  let isSandboxCall = env.TWILIO_SANDBOX_MODE === true || (accountSid && accountSid.startsWith("ACsandbox"));
+  
+  if (isSandboxCall) {
+    return true;
+  }
+
+  let authToken = env.TWILIO_AUTH_TOKEN;
+
+  if (accountSid && accountSid !== env.TWILIO_ACCOUNT_SID) {
+    const { requireAdmin } = require("../../config/supabase");
+    const admin = requireAdmin();
+    const { data: sub } = await admin
+      .from("twilio_subaccounts")
+      .select("auth_token_ref")
+      .eq("subaccount_sid", accountSid)
+      .maybeSingle();
+
+    if (sub && sub.auth_token_ref) {
+      if (sub.auth_token_ref.startsWith("sandbox:")) {
+        return true;
+      }
+      const { data: secret } = await admin.rpc("vault_read", { name: sub.auth_token_ref });
+      if (secret) {
+        authToken = secret;
+      }
+    }
+  }
+
+  if (!authToken) {
+    logger.error({ accountSid }, "Twilio webhook signature verification failed: no auth token configured");
+    return false;
+  }
+
+  return verifyTwilioSignature(authToken, url, req.body, sig);
+}
+
 router.post(
   "/twilio",
   express.urlencoded({ extended: false }),
   asyncHandler(async (req, res) => {
     const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
     const sig = req.headers["x-twilio-signature"];
-    if (!env.TWILIO_AUTH_TOKEN) {
-      logger.error("TWILIO_AUTH_TOKEN not configured — refusing webhook");
-      return res.status(503).json({ error: { code: "webhook_not_configured" } });
-    }
-    const signatureOk = verifyTwilioSignature(env.TWILIO_AUTH_TOKEN, url, req.body, sig);
+    const signatureOk = await verifyRequestSignature(req, url, sig);
     if (!signatureOk) {
       return res.status(401).json({ error: { code: "invalid_signature" } });
     }
@@ -189,11 +223,7 @@ router.post(
     const crypto = require("crypto");
     const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
     const sig = req.headers["x-twilio-signature"];
-    if (!env.TWILIO_AUTH_TOKEN) {
-      logger.error("TWILIO_AUTH_TOKEN not configured — refusing voice webhook");
-      return res.status(503).type("text/xml").send("<Response/>");
-    }
-    const signatureOk = verifyTwilioSignature(env.TWILIO_AUTH_TOKEN, url, req.body, sig);
+    const signatureOk = await verifyRequestSignature(req, url, sig);
     if (!signatureOk) {
       return res.status(401).type("text/xml").send("<Response/>");
     }
@@ -482,3 +512,4 @@ router.post(
 );
 
 module.exports = router;
+router._verifyRequestSignature = verifyRequestSignature;

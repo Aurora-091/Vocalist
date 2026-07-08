@@ -2,6 +2,24 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.0] — 2026-07-08
+
+### Twilio Webhook Hardening & Phone Number Purchasing UI/UX Wizard
+
+#### Twilio Webhook Hardening
+- **`backend/src/modules/webhooks/webhook.routes.js`**: Added dynamic webhook signature verification logic using subaccount-specific auth tokens from the database and Vault (via `vault_read` RPC query) based on `AccountSid` parameter in incoming requests. Implements a secure fallback to `TWILIO_AUTH_TOKEN` and automated bypasses in sandbox environments.
+- **`backend/src/tests/invariants/webhook-sig.test.js`**: Added unit tests validating sandbox webhook bypasses, mock accounts, and database/vault resolved auth token signature validation.
+
+#### Phone Number Purchasing UI/UX Wizard
+- **`src/components/BuyNumberDialog.tsx`** (new): Created a dual-tabbed phone number provisioning interface matching modern Weeber design guidelines:
+  - **Search & Buy Managed**: Searches available Twilio numbers by country (US, CA, GB), type (local, tollfree), and area code, showing pricing and capabilities.
+  - **Link BYO Number**: Enables merchants to bring their own number via E.164 linking.
+  - **Auto-Assign Agent**: Prompts the user to auto-assign the number to an active voice agent directly on purchase/linking.
+- **`src/pages/Numbers.tsx`**: Integrated the new purchasing modal, replacing the simple BYO input.
+- **`src/pages/SetupNumber.tsx`**: Integrated `BuyNumberDialog` directly into onboarding steps with active status checks.
+
+---
+
 ## [1.15.0] — 2026-07-07
 
 ### Email OTP Verification & Onboarding Modal Refactor

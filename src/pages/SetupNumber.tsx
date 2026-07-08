@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Phone, ShieldCheck, CircleAlert as AlertCircle, Link2, Server, Loader as Loader2 } from "lucide-react";
+import { Phone, ShieldCheck, CircleAlert as AlertCircle, Link2, Server, Loader as Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { listPhoneNumbers } from "../lib/db";
 import { api } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { BuyNumberDialog } from "../components/BuyNumberDialog";
 
 type PhoneNumber = {
   id: string;
@@ -33,17 +34,25 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
   const [numbers, setNumbers] = useState<PhoneNumber[]>([]);
   const [account, setAccount] = useState<TwilioAccount | null | undefined>(undefined);
   const [loadingAccount, setLoadingAccount] = useState(true);
+  const [buyDialogOpen, setBuyDialogOpen] = useState(false);
 
-  useEffect(() => {
-    (async () => {
+  async function load() {
+    try {
       const [n, status] = await Promise.all([
         listPhoneNumbers(),
         api.get<{ account: TwilioAccount | null }>("/v1/twilio/account-status").catch(() => ({ account: null })),
       ]);
       setNumbers(n || []);
       setAccount(status.account);
+    } catch {
+      // ignore
+    } finally {
       setLoadingAccount(false);
-    })();
+    }
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
   if (loadingAccount) {
@@ -95,12 +104,20 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
       )}
 
       {account ? (
-        <AccountLinked account={account} onUnlink={async () => {
-          if (account.account_type !== "byo_linked") return;
-          await api.delete("/v1/twilio/link-account");
-          setAccount(null);
-          toast.success("BYO account unlinked");
-        }} />
+        <div className="space-y-4">
+          <AccountLinked account={account} onUnlink={async () => {
+            if (account.account_type !== "byo_linked") return;
+            await api.delete("/v1/twilio/link-account");
+            setAccount(null);
+            toast.success("BYO account unlinked");
+          }} />
+          <div className="flex justify-start">
+            <Button onClick={() => setBuyDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Buy a Phone Number
+            </Button>
+          </div>
+        </div>
       ) : (
         <TwilioSetupChoice
           onAuroraManaged={async () => {
@@ -123,6 +140,12 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
           </button>
         </div>
       )}
+
+      <BuyNumberDialog
+        open={buyDialogOpen}
+        onOpenChange={setBuyDialogOpen}
+        onSuccess={load}
+      />
     </div>
   );
 }
