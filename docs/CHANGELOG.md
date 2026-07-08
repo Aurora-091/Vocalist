@@ -2,6 +2,31 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.7] — Wednesday, 2026-07-08 20:30 IST
+
+### Sentry Integration for Frontend Error Monitoring
+
+#### Configured Sentry client-side exception capture
+- **`package.json`**: Installed `@sentry/react` for browser runtime tracing/replay capture and `@sentry/vite-plugin` for sourcemap generation.
+- **`src/main.tsx`**: Initialized Sentry on application mount using the `VITE_SENTRY_DSN` environment variable. Enables browser tracing and session replay tracking.
+- **`vite.config.ts`**: Configured `@sentry/vite-plugin` to build and upload sourcemaps during production pipeline, disabled during local dev if `SENTRY_AUTH_TOKEN` is absent.
+- **`.env.example`**: Documented the new `VITE_SENTRY_DSN` variable template.
+
+---
+
+## [1.16.6] — Wednesday, 2026-07-08 17:11 IST
+
+### Dead-Object Cleanup: Drop pgvector `knowledge_chunks` (verified against live DB)
+
+- **`supabase/migrations/20260708103000_drop_knowledge_chunks_and_vector.sql`** (new, applied to the live project via MCP): Drops `public.knowledge_chunks` (with its HNSW index) and the `vector` extension. The Knowledge Base is CAI-native (Non-Negotiable #10); the Phase-1 scope contract explicitly excluded pgvector. Verified live before dropping: 0 rows; no code, DB function, view, foreign-key, or `cron.job` references; `knowledge_chunks.embedding` was the only vector-typed column in the database. `knowledge_sources` (the CAI mirror) is untouched.
+- **Known doc drift (pending)**: `docs/database-guide.md` still describes `knowledge_chunks`/pgvector and `docs/testing/edge_cases.md` INF-4 exercises it — to be cleaned up together with the spend-guard fix below.
+
+#### ⚠️ Live bug found during verification (NOT fixed yet — needs a decision)
+
+Migration `20260629000000_resolve_schema_and_verticals_gaps.sql` dropped `spend_guards` and `inbound_rate_counters` as "unused", but `can_spend()`, `reserve_spend()`, `release_spend()`, and `check_inbound_rate()` still reference them and error at runtime (confirmed by calling them against the live DB). Consequences: the outbound spend cap is silently bypassed (`dialer.worker.js` treats a `can_spend` RPC error as fail-open), and the inbound admission gate throws, breaking inbound calls entirely (`webhook.routes.js` fail-closed). Separately, the dialer and campaign call sites pass wrong RPC parameter names (`p_amount_usd`, `p_org_id` vs. the deployed `p_org`/`p_projected_usd` signature), so those spend checks have never matched the deployed functions. Fix requires restoring the two tables (with RLS) and correcting the call-site signatures.
+
+---
+
 ## [1.16.5] — Wednesday, 2026-07-08 20:00 IST
 
 ### Twilio Subaccounts Schema Hardening

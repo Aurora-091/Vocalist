@@ -6,7 +6,23 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { isAdminApp } from "@/lib/hostname";
+import * as Sentry from "@sentry/react";
 import "./index.css";
+
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+  });
+}
 
 const AdminApp = lazy(() => import("@/apps/admin/AdminApp"));
 const CustomerApp = lazy(() => import("@/apps/customer/CustomerApp"));
