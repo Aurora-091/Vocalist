@@ -60,13 +60,18 @@ async function dispatchOne(admin, { campaign, agent, target }) {
   const overageRate = await billingService.getOrgOverageRate(campaign.org_id);
   const projectedCost = DEFAULT_PROJECTED_MINUTES * overageRate;
 
-  const { data: canSpend, error: spendCheckErr } = await admin.rpc("can_spend", {
+  const spendArgs = {
     p_org: campaign.org_id,
-    p_amount_usd: projectedCost,
-  });
-  if (spendCheckErr) {
-    logger.warn({ err: spendCheckErr.message, orgId: campaign.org_id }, "can_spend RPC error - allowing call");
-  } else if (canSpend === false) {
+    p_scope: "campaign",
+    p_scope_id: campaign.id,
+    p_projected_usd: projectedCost,
+    p_now: new Date().toISOString(),
+  };
+  const { data: canSpend, error: spendCheckErr } = await admin.rpc("can_spend", spendArgs);
+  // Non-negotiable #9: no call without can_spend() = true — an indeterminate
+  // check must not dial. The lease expires and the sweeper retries the target.
+  if (spendCheckErr) throw spendCheckErr;
+  if (canSpend === false) {
     await transition(admin, {
       targetId: target.target_id,
       fromState: STATES.DIALING,
@@ -78,10 +83,7 @@ async function dispatchOne(admin, { campaign, agent, target }) {
   }
 
   // Reserve projected spend so concurrent calls don't exceed budget
-  const { error: reserveErr } = await admin.rpc("reserve_spend", {
-    p_org: campaign.org_id,
-    p_amount_usd: projectedCost,
-  });
+  const { error: reserveErr } = await admin.rpc("reserve_spend", spendArgs);
   if (reserveErr) {
     logger.warn({ err: reserveErr.message, orgId: campaign.org_id }, "reserve_spend RPC error - continuing");
   }
@@ -109,10 +111,8 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     logger.error({ err: err.message, agentProvider: agent.provider }, "Provider startCall failed");
 
     // Release the reserved spend since the call never happened
-    await admin.rpc("release_spend", {
-      p_org: campaign.org_id,
-      p_amount_usd: projectedCost,
-    }).catch((e) => logger.warn({ err: e.message, orgId: campaign.org_id }, "release_spend failed"));
+    await admin.rpc("release_spend", spendArgs)
+      .catch((e) => logger.warn({ err: e.message, orgId: campaign.org_id }, "release_spend failed"));
 
     await transition(admin, {
       targetId: target.target_id,
@@ -140,10 +140,7 @@ async function dispatchOne(admin, { campaign, agent, target }) {
     .single();
   if (callErr) {
     logger.error({ err: callErr.message }, "Failed to insert call row after dispatch");
-    await admin.rpc("release_spend", {
-      p_org: campaign.org_id,
-      p_amount_usd: projectedCost,
-    }).catch(() => {});
+    await admin.rpc("release_spend", spendArgs).catch(() => {});
     return { failed: true, reason: "call_insert_failed" };
   }
 

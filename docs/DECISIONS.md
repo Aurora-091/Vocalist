@@ -240,3 +240,9 @@ This document tracks all major product, architecture, and technology decisions m
   - `src/pages/Dashboard.tsx`
   - `src/pages/Signup.tsx`
   - `src/apps/customer/CustomerApp.tsx`
+
+## DEC-018: Spend Guard Is Fail-Closed at Dial Time
+* **Date**: 2026-07-08
+* **Status**: Accepted
+* **Context**: Migration `20260629000000` dropped `spend_guards`/`inbound_rate_counters` as "unused" while the guard RPCs still referenced them, so `can_spend()` errored on every call. The dialer treated an RPC error as "allow" (fail-open), which silently disabled the spend ceiling — no alert, no symptom, real Twilio/LLM cost exposure (Non-Negotiables #9/#12). Separately, `reserve_spend`/`release_spend`/`commit_spend` had a PL/pgSQL loop-variable shadowing bug (`g RECORD` vs `FROM spend_guards g`) that made them error on every invocation since Phase 0.
+* **Decision**: The tables are restored (`20260708174500`), the RPCs are fixed (`20260708175500`), and `dialer.worker.js` now **throws on a `can_spend` RPC error instead of dialing** — an indeterminate spend check must never place a call; the lease expires and the sweeper retries. Campaign preflight (`campaigns.routes.js`) stays permissive on RPC error but logs it, because the dialer re-checks at dial time. Guard-function changes must ship in the same migration as any table they touch.

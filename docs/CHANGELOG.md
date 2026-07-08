@@ -2,6 +2,25 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.8] — Wednesday, 2026-07-08 17:43 IST
+
+### Backend Crash-Loop Fix + Spend Guard / Inbound Gate Restoration (DEC-018)
+
+#### Railway deploys unblocked (4 consecutive failures)
+
+- **`backend/src/modules/twilio/twilio.routes.js`**: Commit `7424c96` inserted the twilio_subaccounts pre-init check inside the `if (req.body.agent_id)` block and dropped its closing brace → `SyntaxError: Unexpected token ')'` at module load → container crash-loop → `/health` never answered → every deploy since 11:41 UTC failed. Brace restored; the subaccount check now applies to all purchases as intended. This outage is also why Twilio showed "webhook connection closed/never opened" on inbound calls — the backend was down.
+
+#### Spend guard & inbound admission gate restored (Non-Negotiables #9/#11/#12)
+
+- **`supabase/migrations/20260708174500_restore_spend_guards_and_inbound_rate_counters.sql`** (applied): Recreates `spend_guards` + `inbound_rate_counters` (schema/RLS/indexes verbatim from `20260604090200`/`20260604090300`), wrongly dropped as "unused" by `20260629000000` while `can_spend`/`reserve_spend`/`release_spend`/`commit_spend`/`check_inbound_rate` still referenced them (42P01 on every call).
+- **`supabase/migrations/20260708175500_fix_spend_rpc_loop_variable_shadowing.sql`** (applied): `reserve_spend`/`release_spend`/`commit_spend` declared `g RECORD` while aliasing `spend_guards g` in the FOR query — PL/pgSQL resolved `g.scope` to the unassigned record (`55000`) on every invocation since Phase 0. Loop record renamed `v_guard`, alias `sg`.
+- **`backend/src/workers/dialer.worker.js`**: `can_spend`/`reserve_spend`/`release_spend` calls now pass the deployed 5-arg signature (`p_org, p_scope:'campaign', p_scope_id, p_projected_usd, p_now`) instead of the never-valid `p_amount_usd`. A `can_spend` RPC error now **throws (fail-closed)** instead of "allowing call" — see DEC-018.
+- **`backend/src/modules/campaigns/campaigns.routes.js`**: preflight `can_spend` param fixed `p_org_id`→`p_org`; RPC errors now logged instead of silently swallowed (stays permissive — dial-time check is the enforcement point).
+- **Verified live** (temp org in a rolled-back transaction): no-guard default = open; reserve 0.90/1.00 then +0.50 projected = blocked; inbound first call = `admit`, over per-from threshold = `blocked_rate`.
+- **Known gap (not fixed)**: nothing calls `commit_spend` on call end yet, so reservations release but spent_usd never accrues from calls; enforcement relies on reservations + `usage_ledger` rollups until that's wired.
+
+---
+
 ## [1.16.7] — Wednesday, 2026-07-08 20:30 IST
 
 ### Sentry Integration for Frontend Error Monitoring

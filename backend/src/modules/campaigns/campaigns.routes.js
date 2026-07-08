@@ -4,6 +4,7 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
 const { NotFound, BadRequest } = require("../../utils/errors");
+const logger = require("../../config/logger");
 const { STATES } = require("./state-machine");
 
 const router = express.Router();
@@ -244,17 +245,18 @@ router.get(
     const estimatedCost = consented * avgCallMinutes * 0.14;
 
     let spendCheckPassed = true;
-    try {
-      const { data: canSpend } = await admin.rpc("can_spend", {
-        p_org_id: campaign.org_id,
-        p_scope: "campaign",
-        p_scope_id: campaign.id,
-        p_projected_usd: estimatedCost,
-        p_now: new Date().toISOString(),
-      });
+    const { data: canSpend, error: spendErr } = await admin.rpc("can_spend", {
+      p_org: campaign.org_id,
+      p_scope: "campaign",
+      p_scope_id: campaign.id,
+      p_projected_usd: estimatedCost,
+      p_now: new Date().toISOString(),
+    });
+    if (spendErr) {
+      // Preflight estimate only — the dialer re-checks at dial time and fails closed there.
+      logger.warn({ err: spendErr.message, orgId: campaign.org_id }, "can_spend RPC error in campaign preflight");
+    } else {
       spendCheckPassed = canSpend !== false;
-    } catch {
-      spendCheckPassed = true;
     }
 
     let blockReason = null;
