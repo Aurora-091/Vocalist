@@ -246,3 +246,15 @@ This document tracks all major product, architecture, and technology decisions m
 * **Status**: Accepted
 * **Context**: Migration `20260629000000` dropped `spend_guards`/`inbound_rate_counters` as "unused" while the guard RPCs still referenced them, so `can_spend()` errored on every call. The dialer treated an RPC error as "allow" (fail-open), which silently disabled the spend ceiling — no alert, no symptom, real Twilio/LLM cost exposure (Non-Negotiables #9/#12). Separately, `reserve_spend`/`release_spend`/`commit_spend` had a PL/pgSQL loop-variable shadowing bug (`g RECORD` vs `FROM spend_guards g`) that made them error on every invocation since Phase 0.
 * **Decision**: The tables are restored (`20260708174500`), the RPCs are fixed (`20260708175500`), and `dialer.worker.js` now **throws on a `can_spend` RPC error instead of dialing** — an indeterminate spend check must never place a call; the lease expires and the sweeper retries. Campaign preflight (`campaigns.routes.js`) stays permissive on RPC error but logs it, because the dialer re-checks at dial time. Guard-function changes must ship in the same migration as any table they touch.
+
+---
+
+## DEC-019: Call Row Created Before Provider startCall (Insert-Before-Dial Pattern)
+* **Date**: 2026-07-08
+* **Status**: Accepted
+* **Context**: The campaign dialer (`dialer.worker.js`) previously inserted the `calls` row only after `provider.startCall()` succeeded. An ElevenLabs webhook event (e.g., `conversation.ended`) could arrive within seconds of the dial — before the row was inserted — causing the webhook handler to log "unknown call" and lose all billing/outcome data for that call. Additionally, if the DB insert failed after a live call was placed, the call ran unbilled and untracked with no path to reconciliation.
+* **Decision**: The `calls` row is inserted with `status: 'queued'` **before** `startCall()` is invoked. The auto-generated `callId` is passed into `conversation_initiation_client_data.call_id` so the ElevenLabs webhook handler uses the metadata lookup path (fast path, no table scan) rather than the `conversation_id` / `provider_call_id` fallback. On `startCall()` failure, the pre-created row is immediately marked `status: 'failed'`. This pattern was already used by `call-scheduler.worker.js` and is now consistent across all outbound call paths. The `call-scheduler.worker.js` does not yet pass `call_id` in metadata; this is a known gap (INT-M2) but lower priority since scheduled calls are not campaign-volume.
+* **Key Files**:
+  - `backend/src/workers/dialer.worker.js`
+  - `backend/src/modules/webhooks/handlers/elevenlabs.handler.js` (metadata lookup path, lines 101-112)
+

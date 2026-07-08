@@ -1,10 +1,132 @@
 # Weeber — Full Codebase Audit
 
-_Last updated: 2026-07-06_
+_Last updated: 2026-07-08_
 _Scope: Security, code quality, architecture, dependencies & configuration_
 _Stack: React + Vite + Tailwind v4 + shadcn/ui (frontend) · Node/Express 5 (backend) · Supabase (Postgres + Auth + Edge Functions + 10 Edge Functions) · ElevenLabs + Twilio + Stripe_
 
 This audit reviews the frontend (`src/`), backend API (`backend/`), Supabase migrations and Edge Functions (`supabase/`), and project configuration. Findings are grouped by severity.
+
+---
+
+## Twilio ↔ ElevenLabs Integration Audit (2026-07-08)
+
+_Scope: API integration correctness, audio quality/latency, auth/key management, error handling/fallbacks_
+
+### Summary
+
+| Severity | Count | Fixed |
+|----------|-------|-------|
+| Critical | 1 | 0 (requires ElevenLabs API confirmation — see INT-C1) |
+| High | 9 | 6 |
+| Medium | 8 | 2 |
+| Low | 3 | 0 |
+
+---
+
+### Critical
+
+#### INT-C1 — Audio codec contract between Twilio and ElevenLabs is unverified
+**Location:** `backend/src/services/twilio-stream.service.js:174`
+
+Twilio Media Streams deliver audio as G.711 mu-law (8kHz, mono, base64-encoded in 20ms chunks). The relay code forwards this payload verbatim to ElevenLabs as `user_audio_chunk`. ElevenLabs Conversational AI's WebSocket API documentation specifies the expected encoding for input audio, which must be confirmed against actual behavior. If ElevenLabs expects PCM16 linear or a different sample rate, every inbound call will have garbled audio silently — there is no error returned, just degraded ASR accuracy.
+
+**Risk:** All inbound calls may have degraded or non-functional speech recognition without any error surfaced.
+**Status:** Unresolved — requires testing a live call and verifying ElevenLabs docs for `user_audio_chunk` expected format. If transcoding is needed, a `ffmpeg`-based or `node-wav` transcode step must be added in the relay.
+
+---
+
+### High
+
+#### INT-H1 — Verbose per-chunk logging causes log explosion at scale (FIXED)
+**Location:** `backend/src/services/twilio-stream.service.js` (prior lines 93, 96, 173)
+**Status:** Fixed in [1.16.12]. All per-chunk `logger.info` calls removed.
+
+#### INT-H2 — Race condition: stream cleanup and webhook handler both write call row (FIXED)
+**Location:** `backend/src/services/twilio-stream.service.js:cleanup()`, `backend/src/modules/webhooks/handlers/elevenlabs.handler.js`
+**Status:** Fixed in [1.16.12]. Cleanup now checks current `status` and skips update if already terminal.
+
+#### INT-H3 — No retry on ElevenLabs WebSocket connection failure (FIXED)
+**Location:** `backend/src/services/twilio-stream.service.js`
+**Status:** Fixed in [1.16.12]. Single retry with 1-second backoff added.
+
+#### INT-H4 — Per-call phone number ID lookup adds 100–300ms to every outbound dial (FIXED)
+**Location:** `backend/src/providers/voice/elevenlabs.provider.js:_getOrImportPhoneNumberId()`
+**Status:** Fixed in [1.16.12]. In-memory 10-minute TTL cache added.
+
+#### INT-H5 — Dialer inserts call row after startCall, creating orphaned live calls on DB failure (FIXED)
+**Location:** `backend/src/workers/dialer.worker.js`
+**Status:** Fixed in [1.16.12]. Call row inserted before `startCall()`; `call_id` passed in `conversation_initiation_client_data`.
+
+#### INT-H6 — No WS concurrency limit — event loop can be saturated by inbound call burst
+**Location:** `backend/server.js:upgrade handler`
+**Status:** Unresolved. Recommend adding a counter-based admission gate at the upgrade handler that rejects new streams when active WebSocket count exceeds a configured ceiling (e.g., 30 concurrent). Returns `503` to Twilio, which then plays a configurable fallback message.
+
+#### INT-H7 — Inbound call disconnects silently when ElevenLabs drops mid-call
+**Location:** `backend/src/services/twilio-stream.service.js:elevenLabsSocket.on("close")`
+**Status:** Unresolved. When ElevenLabs closes mid-call, `cleanup()` tears down the Twilio WS, causing the caller to hear dead air or a sudden disconnect tone. A graceful path would involve detecting the ElevenLabs close, injecting a brief TwiML `<Say>` before hangup, or reconnecting the Twilio leg to a fallback IVR. This requires Twilio REST API (not Media Streams) to modify the call in flight, which is a more complex change.
+
+#### INT-H8 — Streaming service uses only global ELEVENLABS_API_KEY, ignoring per-org keys
+**Location:** `backend/src/services/twilio-stream.service.js:45`
+**Status:** Unresolved. The REST provider correctly falls back from `this.config.api_key` (per-org) to the env var; the streaming service has no access to the provider instance. When per-org ElevenLabs accounts are needed (rate limit isolation, billing separation), the streaming path will also need to resolve the key from DB. This requires passing `orgId` through the stream URL or a short-lived token lookup at connection time.
+
+#### INT-H9 — Vault fallback to master Twilio auth token on Vault read failure
+**Location:** `backend/src/providers/voice/elevenlabs.provider.js:_getTwilioCredentials()`
+**Status:** Unresolved. If `vault_read` returns null (Vault temporarily down, secret not yet stored), the code falls back to `process.env.TWILIO_AUTH_TOKEN` — the master account token. An outbound call for a subaccount tenant would authenticate against the master Twilio account, a privilege escalation. Consider throwing rather than falling back, or caching the last-known-good credential with a short TTL.
+
+---
+
+### Medium
+
+#### INT-M1 — `calls.outcome` stored raw analysis object instead of string enum (FIXED)
+**Location:** `backend/src/modules/webhooks/handlers/elevenlabs.handler.js:172-174`
+**Status:** Fixed in [1.16.12]. `outcome` now stores `deriveOutcome()` string; raw analysis stored in `calls.analysis`.
+
+#### INT-M2 — `call-scheduler.worker.js` zombie rows on failed startCall
+**Location:** `backend/src/workers/call-scheduler.worker.js`
+**Status:** Partially addressed. If `startCall()` throws, the `calls` row is marked `failed` (consistent with the dialer fix). However, if the row stays as `queued` for any reason (e.g., crash before the update), there is still no scheduled sweep for zombie `queued` rows older than N minutes. Recommend a lease-sweeper-style query: `UPDATE calls SET status='failed' WHERE status='queued' AND created_at < NOW() - INTERVAL '10 minutes' AND provider_call_id IS NULL`.
+
+#### INT-M3 — No backpressure handling (FIXED)
+**Location:** `backend/src/services/twilio-stream.service.js`
+**Status:** Fixed in [1.16.12]. `bufferedAmount` check added before both relay directions.
+
+#### INT-M4 — No ElevenLabs WS ping (FIXED)
+**Location:** `backend/src/services/twilio-stream.service.js`
+**Status:** Fixed in [1.16.12]. 20-second interval ping added for silent disconnect detection.
+
+#### INT-M5 — Campaign targets processed sequentially in dialer tick
+**Location:** `backend/src/workers/dialer.worker.js:209-214`
+**Status:** Unresolved. A single slow or failing ElevenLabs `startCall()` (e.g., 30s timeout) blocks all remaining targets in the current tick. Recommend `Promise.allSettled()` with a concurrency ceiling of ~5 to parallelize dispatches while bounding total concurrent API calls.
+
+#### INT-M6 — No active-call metrics on the streaming service
+**Location:** `backend/src/services/twilio-stream.service.js`
+**Status:** Unresolved. Connection count, active concurrent calls, and relay latency are not measured. Add `metrics.gauge("stream.active_connections")` increment/decrement at connect/cleanup.
+
+#### INT-M7 — `archiveRecording` fire-and-forget: recording_url may stay as ElevenLabs URL
+**Location:** `backend/src/modules/webhooks/handlers/elevenlabs.handler.js:archiveRecording()`
+**Status:** Unresolved, by design. If archival fails, `recording_url` stays as `https://api.elevenlabs.io/...`, which requires an API key to access. The frontend must handle both URL patterns when generating signed URLs or direct links. Document this dual-pattern in the frontend `Calls.tsx` recording logic.
+
+#### INT-M8 — Twilio credential import to ElevenLabs sends auth token in request body
+**Location:** `backend/src/providers/voice/elevenlabs.provider.js:_getOrImportPhoneNumberId()`
+**Status:** Accepted risk. The ElevenLabs `/v1/convai/phone-numbers` import API requires `{ provider: "twilio", sid: ..., token: ... }` — this is the documented pattern. The auth token is sent over HTTPS to a third party. ElevenLabs uses it to provision the number, then stores it encrypted on their side. This is unavoidable with the current ElevenLabs architecture; documented here for awareness.
+
+---
+
+### Low
+
+#### INT-L1 — `ELEVENLABS_API_KEY` not required when RUN_WORKERS=0
+**Location:** `backend/src/config/env.js:38`
+**Status:** Low risk. If the API server (not workers) receives an inbound call WebSocket connection, the stream service reads `process.env.ELEVENLABS_API_KEY` directly (bypassing the env validator). If unset, the call falls through to mock mode silently. Consider adding a runtime check at WS upgrade time when not in mock mode.
+
+#### INT-L2 — ElevenLabs webhook secret is single shared across all orgs
+**Status:** By design for current single-ElevenLabs-account architecture. If per-org ElevenLabs accounts are added, webhook secrets would need per-org routing.
+
+#### INT-L3 — Phone number ID cache is process-local
+**Location:** `backend/src/providers/voice/elevenlabs.provider.js:phoneNumberIdCache`
+**Status:** Known limitation. In multi-instance deployments (Railway horizontal scaling), each instance maintains its own cache. Acceptable for a single-instance deployment; on scale-out, consider Redis or accept the first-call-per-instance lookup cost.
+
+---
+
+
 
 ---
 

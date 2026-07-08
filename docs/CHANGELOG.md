@@ -2,7 +2,36 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
-## [1.16.11] — Wednesday, 2026-07-08 18:48 IST
+## [1.16.12] — Tuesday, 2026-07-08 20:30 IST
+
+### Twilio ↔ ElevenLabs Integration Reliability + Audit Fixes
+
+Following a comprehensive technical audit of the Twilio ↔ ElevenLabs Conversational AI integration, eight high-priority issues were resolved spanning audio relay reliability, call data integrity, performance, and security hardening.
+
+#### `backend/src/services/twilio-stream.service.js` — Audio relay hardened
+
+- **Verbose per-chunk logging eliminated**: All `logger.info` calls inside the `media` event loop removed. Each active call generated 50 audio chunks/second in each direction; at production volume this produced >6,000 log lines/minute per call, masking signal in noise and adding measurable CPU overhead. Non-audio ElevenLabs events now log at `debug`; connection lifecycle events remain at `info`.
+- **Single WS reconnect with backoff**: On ElevenLabs WebSocket connection failure, one retry is attempted after 1 second before giving up. This handles transient ElevenLabs restarts without failing the inbound call, given Twilio's 15-second stream timeout budget.
+- **Terminal state guard in cleanup**: The `cleanup()` function now checks the current `calls.status` before writing. If the ElevenLabs webhook handler already wrote a terminal status (`completed`, `failed`, `no_answer`) with accurate ElevenLabs-reported duration, the stream cleanup skips its update — eliminating a race condition that could overwrite accurate billing data with a wall-clock estimate.
+- **ElevenLabs WS periodic ping**: A 20-second `setInterval` ping on the ElevenLabs socket detects silent disconnects (no close frame) before the Twilio stream times out.
+- **Backpressure handling**: Both the Twilio→ElevenLabs and ElevenLabs→Twilio audio relay paths now check `bufferedAmount < 64KB` before sending, preventing unbounded memory growth under slow-consumer conditions.
+- **Metrics**: `elevenlabs.stream_connected` and `elevenlabs.stream_connect_failed` counters added for observability.
+
+#### `backend/src/providers/voice/elevenlabs.provider.js` — Phone number ID cache
+
+- `_getOrImportPhoneNumberId()` previously fetched ElevenLabs's full phone number list on every outbound call to check if the number was already imported. This added 100–300ms to every campaign dial. A 10-minute in-memory TTL cache keyed by E.164 number eliminates this round-trip for all calls after the first.
+
+#### `backend/src/workers/dialer.worker.js` — Call row created before provider call
+
+- The `calls` row is now inserted **before** `provider.startCall()` is invoked, and the generated `callId` is passed into `conversation_initiation_client_data` as `call_id`. Previously, if the DB insert failed after a live call was placed, the call would run and complete but have no row for the ElevenLabs webhook to correlate against — an untracked, unbilled, orphaned call. If `startCall()` fails, the pre-created row is immediately marked `status: 'failed'` rather than leaving a zombie `queued` row. This aligns the dialer with the safer pattern already used by `call-scheduler.worker.js`.
+
+#### `backend/src/modules/webhooks/handlers/elevenlabs.handler.js` — Outcome field consistency
+
+- `calls.outcome` was being set to `data.analysis` (a raw JSON object from ElevenLabs) instead of the string enum produced by `deriveOutcome()`. If the column is `text`, this would store `[object Object]`. The outcome field now always stores a consistent string (`answered` / `voicemail` / `declined` / `no_answer` / `failed`). The raw ElevenLabs analysis object is stored separately in `calls.analysis` for downstream use.
+
+---
+
+
 
 ### Vault RPCs Fixed — Twilio Subaccount Provisioning Was Storing Nothing (Non-Negotiable #4)
 
