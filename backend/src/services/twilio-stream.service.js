@@ -90,8 +90,10 @@ async function handleTwilioStream(ws, req) {
         if (isClosed || ws.readyState !== WebSocket.OPEN) return;
         try {
           const msg = JSON.parse(data.toString());
+          logger.info({ callId, event: msg.event }, "Received event from ElevenLabs");
           // If ElevenLabs returns audio, send it back to Twilio
           if (msg.event === "audio" && msg.audio?.chunk && streamSid) {
+            logger.info({ callId, payloadLength: msg.audio.chunk.length }, "Forwarding ElevenLabs audio chunk to Twilio");
             ws.send(JSON.stringify({
               event: "media",
               streamSid,
@@ -109,8 +111,8 @@ async function handleTwilioStream(ws, req) {
         logger.error({ err: err.message, callId }, "ElevenLabs WebSocket error");
       });
 
-      elevenLabsSocket.on("close", () => {
-        logger.info({ callId }, "ElevenLabs WebSocket closed");
+      elevenLabsSocket.on("close", (code, reason) => {
+        logger.info({ callId, code, reason: reason ? reason.toString() : "" }, "ElevenLabs WebSocket closed");
         cleanup();
       });
     } else {
@@ -168,6 +170,7 @@ async function handleTwilioStream(ws, req) {
         case "media":
           // Twilio sends 20ms base64 mulaw audio chunks in data.media.payload
           if (setup.useRealElevenLabs && elevenLabsSocket && elevenLabsSocket.readyState === WebSocket.OPEN) {
+            logger.info({ callId, payloadLength: data.media.payload ? data.media.payload.length : 0 }, "Forwarding Twilio audio chunk to ElevenLabs");
             elevenLabsSocket.send(JSON.stringify({
               event: "user_audio_chunk",
               user_audio_chunk: data.media.payload
@@ -190,8 +193,8 @@ async function handleTwilioStream(ws, req) {
     cleanup();
   });
 
-  ws.on("close", () => {
-    logger.info({ callId }, "Twilio stream WebSocket closed");
+  ws.on("close", (code, reason) => {
+    logger.info({ callId, code, reason: reason ? reason.toString() : "" }, "Twilio stream WebSocket closed");
     cleanup();
   });
 
@@ -202,11 +205,13 @@ async function handleTwilioStream(ws, req) {
     clearInterval(pingInterval);
 
     try {
+      logger.info({ callId }, "Closing Twilio stream WebSocket client connection");
       ws.close();
     } catch {}
 
     if (elevenLabsSocket) {
       try {
+        logger.info({ callId }, "Closing ElevenLabs WebSocket connection");
         elevenLabsSocket.close();
       } catch {}
     }
