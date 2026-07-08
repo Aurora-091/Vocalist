@@ -2,6 +2,15 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.5] — Wednesday, 2026-07-08 20:00 IST
+
+### Twilio Subaccounts Schema Hardening
+
+#### Created migration for missing subaccount columns
+- **`supabase/migrations/20260708113500_add_twilio_subaccounts_columns.sql`** (new): Idempotently adds missing columns `account_type`, `friendly_name`, `verified_at`, and `updated_at` to the `twilio_subaccounts` table, and reloads the Postgrest schema cache. Fixes production log errors where Postgrest fails with `PGRST204` (column not found in schema cache) when querying or modifying Twilio subaccounts.
+
+---
+
 ## [1.16.4] — Wednesday, 2026-07-08 19:30 IST
 
 ### Twilio Integrations Fix: Vault RPC Parameter Matching
