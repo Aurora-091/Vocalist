@@ -84,3 +84,16 @@ Frontend → Vercel (`vercel.json`); backend API + worker → Railway (`railway.
 - When a change spans layers, update dependency files (`db.ts`, services) before the client views that consume them.
 - Before finishing: `npx tsc --noEmit` at root and `npm test` in `backend/` must both pass.
 - A pre-push hook (`.githooks/pre-push`, enabled via `git config core.hooksPath .githooks`) runs `node scripts/check-doc-drift.mjs` — it fails on broken doc links or stale counts, so keep docs in sync when moving/renaming files.
+
+## Hands-Off Zones
+
+Do NOT modify or refactor the following files unless the user explicitly requests changes to Twilio:
+
+- `backend/src/modules/twilio/` (all files)
+- `backend/src/providers/telephony/twilio.adapter.js`
+- `backend/src/services/twilio-stream.service.js`
+- `src/components/TwilioAccountSection.tsx`
+- Any Twilio-related environment variables (`TWILIO_*`)
+- Twilio webhook handlers in `backend/src/modules/webhooks/handlers/twilio.handler.js`
+
+These files contain production telephony configuration that is sensitive and stable. Treat them as read-only unless the user says otherwise.
