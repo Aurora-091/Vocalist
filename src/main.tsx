@@ -43,6 +43,7 @@ function AppLoader() {
 
 import { AnalyticsLoader } from "@/components/AnalyticsLoader";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -57,6 +58,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           </ErrorBoundary>
           <Toaster richColors closeButton position="top-right" />
           <SpeedInsights />
+          <Analytics />
         </TooltipProvider>
       </ThemeProvider>
     </BrowserRouter>
