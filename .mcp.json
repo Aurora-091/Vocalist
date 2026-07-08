@@ -11,6 +11,21 @@
     "railway": {
       "type": "http",
       "url": "https://mcp.railway.com"
+    },
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
+    },
+    "twilio": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@twilio-alpha/mcp",
+        "${TWILIO_ACCOUNT_SID}/${TWILIO_MCP_API_KEY}:${TWILIO_MCP_API_SECRET}"
+      ]
     }
   }
 }

@@ -2,6 +2,14 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.9] — Wednesday, 2026-07-08 17:50 IST
+
+### Sentry + Twilio MCP Servers
+
+- **`.mcp.json`**: Added the Sentry hosted MCP server (`https://mcp.sentry.dev/mcp`, per-user OAuth via `/mcp` — pairs with the new frontend Sentry integration) and the Twilio MCP server (`@twilio-alpha/mcp` via npx, wrapped in `cmd /c` for Windows). Twilio credentials are injected through environment-variable expansion (`TWILIO_ACCOUNT_SID`, `TWILIO_MCP_API_KEY`, `TWILIO_MCP_API_SECRET`) so no secrets are committed; each developer creates a standard API key in the Twilio console and sets those three variables. PostHog and ElevenLabs MCPs were evaluated and deliberately deferred (analytics not on the critical debugging path; ElevenLabs already wrapped by the `VoiceProvider` backend abstraction).
+
+---
+
 ## [1.16.8] — Wednesday, 2026-07-08 17:43 IST
 
 ### Backend Crash-Loop Fix + Spend Guard / Inbound Gate Restoration (DEC-018)
