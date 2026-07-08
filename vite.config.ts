@@ -57,8 +57,7 @@ export default defineConfig({
           if (id.includes("node_modules/@supabase")) return "supabase";
           if (id.includes("node_modules/posthog-js")) return "posthog";
           if (id.includes("node_modules/zod")) return "schemas";
-          if (id.includes("src/pages/AgentDetail")) return "agent-detail";
-          if (id.includes("src/apps/admin") || id.includes("src/pages/admin")) return "admin";
+          if (id.includes("node_modules/@11labs") || id.includes("node_modules/@elevenlabs")) return "elevenlabs-webrtc";
         },
       },
     },

@@ -1,26 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
-import {
-  ArrowLeft,
-  Loader2,
-  ChevronDown,
-  Check,
-  Phone,
-  X,
-  Mic,
-  RefreshCw,
-  ChevronRight,
-  TriangleAlert as AlertTriangle,
-  Zap,
-  Globe,
-  LayoutTemplate,
-  MessageSquare,
-  WrapText,
-  Clock,
-  MoreHorizontal,
-  Trash2,
-  History,
-} from "lucide-react";
+import { ArrowLeft, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Zap, Globe, LayoutTemplate, MessageSquare, WrapText, Clock, MoveHorizontal as MoreHorizontal, Trash2, History } from "lucide-react";
 import { toast } from "sonner";
 import { getAgent, listVoices, listAgentKnowledge, getCall, listCalls, listPhoneNumbers, unlinkPhoneNumberAgent } from "../lib/db";
 import { api } from "../lib/api";
@@ -58,12 +38,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import VoiceLibrary from "./VoiceLibrary";
-import { WebTestCallModal } from "@/components/WebTestCallModal";
-import { WebTestPanel } from "@/components/WebTestPanel";
+const VoiceLibrary = lazy(() => import("./VoiceLibrary"));
+const WebTestCallModal = lazy(() => import("@/components/WebTestCallModal").then(m => ({ default: m.WebTestCallModal })));
+const WebTestPanel = lazy(() => import("@/components/WebTestPanel").then(m => ({ default: m.WebTestPanel })));
 import { VariablesPanel } from "@/components/VariablesPanel";
 import { AgentPresetPicker } from "@/components/AgentPresetPicker";
-import { PromptHistoryDrawer } from "@/components/PromptHistoryDrawer";
+const PromptHistoryDrawer = lazy(() => import("@/components/PromptHistoryDrawer").then(m => ({ default: m.PromptHistoryDrawer })));
 import { usePageTitle } from "../hooks/usePageTitle";
 import { cn } from "@/lib/utils";
 import { formatRelative } from "@/lib/format";
@@ -1296,18 +1276,20 @@ export default function AgentDetail() {
             </div>
 
             {agent.provider_ref ? (
-              <WebTestPanel
-                agentId={id!}
-                agentName={agent.name}
-                transcriptHeight="h-[180px]"
-                onSessionStart={() => setTestSessionStarted(true)}
-                onGoFix={(notes) => {
-                  setTestSessionStarted(false);
-                  setTab("behavior");
-                  setTimeout(() => objectiveRef.current?.focus(), 150);
-                  if (notes) toast.info("Notes captured — check behavior tab.");
-                }}
-              />
+              <Suspense fallback={<Skeleton className="h-[260px] w-full rounded-lg" />}>
+                <WebTestPanel
+                  agentId={id!}
+                  agentName={agent.name}
+                  transcriptHeight="h-[180px]"
+                  onSessionStart={() => setTestSessionStarted(true)}
+                  onGoFix={(notes) => {
+                    setTestSessionStarted(false);
+                    setTab("behavior");
+                    setTimeout(() => objectiveRef.current?.focus(), 150);
+                    if (notes) toast.info("Notes captured — check behavior tab.");
+                  }}
+                />
+              </Suspense>
             ) : (
               <div className="text-xs text-muted-foreground p-4 rounded-lg border border-border bg-muted/30 text-center">
                 Save the agent first to enable browser testing.
@@ -1399,7 +1381,9 @@ export default function AgentDetail() {
 
       {/* ── Modals & drawers ─────────────────────────────────────────────── */}
       {historyOpen && (
-        <PromptHistoryDrawer agentId={id!} onRestore={load} onClose={() => setHistoryOpen(false)} />
+        <Suspense fallback={null}>
+          <PromptHistoryDrawer agentId={id!} onRestore={load} onClose={() => setHistoryOpen(false)} />
+        </Suspense>
       )}
 
       {templateModalOpen && (
@@ -1407,17 +1391,19 @@ export default function AgentDetail() {
       )}
 
       {webTestOpen && (
-        <WebTestCallModal
-          open={webTestOpen}
-          onOpenChange={setWebTestOpen}
-          agentId={id!}
-          agentName={agent.name}
-          onGoFix={(notes) => {
-            setWebTestOpen(false);
-            setTab("behavior");
-            setTimeout(() => objectiveRef.current?.focus(), 150);
-          }}
-        />
+        <Suspense fallback={null}>
+          <WebTestCallModal
+            open={webTestOpen}
+            onOpenChange={setWebTestOpen}
+            agentId={id!}
+            agentName={agent.name}
+            onGoFix={(notes) => {
+              setWebTestOpen(false);
+              setTab("behavior");
+              setTimeout(() => objectiveRef.current?.focus(), 150);
+            }}
+          />
+        </Suspense>
       )}
 
       {activeCallId && (
@@ -1435,7 +1421,9 @@ export default function AgentDetail() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              <VoiceLibrary onSelect={handleVoiceSelect} selectedVoiceId={agent.voice_id || undefined} filterLanguages={selectedLanguages} />
+              <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
+                <VoiceLibrary onSelect={handleVoiceSelect} selectedVoiceId={agent.voice_id || undefined} filterLanguages={selectedLanguages} />
+              </Suspense>
             </div>
           </div>
         </div>
