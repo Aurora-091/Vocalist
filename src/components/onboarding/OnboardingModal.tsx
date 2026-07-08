@@ -262,19 +262,19 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                 <p className="text-sm text-muted-foreground">No templates available.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
                 {visiblePresets.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setSelectedPreset(p)}
                     className={cn(
-                      "text-left p-5 rounded-xl border transition-all",
+                      "text-left p-4 rounded-lg border transition-all",
                       selectedPreset?.id === p.id
                         ? "ring-2 ring-foreground border-transparent bg-muted/60"
                         : "border-border bg-background hover:border-foreground/30 hover:bg-muted/30"
                     )}
                   >
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-muted-foreground">
                         {VERTICAL_ICON[p.vertical_key] ?? <Phone className="w-3.5 h-3.5" />}
                       </span>
@@ -285,8 +285,8 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                         <Check className="w-3.5 h-3.5 text-emerald-500 ml-auto" />
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-foreground leading-snug">{p.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">
+                    <p className="text-sm font-medium text-foreground leading-snug">{p.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
                       {p.description}
                     </p>
                   </button>
@@ -507,9 +507,9 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   // ── Left step rail ────────────────────────────────────────────────────────
 
   const stepRail = (
-    <div className="w-60 shrink-0 flex flex-col border-r border-border bg-muted/20 px-6 py-8">
-      <div className="mb-10">
-        <WeeberLogo className="h-6 w-auto" />
+    <div className="hidden lg:flex w-56 shrink-0 flex-col border-r border-border bg-muted/20 px-5 py-6">
+      <div className="mb-8">
+        <WeeberLogo className="h-5 w-auto" />
       </div>
 
       <div className="flex flex-col gap-1 flex-1">
@@ -519,7 +519,6 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
 
           return (
             <div key={key} className="flex gap-3">
-              {/* Line + circle column */}
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
@@ -536,15 +535,14 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                 {i < STEP_KEYS.length - 1 && (
                   <div
                     className={cn(
-                      "w-px flex-1 my-1 min-h-[28px]",
+                      "w-px flex-1 my-1 min-h-[24px]",
                       isDone ? "bg-emerald-500/40" : "bg-border"
                     )}
                   />
                 )}
               </div>
 
-              {/* Label + hint column */}
-              <div className="pb-7 last:pb-0">
+              <div className="pb-6">
                 <p
                   className={cn(
                     "text-sm font-medium leading-6 transition-colors",
@@ -573,16 +571,36 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
     </div>
   );
 
+  // ── Progress bar (shown when rail is hidden) ─────────────────────────────
+
+  const progressBar = (
+    <div className="lg:hidden flex gap-1.5 px-5 pt-4 pb-3 shrink-0">
+      {STEP_KEYS.map((_, i) => (
+        <div
+          key={i}
+          className={cn(
+            "flex-1 h-1 rounded-full transition-colors",
+            i < step
+              ? "bg-emerald-500"
+              : i === step
+              ? "bg-foreground"
+              : "bg-muted"
+          )}
+        />
+      ))}
+    </div>
+  );
+
   // ── Right content panel ───────────────────────────────────────────────────
 
   const contentPanel = (
-    <div className="flex flex-col flex-1 overflow-hidden px-10 py-8">
+    <div className="flex flex-col flex-1 overflow-hidden px-5 py-5 sm:px-8 sm:py-6">
       {!finished && (
-        <div className="mb-8 shrink-0">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-2">
+        <div className="mb-5 shrink-0">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1.5">
             Step {step + 1} of {STEP_KEYS.length}
           </p>
-          <h2 className="text-2xl font-semibold text-foreground leading-tight">
+          <h2 className="text-xl sm:text-2xl font-semibold text-foreground leading-tight">
             {STEP_TITLES[currentKey]}
           </h2>
         </div>
@@ -599,9 +617,12 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   // ── Desktop layout ────────────────────────────────────────────────────────
 
   const desktopLayout = (
-    <div className="flex flex-1 overflow-hidden">
-      {stepRail}
-      {contentPanel}
+    <div className="flex flex-col flex-1 overflow-hidden">
+      {progressBar}
+      <div className="flex flex-1 overflow-hidden">
+        {stepRail}
+        {contentPanel}
+      </div>
     </div>
   );
 
@@ -609,7 +630,6 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
 
   const mobileLayout = (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Segmented progress bar */}
       <div className="flex gap-1.5 px-4 pt-4 pb-3 shrink-0">
         {STEP_KEYS.map((_, i) => (
           <div
@@ -626,7 +646,6 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
         ))}
       </div>
 
-      {/* Heading */}
       {!finished && (
         <div className="px-4 pb-4 shrink-0">
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">
@@ -639,12 +658,10 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
         </div>
       )}
 
-      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-4 min-h-0">
         {stepContent}
       </div>
 
-      {/* Footer */}
       <div className="px-4 pb-6 pt-2 shrink-0">
         {footerActions}
       </div>
@@ -656,7 +673,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="h-[95dvh]">
+        <DrawerContent className="h-[92dvh]">
           {mobileLayout}
         </DrawerContent>
       </Drawer>
@@ -666,7 +683,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[90vw] max-w-5xl h-[85vh] min-h-[640px] p-0 gap-0 flex flex-col overflow-hidden"
+        className="w-[92vw] max-w-4xl h-[80vh] max-h-[700px] p-0 gap-0 flex flex-col overflow-hidden"
         showCloseButton={false}
       >
         {desktopLayout}
