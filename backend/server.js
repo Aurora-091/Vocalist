@@ -38,17 +38,57 @@ wss.on("connection", (ws, req) => {
   handleTwilioStream(ws, req);
 });
 
+wss.on("error", (err) => {
+  logger.error({ err: err.message }, "Twilio WSS server error");
+  if (process.env.SENTRY_DSN) Sentry.captureException(err, { tags: { component: "wss-twilio" } });
+});
+
+waitlistWss.on("error", (err) => {
+  logger.error({ err: err.message }, "Waitlist WSS server error");
+  if (process.env.SENTRY_DSN) Sentry.captureException(err, { tags: { component: "wss-waitlist" } });
+});
+
+// Heartbeat: detect and clean up dead connections every 30s
+const HEARTBEAT_INTERVAL = 30_000;
+const heartbeat = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) {
+      logger.warn("Terminating unresponsive Twilio WS client");
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  }
+  for (const ws of waitlistWss.clients) {
+    if (ws.isAlive === false) {
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, HEARTBEAT_INTERVAL);
+
+wss.on("connection", (ws) => {
+  ws.isAlive = true;
+  ws.on("pong", () => { ws.isAlive = true; });
+});
+
 server.on("upgrade", (request, socket, head) => {
-  const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
-  if (url.pathname.startsWith("/v1/twilio/stream/")) {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit("connection", ws, request);
-    });
-  } else if (url.pathname === "/ws/waitlist") {
-    waitlistWss.handleUpgrade(request, socket, head, (ws) => {
-      waitlistWss.emit("connection", ws, request);
-    });
-  } else {
+  try {
+    const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+    if (url.pathname.startsWith("/v1/twilio/stream/")) {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit("connection", ws, request);
+      });
+    } else if (url.pathname === "/ws/waitlist") {
+      waitlistWss.handleUpgrade(request, socket, head, (ws) => {
+        waitlistWss.emit("connection", ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  } catch (err) {
+    logger.error({ err: err.message, url: request.url }, "WebSocket upgrade failed");
     socket.destroy();
   }
 });
@@ -70,7 +110,10 @@ if (process.env.RUN_WORKERS === "1") {
 
 function shutdown(signal) {
   logger.info({ signal }, "Shutting down");
+  clearInterval(heartbeat);
   stoppers.forEach((stop) => { try { stop(); } catch {} });
+  for (const ws of wss.clients) ws.terminate();
+  for (const ws of waitlistWss.clients) ws.terminate();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 10_000).unref();
 }

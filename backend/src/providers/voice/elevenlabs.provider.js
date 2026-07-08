@@ -1,7 +1,9 @@
 const { VoiceProvider } = require("./interface");
 const logger = require("../../config/logger");
+const metrics = require("../../utils/metrics");
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io";
+const REQUEST_TIMEOUT_MS = 30_000;
 
 function replacePlaceholders(text, variables) {
   if (typeof text !== "string" || !variables || typeof variables !== "object") return text;
@@ -31,11 +33,28 @@ class ElevenLabsProvider extends VoiceProvider {
       headers["Content-Type"] = "application/json";
     }
 
-    const res = await fetch(`${ELEVENLABS_BASE}${path}`, {
-      method,
-      headers,
-      body: body ? (isMultipart ? body : JSON.stringify(body)) : undefined,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    let res;
+    try {
+      res = await fetch(`${ELEVENLABS_BASE}${path}`, {
+        method,
+        headers,
+        body: body ? (isMultipart ? body : JSON.stringify(body)) : undefined,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timeout);
+      metrics.increment("elevenlabs.request_error", 1, { method, reason: err.name === "AbortError" ? "timeout" : "network" });
+      const { BadGateway } = require("../../utils/errors");
+      if (err.name === "AbortError") {
+        throw BadGateway(`ElevenLabs ${method} ${path} timed out after ${REQUEST_TIMEOUT_MS}ms`);
+      }
+      throw BadGateway(`ElevenLabs ${method} ${path} network error: ${err.message}`);
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!res.ok) {
       let detail;
@@ -44,7 +63,12 @@ class ElevenLabsProvider extends VoiceProvider {
       } catch {
         detail = await res.text().catch(() => "");
       }
+      metrics.increment("elevenlabs.api_error", 1, { method, status: String(res.status) });
       const { BadGateway, BadRequest } = require("../../utils/errors");
+      if (res.status === 429) {
+        logger.warn({ method, path, status: res.status }, "ElevenLabs rate limited");
+        throw BadGateway(`ElevenLabs rate limited on ${method} ${path}`, detail);
+      }
       if (res.status >= 400 && res.status < 500) {
         logger.error({ detail, status: res.status, method, path, payload: body }, "ElevenLabs 4xx error");
         throw BadRequest(`ElevenLabs ${method} ${path} failed: ${res.status}`, detail);
@@ -52,6 +76,7 @@ class ElevenLabsProvider extends VoiceProvider {
       throw BadGateway(`ElevenLabs ${method} ${path} failed: ${res.status}`, detail);
     }
 
+    metrics.increment("elevenlabs.request_ok", 1, { method });
     if (res.status === 204) return null;
     return res.json();
   }

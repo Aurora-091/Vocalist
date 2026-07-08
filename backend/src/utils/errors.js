@@ -17,6 +17,7 @@ const UnprocessableEntity = (message, details) =>
 const TooManyRequests = (message = "Rate limit exceeded") =>
   new HttpError(429, "rate_limited", message);
 const Internal = (message = "Internal Server Error") => new HttpError(500, "internal", message);
+const BadGateway = (message = "Bad Gateway", details) => new HttpError(502, "bad_gateway", message, details);
 
 module.exports = {
   HttpError,
@@ -28,4 +29,5 @@ module.exports = {
   UnprocessableEntity,
   TooManyRequests,
   Internal,
+  BadGateway,
 };

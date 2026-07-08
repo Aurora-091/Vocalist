@@ -4,6 +4,8 @@ const { transition, STATES } = require("../../campaigns/state-machine");
 const { buildIdempotencyKey } = require("../../../utils/idempotency");
 const { DEFAULT_COST_PER_MINUTE_USD } = require("../../billing/billing.constants");
 const { canRetry, computeRetryAt } = require("../../../utils/scheduling");
+const metrics = require("../../../utils/metrics");
+const Sentry = require("@sentry/node");
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io";
 const RECORDING_BUCKET = "call-recordings";
@@ -89,8 +91,11 @@ async function handle(payload) {
   const providerCallId = data?.call_sid || payload?.call_sid || conversationId;
 
   if (!eventType || !providerCallId) {
+    logger.warn({ payload: JSON.stringify(payload).slice(0, 200) }, "ElevenLabs webhook missing event_type or call_id");
     return { skipped: true, reason: "missing_event_type_or_call_id" };
   }
+
+  metrics.increment("webhook.received", 1, { provider: "elevenlabs", event: eventType });
 
   // Find the call row by provider_call_id, conversation_id, or local call ID (if passed in metadata)
   const clientData = data?.conversation_initiation_client_data || {};
@@ -114,12 +119,17 @@ async function handle(payload) {
       .or(`provider_call_id.eq.${providerCallId},conversation_id.eq.${conversationId}`)
       .maybeSingle();
 
-    if (lookupErr) throw lookupErr;
+    if (lookupErr) {
+      logger.error({ err: lookupErr.message, providerCallId }, "ElevenLabs call lookup DB error");
+      metrics.increment("webhook.error", 1, { provider: "elevenlabs", reason: "db_lookup_failed" });
+      throw lookupErr;
+    }
     callRow = row;
   }
 
   if (!callRow) {
-    logger.warn({ providerCallId, conversationId }, "ElevenLabs event for unknown call");
+    logger.warn({ providerCallId, conversationId, eventType }, "ElevenLabs event for unknown call");
+    metrics.increment("webhook.skipped", 1, { provider: "elevenlabs", reason: "unknown_call" });
     return { skipped: true, reason: "unknown_call" };
   }
 
@@ -166,16 +176,29 @@ async function handle(payload) {
 
   if (Object.keys(update).length > 0) {
     const { error: upErr } = await admin.from("calls").update(update).eq("id", callRow.id);
-    if (upErr) throw upErr;
+    if (upErr) {
+      logger.error({ err: upErr.message, callId: callRow.id, eventType }, "Failed to update call row from ElevenLabs webhook");
+      metrics.increment("webhook.error", 1, { provider: "elevenlabs", reason: "call_update_failed" });
+      throw upErr;
+    }
+    if (isCallEnd) {
+      metrics.increment("call.completed", 1, { provider: "elevenlabs", outcome: update.status });
+      if (update.duration_sec) {
+        metrics.distribution("call.duration_sec", update.duration_sec, "second", { provider: "elevenlabs" });
+      }
+    }
   }
 
-  // Log events
-  await admin.from("call_events").insert({
+  // Log events (non-fatal — don't block the webhook response)
+  const { error: eventErr } = await admin.from("call_events").insert({
     org_id: callRow.org_id,
     call_id: callRow.id,
     kind: `elevenlabs.${eventType}`,
     payload,
   });
+  if (eventErr) {
+    logger.warn({ err: eventErr.message, callId: callRow.id, eventType }, "Failed to insert call_event — non-fatal");
+  }
 
   // Archive recording to private bucket (fire-and-forget — does not block webhook response)
   if (isCallEnd && conversationId && eventType !== "call.failed") {

@@ -154,8 +154,15 @@ router.post(
     if (error) throw error;
     if (!row) throw NotFound("Integration not configured");
     const provider = buildProvider(req.params.type, req.auth.orgId, row.config);
-    const result = await provider.testConnection();
-    res.json({ result });
+    try {
+      const result = await provider.testConnection();
+      metrics.increment("integration.test", 1, { provider: req.params.type, success: "true" });
+      res.json({ result });
+    } catch (err) {
+      metrics.increment("integration.test", 1, { provider: req.params.type, success: "false" });
+      const { BadGateway } = require("../../utils/errors");
+      throw BadGateway(`Integration test failed for ${req.params.type}: ${err.message}`);
+    }
   })
 );
 
@@ -172,8 +179,17 @@ router.post(
     if (error) throw error;
     if (!row || row.status !== "active") throw NotFound("Shopify integration not connected");
     const provider = buildProvider("shopify", req.auth.orgId, row.config);
-    const result = await provider.syncContacts();
-    res.json(result);
+    try {
+      const result = await provider.syncContacts();
+      metrics.increment("integration.sync", 1, { provider: "shopify", success: "true" });
+      res.json(result);
+    } catch (err) {
+      metrics.increment("integration.sync", 1, { provider: "shopify", success: "false" });
+      const logger = require("../../config/logger");
+      logger.error({ err: err.message, orgId: req.auth.orgId }, "Shopify contact sync failed");
+      const { BadGateway } = require("../../utils/errors");
+      throw BadGateway(`Shopify sync failed: ${err.message}`);
+    }
   })
 );
 
@@ -188,6 +204,7 @@ router.delete(
       .eq("type", req.params.type)
       .eq("org_id", req.auth.orgId);
     if (error) throw error;
+    metrics.increment("integration.disconnected", 1, { provider: req.params.type });
     res.status(204).end();
   })
 );
