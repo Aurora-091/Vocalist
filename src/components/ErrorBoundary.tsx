@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { TriangleAlert as AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import * as Sentry from "@sentry/react";
 
 interface Props {
   children: ReactNode;
@@ -20,6 +21,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("[ErrorBoundary]", error, info.componentStack);
+    Sentry.captureException(error, {
+      extra: {
+        componentStack: info.componentStack,
+      },
+    });
   }
 
   handleReload = () => {

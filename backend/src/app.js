@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const crypto = require("crypto");
+const Sentry = require("@sentry/node");
 
 const env = require("./config/env");
 const logger = require("./config/logger");
@@ -85,6 +86,11 @@ function buildCorsOptions() {
 function createApp() {
   const app = express();
 
+  if (process.env.SENTRY_DSN) {
+    app.use(Sentry.Handlers.requestHandler());
+    app.use(Sentry.Handlers.tracingHandler());
+  }
+
   if (env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
   }
@@ -150,6 +156,9 @@ function createApp() {
   app.use("/v1/admin", adminRoutes);
   app.use("/v1/skills", skillRoutes);
   app.use("/v1/playbooks", playbookRoutes);
+  if (process.env.SENTRY_DSN) {
+    app.use(Sentry.Handlers.errorHandler());
+  }
   app.use(notFound);
   app.use(errorHandler);
 

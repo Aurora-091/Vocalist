@@ -2,6 +2,20 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.10] — Wednesday, 2026-07-08 18:05 IST
+
+### Full-Stack Error Monitoring with Sentry
+
+#### Configured backend and frontend exception capturing
+- **`backend/package.json`**: Installed `@sentry/node` package.
+- **`backend/server.js`**: Initialized Sentry at start if `SENTRY_DSN` is configured.
+- **`backend/src/app.js`**: Mounted Sentry's request tracing handlers and custom error handler.
+- **`backend/src/middleware/error.middleware.js`**: Hooked unhandled exceptions and database errors to pipe to Sentry.
+- **`src/lib/api.ts`**: Configured custom HTTP client to forward non-2xx status failures to Sentry.
+- **`src/components/ErrorBoundary.tsx`**: Hooked React ErrorBoundary lifecycle to capture component rendering crashes.
+
+---
+
 ## [1.16.9] — Wednesday, 2026-07-08 17:50 IST
 
 ### Sentry + Twilio MCP Servers

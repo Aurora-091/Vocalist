@@ -1,6 +1,7 @@
 const { HttpError } = require("../utils/errors");
 const logger = require("../config/logger");
 const env = require("../config/env");
+const Sentry = require("@sentry/node");
 
 function notFound(_req, _res, next) {
   next(new HttpError(404, "not_found", "Route not found"));
@@ -10,6 +11,9 @@ function errorHandler(err, req, res, _next) {
   if (err instanceof HttpError) {
     if (err.status >= 500) {
       logger.error({ err, path: req.path, method: req.method, requestId: req.id }, "Request failed");
+      if (process.env.SENTRY_DSN) {
+        Sentry.captureException(err, { extra: { path: req.path, method: req.method, requestId: req.id } });
+      }
     } else {
       logger.warn(
         { code: err.code, path: req.path, method: req.method, message: err.message, requestId: req.id, status: err.status },
@@ -39,6 +43,9 @@ function errorHandler(err, req, res, _next) {
   }
 
   logger.error({ err, path: req.path, method: req.method, requestId: req.id }, "Unhandled error");
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err, { extra: { path: req.path, method: req.method, requestId: req.id } });
+  }
   res.status(500).json({
     error: { code: "internal", message: "Internal server error" },
   });

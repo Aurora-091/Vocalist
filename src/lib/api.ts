@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react";
 import { supabase } from "./supabase";
 
 // In dev with Vite proxy, relative paths work (/v1/... → localhost:3000).
@@ -70,7 +71,24 @@ async function request<T>(
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new ApiError(res.status, err?.error?.code || "error", err?.error?.message || res.statusText, err?.error?.details);
+      const apiErr = new ApiError(res.status, err?.error?.code || "error", err?.error?.message || res.statusText, err?.error?.details);
+      
+      if (res.status >= 400) {
+        Sentry.captureException(apiErr, {
+          extra: {
+            method,
+            path,
+            status: res.status,
+            apiErrorCode: err?.error?.code,
+            details: err?.error?.details,
+          },
+          tags: {
+            component: "api-client",
+            status: String(res.status),
+          }
+        });
+      }
+      throw apiErr;
     }
 
     if (res.status === 204) return undefined as T;

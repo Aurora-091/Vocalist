@@ -1,5 +1,15 @@
 const env = require("./src/config/env");
 const logger = require("./src/config/logger");
+const Sentry = require("@sentry/node");
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: env.NODE_ENV || "development",
+    tracesSampleRate: 1.0,
+  });
+}
+
 const createApp = require("./src/app");
 
 const dialerWorker = require("./src/workers/dialer.worker");
