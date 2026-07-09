@@ -24,8 +24,13 @@
         "npx",
         "-y",
         "@twilio-alpha/mcp",
-        "${TWILIO_ACCOUNT_SID}/${TWILIO_MCP_API_KEY}:${TWILIO_MCP_API_SECRET}"
+        "%TWILIO_ACCOUNT_SID%/%TWILIO_MCP_API_KEY%:%TWILIO_MCP_API_SECRET%"
       ]
+    },
+    "elevenlabs": {
+      "type": "stdio",
+      "command": "C:\\Users\\neore\\AppData\\Roaming\\Python\\Python314\\Scripts\\uvx.exe",
+      "args": ["elevenlabs-mcp"]
     }
   }
 }

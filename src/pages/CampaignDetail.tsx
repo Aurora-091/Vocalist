@@ -348,7 +348,7 @@ function AddContactsPanel({
 }) {
   const { id } = useParams<{ id: string }>();
   const { t } = useVertical();
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [campaign, setCampaign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"list" | "csv">("list");
   const [contacts, setContacts] = useState<Contact[] | null>(null);
@@ -366,7 +366,7 @@ function AddContactsPanel({
 
   const load = useCallback(async (query?: string) => {
     try {
-      const raw = await listContacts({ q: query, limit: 200 });
+      const { data: raw } = await listContacts({ q: query, limit: 200 });
       const filtered =
         filter === "granted" ? raw.filter((c: any) => c.consent_status === "granted") : raw;
       setContacts(filtered as Contact[]);

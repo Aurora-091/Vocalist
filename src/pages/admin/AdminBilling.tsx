@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useCopy } from "../../hooks/useCopy";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function AdminBilling() {
   const [searchParams] = useSearchParams();
@@ -163,8 +164,14 @@ export default function AdminBilling() {
                             </div>
                             <div className="flex items-end justify-start md:justify-end">
                               {entry.status === "active" && (
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
+                                  <ConfirmDialog
+                                    title="Cancel Subscription?"
+                                    description="Are you sure you want to cancel this Stripe subscription? This action will immediately update the subscription status on Stripe."
+                                    actionLabel="Confirm"
+                                    variant="destructive"
+                                    disabled={cancelingId === entry.id}
+                                    onConfirm={() => handleCancelSub(entry.id)}
+                                  >
                                     <Button
                                       size="sm"
                                       variant="destructive"
@@ -173,25 +180,7 @@ export default function AdminBilling() {
                                     >
                                       {cancelingId === entry.id ? "Cancelling..." : "Cancel Subscription"}
                                     </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to cancel this Stripe subscription? This action will immediately update the subscription status on Stripe.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                                        onClick={() => handleCancelSub(entry.id)}
-                                      >
-                                        Confirm
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                  </ConfirmDialog>
                               )}
                             </div>
                           </div>
@@ -205,15 +194,13 @@ export default function AdminBilling() {
           </table>
         </div>
 
-        {result && totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-            <span className="text-xs text-muted-foreground">{result.total} subscriptions</span>
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Prev</Button>
-              <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalEntries={result?.total}
+          entryLabel="subscriptions"
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

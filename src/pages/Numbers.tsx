@@ -14,17 +14,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BuyNumberDialog } from "../components/BuyNumberDialog";
@@ -249,27 +239,17 @@ export default function Numbers() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive">
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete phone number</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete {n.e164}? This cannot be undone and the number will be released.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteNumber(n.id)}>
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                           <ConfirmDialog
+                             title="Delete phone number"
+                             description={`Are you sure you want to delete ${n.e164}? This cannot be undone and the number will be released.`}
+                             actionLabel="Delete"
+                             variant="destructive"
+                             onConfirm={() => deleteNumber(n.id)}
+                           >
+                             <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive">
+                               <Trash2 className="h-3 w-3" />
+                             </Button>
+                           </ConfirmDialog>
                         </TableCell>
                       </TableRow>
                     ))}

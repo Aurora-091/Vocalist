@@ -77,19 +77,25 @@ export async function updateAgent(id: string, fields: Record<string, any>) {
 
 // ───── Contacts ─────
 
-export async function listContacts(opts?: { q?: string; limit?: number }) {
+export async function listContacts(opts?: { q?: string; limit?: number; offset?: number }) {
   let query = supabase
     .from("contacts")
-    .select("*")
+    .select("*", { count: "exact" })
     .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(opts?.limit || 100);
+    .order("created_at", { ascending: false });
   if (opts?.q) {
     query = query.or(`name.ilike.%${opts.q}%,e164.ilike.%${opts.q}%,email.ilike.%${opts.q}%`);
   }
-  const { data, error } = await query;
+  if (opts?.limit !== undefined) {
+    const from = opts.offset || 0;
+    const to = from + opts.limit - 1;
+    query = query.range(from, to);
+  } else {
+    query = query.limit(100);
+  }
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data || [];
+  return { data: data || [], total: count || 0 };
 }
 
 export async function createContact(fields: {

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Bot, Trash2, Copy } from "lucide-react";
 import { listAgents, deleteAgent as deleteAgentDb } from "../lib/db";
@@ -17,17 +17,7 @@ import {
   EmptyDescription,
   EmptyContent,
 } from "@/components/ui/empty";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AgentPresetPicker } from "../components/AgentPresetPicker";
 import VoiceLibrary from "./VoiceLibrary";
 
@@ -313,42 +303,30 @@ export default function AgentsList() {
                 >
                   <Copy className="w-3.5 h-3.5" />
                 </button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
-                      disabled={deletingId === a.id}
-                      aria-label="Delete agent"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete agent?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete "{a.name}"? This will permanently delete this agent and all associated call history. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteAgent(a.id);
-                        }}
-                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                      >
-                        {deletingId === a.id ? "Deleting…" : "Delete"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <ConfirmDialog
+                  title="Delete agent?"
+                  description={`Are you sure you want to delete "${a.name}"? This will permanently delete this agent and all associated call history. This action cannot be undone.`}
+                  actionLabel={deletingId === a.id ? "Deleting…" : "Delete"}
+                  variant="destructive"
+                  disabled={deletingId === a.id}
+                  onConfirm={(e) => {
+                    e.stopPropagation();
+                    deleteAgent(a.id);
+                  }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
+                    disabled={deletingId === a.id}
+                    aria-label="Delete agent"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </ConfirmDialog>
               </div>
             </div>
           )})}

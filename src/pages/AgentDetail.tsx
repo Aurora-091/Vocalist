@@ -22,16 +22,10 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -141,6 +135,22 @@ function serializeDraft(d: DraftState): string {
   return JSON.stringify({ ...d, selectedLanguages: [...d.selectedLanguages].sort(), boostKeywords: [...d.boostKeywords] });
 }
 
+const agentConfigSchema = z.object({
+  name: z.string().min(1, "Display name is required"),
+  objective: z.string().min(1, "Instructions / objective is required"),
+  businessName: z.string().optional(),
+  firstMessage: z.string().optional(),
+  guardrails: z.string().optional(),
+  identity: z.string().optional(),
+  transferNumber: z.string().optional().refine((val) => {
+    if (!val) return true;
+    return /^\+?[1-9]\d{1,14}$/.test(val.replace(/\s/g, ""));
+  }, "Please enter a valid phone number in E.164 format (e.g. +1234567890)."),
+  timezone: z.string().optional(),
+});
+
+type AgentFormValues = z.infer<typeof agentConfigSchema>;
+
 export default function AgentDetail() {
   const { id } = useParams();
   const { t } = useVertical();
@@ -175,16 +185,41 @@ export default function AgentDetail() {
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
-  const [name, setName] = useState("");
-  const [objective, setObjective] = useState("");
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    getValues,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<AgentFormValues>({
+    resolver: zodResolver(agentConfigSchema),
+    defaultValues: {
+      name: "",
+      objective: "",
+      businessName: "",
+      firstMessage: "",
+      guardrails: "",
+      identity: "",
+      transferNumber: "",
+      timezone: "America/New_York",
+    },
+  });
+
+  const watchedValues = watch();
+
+  const name = watchedValues.name || "";
+  const objective = watchedValues.objective || "";
+  const businessName = watchedValues.businessName || "";
+  const firstMessage = watchedValues.firstMessage || "";
+  const guardrails = watchedValues.guardrails || "";
+  const identity = watchedValues.identity || "";
+  const transferNumber = watchedValues.transferNumber || "";
+  const timezone = watchedValues.timezone || "";
+
   const [toneMode, setToneMode] = useState<string>(TONE_PRESETS[0]);
   const [customTone, setCustomTone] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [firstMessage, setFirstMessage] = useState("");
-  const [guardrails, setGuardrails] = useState("");
-  const [identity, setIdentity] = useState("");
-  const [transferNumber, setTransferNumber] = useState("");
-  const [timezone, setTimezone] = useState("");
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(["en"]);
   const [languageMessages, setLanguageMessages] = useState<Record<string, string>>({});
   const [boostKeywords, setBoostKeywords] = useState<string[]>([]);
@@ -223,8 +258,7 @@ export default function AgentDetail() {
     name, objective, toneMode, customTone, businessName, firstMessage,
     guardrails, identity, transferNumber, timezone, selectedLanguages,
     languageMessages, boostKeywords, conversationStyle, recordVoice, zeroRetentionMode,
-  }), [name, objective, toneMode, customTone, businessName, firstMessage,
-    guardrails, identity, transferNumber, timezone, selectedLanguages,
+  }), [watchedValues, toneMode, customTone, selectedLanguages,
     languageMessages, boostKeywords, conversationStyle, recordVoice, zeroRetentionMode]);
 
   const isDirty = savedDraft !== "" && serializeDraft(currentDraft()) !== savedDraft;
@@ -237,45 +271,45 @@ export default function AgentDetail() {
     try {
       const a = await getAgent(id!);
       setAgent(a);
-      setName(a.name || "");
-      setObjective(a.persona?.objective || "");
 
       const savedTone = a.persona?.tone || "";
       const isPreset = (TONE_PRESETS as readonly string[]).includes(savedTone);
+      let tMode: string = TONE_PRESETS[0];
+      let cTone = "";
       if (!savedTone || isPreset) {
-        setToneMode(savedTone || TONE_PRESETS[0]);
+        tMode = savedTone || TONE_PRESETS[0];
+        setToneMode(tMode);
         setCustomTone("");
       } else {
-        setToneMode("custom");
-        setCustomTone(savedTone);
+        tMode = "custom";
+        cTone = savedTone;
+        setToneMode(tMode);
+        setCustomTone(cTone);
       }
 
-      setBusinessName(a.persona?.business_name || "");
-      setFirstMessage(a.persona?.first_message || a.persona?.opening_message || "");
-      setGuardrails(
-        Array.isArray(a.persona?.guardrails)
-          ? (a.persona.guardrails as string[]).join("\n")
-          : a.persona?.guardrails || ""
-      );
-      setIdentity(a.persona?.identity || "");
-      setTransferNumber(a.transfer_number || "");
-      setTimezone(a.timezone || "America/New_York");
       const langs = (a.languages || ["en"])
         .map((l: string) => l.trim().toLowerCase().slice(0, 5))
         .filter(Boolean);
-      setSelectedLanguages(langs.length ? langs : ["en"]);
-      setLanguageMessages(a.persona?.first_message_overrides || a.persona?.language_messages || {});
-      setBoostKeywords(Array.isArray(a.persona?.boost_keywords) ? a.persona.boost_keywords : []);
-      setConversationStyle(a.persona?.conversation_style || "balanced");
+      const selLangs = langs.length ? langs : ["en"];
+      setSelectedLanguages(selLangs);
+
+      const firstMsgOverrides = a.persona?.first_message_overrides || a.persona?.language_messages || {};
+      setLanguageMessages(firstMsgOverrides);
+
+      const bKeywords = Array.isArray(a.persona?.boost_keywords) ? a.persona.boost_keywords : [];
+      setBoostKeywords(bKeywords);
+
+      const convStyle = a.persona?.conversation_style || "balanced";
+      setConversationStyle(convStyle);
+
       const privacyCfg = a.persona?.privacy || a.persona?.privacy_config || {};
-      setRecordVoice(
-        typeof privacyCfg.store_audio === "boolean" ? privacyCfg.store_audio
-          : typeof privacyCfg.record_voice === "boolean" ? privacyCfg.record_voice : true
-      );
-      setZeroRetentionMode(
-        typeof privacyCfg.zero_retention === "boolean" ? privacyCfg.zero_retention
-          : typeof privacyCfg.zero_retention_mode === "boolean" ? privacyCfg.zero_retention_mode : false
-      );
+      const recVoice = typeof privacyCfg.store_audio === "boolean" ? privacyCfg.store_audio
+          : typeof privacyCfg.record_voice === "boolean" ? privacyCfg.record_voice : true;
+      setRecordVoice(recVoice);
+
+      const zeroRet = typeof privacyCfg.zero_retention === "boolean" ? privacyCfg.zero_retention
+          : typeof privacyCfg.zero_retention_mode === "boolean" ? privacyCfg.zero_retention_mode : false;
+      setZeroRetentionMode(zeroRet);
 
       if (a.voice_id) {
         const voices = await listVoices();
@@ -326,39 +360,32 @@ export default function AgentDetail() {
         setRecentCalls(calls || []);
       } catch { /* non-fatal */ }
 
-      // Snapshot for dirty tracking — set after all state is applied
-      const snap: DraftState = {
+      const snapFields = {
         name: a.name || "",
         objective: a.persona?.objective || "",
-        toneMode: (() => {
-          const t = a.persona?.tone || "";
-          return (TONE_PRESETS as readonly string[]).includes(t) || !t ? (t || TONE_PRESETS[0]) : "custom";
-        })(),
-        customTone: (() => {
-          const t = a.persona?.tone || "";
-          return (TONE_PRESETS as readonly string[]).includes(t) || !t ? "" : t;
-        })(),
         businessName: a.persona?.business_name || "",
         firstMessage: a.persona?.first_message || a.persona?.opening_message || "",
         guardrails: Array.isArray(a.persona?.guardrails)
-          ? (a.persona.guardrails as string[]).join("\n") : a.persona?.guardrails || "",
+          ? (a.persona.guardrails as string[]).join("\n")
+          : a.persona?.guardrails || "",
         identity: a.persona?.identity || "",
         transferNumber: a.transfer_number || "",
         timezone: a.timezone || "America/New_York",
-        selectedLanguages: (a.languages || ["en"]).map((l: string) => l.trim().toLowerCase().slice(0, 5)).filter(Boolean),
-        languageMessages: a.persona?.first_message_overrides || a.persona?.language_messages || {},
-        boostKeywords: Array.isArray(a.persona?.boost_keywords) ? a.persona.boost_keywords : [],
-        conversationStyle: a.persona?.conversation_style || "balanced",
-        recordVoice: (() => {
-          const p = a.persona?.privacy || a.persona?.privacy_config || {};
-          return typeof p.store_audio === "boolean" ? p.store_audio : typeof p.record_voice === "boolean" ? p.record_voice : true;
-        })(),
-        zeroRetentionMode: (() => {
-          const p = a.persona?.privacy || a.persona?.privacy_config || {};
-          return typeof p.zero_retention === "boolean" ? p.zero_retention : typeof p.zero_retention_mode === "boolean" ? p.zero_retention_mode : false;
-        })(),
       };
-      setSavedDraft(serializeDraft(snap));
+      reset(snapFields);
+
+      const initialDraft: DraftState = {
+        ...snapFields,
+        toneMode: tMode,
+        customTone: cTone,
+        selectedLanguages: selLangs,
+        languageMessages: firstMsgOverrides,
+        boostKeywords: bKeywords,
+        conversationStyle: convStyle,
+        recordVoice: recVoice,
+        zeroRetentionMode: zeroRet,
+      };
+      setSavedDraft(serializeDraft(initialDraft));
     } catch {
       toast.error("Failed to load agent");
       setAgent(null);
@@ -385,22 +412,22 @@ export default function AgentDetail() {
     })();
   }, [selectedLanguages, agent?.voice_id]);
 
-  async function save() {
+  async function save(data: AgentFormValues) {
     if (!agent) return;
     setSaving(true);
     try {
       const effectiveTone = toneMode === "custom" ? customTone : toneMode;
-      const guardrailsValue = guardrails.trim()
-        ? guardrails.split("\n").map((s) => s.trim()).filter(Boolean) : [];
+      const guardrailsValue = data.guardrails?.trim()
+        ? data.guardrails.split("\n").map((s) => s.trim()).filter(Boolean) : [];
       const persona = {
         ...(agent.persona || {}),
-        objective,
+        objective: data.objective,
         tone: effectiveTone,
-        business_name: businessName,
-        first_message: firstMessage || undefined,
-        opening_message: firstMessage || undefined,
+        business_name: data.businessName,
+        first_message: data.firstMessage || undefined,
+        opening_message: data.firstMessage || undefined,
         guardrails: guardrailsValue.length ? guardrailsValue : undefined,
-        identity: identity.trim() || undefined,
+        identity: data.identity?.trim() || undefined,
         first_message_overrides: Object.keys(languageMessages).length > 0 ? languageMessages : undefined,
         language_messages: Object.keys(languageMessages).length > 0 ? languageMessages : undefined,
         boost_keywords: boostKeywords.length > 0 ? boostKeywords : undefined,
@@ -409,10 +436,10 @@ export default function AgentDetail() {
         privacy_config: { record_voice: recordVoice, zero_retention_mode: zeroRetentionMode },
       };
       await api.patch(`/v1/agents/${id}`, {
-        name,
+        name: data.name,
         persona,
-        transfer_number: transferNumber.trim() || undefined,
-        timezone: timezone || "America/New_York",
+        transfer_number: data.transferNumber?.trim() || undefined,
+        timezone: data.timezone || "America/New_York",
         languages: selectedLanguages,
       });
       toast.success("Agent saved and synced.");
@@ -495,7 +522,8 @@ export default function AgentDetail() {
     const field = lastFocusedField.current;
     const ref = field === "objective" ? objectiveRef : field === "guardrails" ? guardrailsRef : null;
     if (!ref?.current) {
-      setObjective((v) => v + (v.endsWith(" ") || v === "" ? "" : " ") + snippet);
+      const prev = getValues("objective") || "";
+      setValue("objective", prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + snippet);
       toast.success(`Inserted ${snippet} into Objective`);
       return;
     }
@@ -503,8 +531,8 @@ export default function AgentDetail() {
     const start = el.selectionStart ?? el.value.length;
     const end = el.selectionEnd ?? el.value.length;
     const next = el.value.slice(0, start) + snippet + el.value.slice(end);
-    if (field === "objective") setObjective(next);
-    else setGuardrails(next);
+    if (field === "objective") setValue("objective", next);
+    else setValue("guardrails", next);
     requestAnimationFrame(() => {
       el.focus();
       const pos = start + snippet.length;
@@ -517,10 +545,10 @@ export default function AgentDetail() {
     if (!agent) return;
     const p = preset.persona || {};
     if (mode === "replace") {
-      setObjective(p.objective || "");
-      setGuardrails(Array.isArray(p.guardrails) ? p.guardrails.join("\n") : p.guardrails || "");
-      setIdentity(p.identity || "");
-      setFirstMessage(p.first_message || p.opening_message || "");
+      setValue("objective", p.objective || "");
+      setValue("guardrails", Array.isArray(p.guardrails) ? p.guardrails.join("\n") : p.guardrails || "");
+      setValue("identity", p.identity || "");
+      setValue("firstMessage", p.first_message || p.opening_message || "");
       const tone = p.tone || "";
       const isPreset = (TONE_PRESETS as readonly string[]).includes(tone);
       if (!tone || isPreset) { setToneMode(tone || TONE_PRESETS[0]); setCustomTone(""); }
@@ -529,9 +557,11 @@ export default function AgentDetail() {
     } else {
       const newGuardrails = Array.isArray(p.guardrails) ? p.guardrails.join("\n") : p.guardrails || "";
       if (newGuardrails) {
-        setGuardrails((prev) => { const t = prev.trim(); return t ? `${t}\n${newGuardrails}` : newGuardrails; });
+        const prev = getValues("guardrails") || "";
+        const t = prev.trim();
+        setValue("guardrails", t ? `${t}\n${newGuardrails}` : newGuardrails);
       }
-      if (p.identity && !identity) setIdentity(p.identity);
+      if (p.identity && !getValues("identity")) setValue("identity", p.identity);
       toast.success(`Rules from "${preset.name}" merged into guardrails.`);
     }
     setTemplateModalOpen(false);
@@ -589,7 +619,7 @@ export default function AgentDetail() {
               <input
                 ref={nameInputRef}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setValue("name", e.target.value)}
                 onBlur={() => setEditingName(false)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditingName(false); }}
                 className="text-base font-semibold bg-transparent border-b border-foreground/30 outline-none w-full max-w-sm leading-tight py-0.5"
@@ -757,24 +787,32 @@ export default function AgentDetail() {
                 {/* Editor column */}
                 <div className="flex-1 min-w-0 max-w-2xl space-y-5">
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <Field label="Display name">
-                      <Input value={name} onChange={(e) => setName(e.target.value)} />
+                    <Field label="Display name" error={errors.name?.message}>
+                      <Input {...register("name")} className={errors.name ? "border-danger focus-visible:ring-danger" : ""} />
                     </Field>
-                    <Field label="Business name">
-                      <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Lakeshore Family Clinic" />
+                    <Field label="Business name" error={errors.businessName?.message}>
+                      <Input {...register("businessName")} className={errors.businessName ? "border-danger focus-visible:ring-danger" : ""} placeholder="Lakeshore Family Clinic" />
                     </Field>
-                    <Field label="Objective" full>
-                      <Textarea
-                        ref={objectiveRef}
-                        value={objective}
-                        onChange={(e) => setObjective(e.target.value)}
-                        onFocus={() => { lastFocusedField.current = "objective"; }}
-                        rows={3}
-                        placeholder="Answer questions and book appointments. Route billing questions to a human."
-                      />
+                    <Field label="Objective" full error={errors.objective?.message}>
+                      {(() => {
+                        const objectiveRegister = register("objective");
+                        return (
+                          <Textarea
+                            {...objectiveRegister}
+                            ref={(e) => {
+                              objectiveRegister.ref(e);
+                              (objectiveRef as any).current = e;
+                            }}
+                            onFocus={() => { lastFocusedField.current = "objective"; }}
+                            rows={3}
+                            placeholder="Answer questions and book appointments. Route billing questions to a human."
+                            className={errors.objective ? "border-danger focus-visible:ring-danger" : ""}
+                          />
+                        );
+                      })()}
                     </Field>
-                    <Field label="Opening message">
-                      <Input value={firstMessage} onChange={(e) => setFirstMessage(e.target.value)} placeholder="Hello, thanks for calling. How can I help?" />
+                    <Field label="Opening message" error={errors.firstMessage?.message}>
+                      <Input {...register("firstMessage")} className={errors.firstMessage ? "border-danger focus-visible:ring-danger" : ""} placeholder="Hello, thanks for calling. How can I help?" />
                     </Field>
                     <Field label="Tone">
                       <Select value={toneMode} onValueChange={setToneMode}>
@@ -795,19 +833,26 @@ export default function AgentDetail() {
                         <Input value={customTone} onChange={(e) => setCustomTone(e.target.value)} placeholder="Playful yet authoritative, like a knowledgeable friend" />
                       </Field>
                     )}
-                    <Field label="Guardrails (one per line)" full>
-                      <Textarea
-                        ref={guardrailsRef}
-                        value={guardrails}
-                        onChange={(e) => setGuardrails(e.target.value)}
-                        onFocus={() => { lastFocusedField.current = "guardrails"; }}
-                        rows={3}
-                        placeholder={"Do not discuss pricing unless asked.\nAlways offer to transfer to a human for complex issues."}
-                        className="font-mono"
-                      />
+                    <Field label="Guardrails (one per line)" full error={errors.guardrails?.message}>
+                      {(() => {
+                        const guardrailsRegister = register("guardrails");
+                        return (
+                          <Textarea
+                            {...guardrailsRegister}
+                            ref={(e) => {
+                              guardrailsRegister.ref(e);
+                              (guardrailsRef as any).current = e;
+                            }}
+                            onFocus={() => { lastFocusedField.current = "guardrails"; }}
+                            rows={3}
+                            placeholder={"Do not discuss pricing unless asked.\nAlways offer to transfer to a human for complex issues."}
+                            className={cn("font-mono", errors.guardrails ? "border-danger focus-visible:ring-danger" : "")}
+                          />
+                        );
+                      })()}
                     </Field>
-                    <Field label="Identity (optional)">
-                      <Input value={identity} onChange={(e) => setIdentity(e.target.value)} placeholder="You are Maya, a billing assistant at Acme Corp." />
+                    <Field label="Identity (optional)" error={errors.identity?.message}>
+                      <Input {...register("identity")} className={errors.identity ? "border-danger focus-visible:ring-danger" : ""} placeholder="You are Maya, a billing assistant at Acme Corp." />
                     </Field>
                   </div>
 
@@ -1200,16 +1245,16 @@ export default function AgentDetail() {
                       </p>
                     </Field>
                     
-                    <Field label="Human transfer number">
-                      <Input value={transferNumber} onChange={(e) => setTransferNumber(e.target.value)} placeholder="+14155551234" className="font-mono" />
+                    <Field label="Human transfer number" error={errors.transferNumber?.message}>
+                      <Input {...register("transferNumber")} placeholder="+14155551234" className={cn("font-mono", errors.transferNumber ? "border-danger focus-visible:ring-danger" : "")} />
                     </Field>
                   </div>
                 </div>
 
                 {/* Timezone */}
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <Field label="Timezone">
-                    <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+                  <Field label="Timezone" error={errors.timezone?.message}>
+                    <Input {...register("timezone")} className={errors.timezone ? "border-danger focus-visible:ring-danger" : ""} />
                   </Field>
                 </div>
 
@@ -1377,7 +1422,7 @@ export default function AgentDetail() {
             <Button variant="ghost" size="sm" onClick={handleDiscard} disabled={saving}>
               Discard
             </Button>
-            <Button size="sm" onClick={save} disabled={saving}>
+            <Button size="sm" onClick={handleSubmit(save)} disabled={saving}>
               {saving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
               {saving ? "Saving…" : "Save & update agent"}
             </Button>
@@ -1435,22 +1480,16 @@ export default function AgentDetail() {
         </div>
       )}
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete agent?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the agent from your organization and de-provisions it from ElevenLabs. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting…" : "Delete agent"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete agent?"
+        description="This removes the agent from your organization and de-provisions it from ElevenLabs. This cannot be undone."
+        actionLabel={deleting ? "Deleting…" : "Delete agent"}
+        variant="destructive"
+        disabled={deleting}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
@@ -1521,11 +1560,12 @@ function LanguagePicker({ selected, onChange }: { selected: string[]; onChange: 
   );
 }
 
-function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
+function Field({ label, children, full, error }: { label: string; children: React.ReactNode; full?: boolean; error?: string }) {
   return (
     <div className={full ? "sm:col-span-2" : ""}>
       <label className="block text-xs font-medium text-muted-foreground mb-1.5">{label}</label>
       {children}
+      {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useCopy } from "../../hooks/useCopy";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function AdminAgents() {
   const [searchParams] = useSearchParams();
@@ -203,15 +204,13 @@ export default function AdminAgents() {
           </table>
         </div>
 
-        {result && totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-            <span className="text-xs text-muted-foreground">{result.total} total agents</span>
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Prev</Button>
-              <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalEntries={result?.total}
+          entryLabel="total agents"
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

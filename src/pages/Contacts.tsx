@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Plus, Upload, Search, Trash2, ShieldOff } from "lucide-react";
 import { listContacts, createContact, deleteContact as deleteContactDb } from "../lib/db";
 import { api } from "../lib/api";
@@ -12,17 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableHeader,
@@ -58,17 +49,25 @@ export default function Contacts() {
 
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 20;
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [dncUploading, setDncUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const debouncedQ = useDebounce(q, 350);
 
   async function load(query?: string) {
     try {
-      setContacts(await listContacts({ q: query || undefined, limit: 100 }));
+      const res = await listContacts({
+        q: query || undefined,
+        limit,
+        offset: (page - 1) * limit,
+      });
+      setContacts(res.data);
+      setTotal(res.total);
     } catch {
       toast.error("Failed to load contacts");
       setContacts([]);
@@ -76,16 +75,20 @@ export default function Contacts() {
   }
 
   useEffect(() => {
-    load(debouncedQ);
+    setPage(1);
   }, [debouncedQ]);
+
+  useEffect(() => {
+    load(debouncedQ);
+  }, [debouncedQ, page]);
 
   async function deleteContact(id: string) {
     setDeletingId(id);
-    setConfirmDeleteId(null);
     const prev = contacts;
     setContacts((c) => c?.filter((x) => x.id !== id) ?? null);
     try {
       await deleteContactDb(id);
+      await load(debouncedQ);
     } catch {
       setContacts(prev);
       toast.error("Failed to delete contact");
@@ -197,34 +200,22 @@ export default function Contacts() {
                       )}
                     </Td>
                     <Td>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button
-                            className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
-                            disabled={deletingId === c.id}
-                            aria-label={`Delete ${c.name || c.e164}`}
-                          >
-                            <Trash2 className="size-3.5" aria-hidden="true" />
-                          </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete contact?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete contact {c.name ? `"${c.name}" (${c.e164})` : c.e164}? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteContact(c.id)}
-                              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                            >
-                              {deletingId === c.id ? "Deleting…" : "Delete"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <ConfirmDialog
+                        title="Delete contact?"
+                        description={`Are you sure you want to delete contact ${c.name ? `"${c.name}" (${c.e164})` : c.e164}? This action cannot be undone.`}
+                        actionLabel={deletingId === c.id ? "Deleting…" : "Delete"}
+                        variant="destructive"
+                        disabled={deletingId === c.id}
+                        onConfirm={() => deleteContact(c.id)}
+                      >
+                        <button
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
+                          disabled={deletingId === c.id}
+                          aria-label={`Delete ${c.name || c.e164}`}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden="true" />
+                        </button>
+                      </ConfirmDialog>
                     </Td>
                   </TableRow>
                 ))}
@@ -258,43 +249,36 @@ export default function Contacts() {
                         <span className="size-1.5 rounded-full bg-current mr-1" />none
                       </Badge>
                     )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <button
-                          className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
-                          disabled={deletingId === c.id}
-                          aria-label={`Delete ${c.name || c.e164}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                        </button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete contact?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete contact {c.name ? `"${c.name}" (${c.e164})` : c.e164}? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteContact(c.id)}
-                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                          >
-                            {deletingId === c.id ? "Deleting…" : "Delete"}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <ConfirmDialog
+                      title="Delete contact?"
+                      description={`Are you sure you want to delete contact ${c.name ? `"${c.name}" (${c.e164})` : c.e164}? This action cannot be undone.`}
+                      actionLabel={deletingId === c.id ? "Deleting…" : "Delete"}
+                      variant="destructive"
+                      disabled={deletingId === c.id}
+                      onConfirm={() => deleteContact(c.id)}
+                    >
+                      <button
+                        className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                        disabled={deletingId === c.id}
+                        aria-label={`Delete ${c.name || c.e164}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                    </ConfirmDialog>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="text-xs text-muted-foreground text-right">
-            {contacts.length} contact{contacts.length !== 1 ? "s" : ""}
-          </div>
+          <Pagination
+            page={page}
+            totalPages={Math.ceil(total / limit)}
+            totalEntries={total}
+            entryLabel={total === 1 ? "contact" : "contacts"}
+            onPageChange={setPage}
+            className="mt-4 border border-border bg-card rounded-lg"
+          />
         </>
       )}
     </div>

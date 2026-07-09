@@ -47,8 +47,8 @@ export function CommandPalette({ open, onOpenChange }: Props) {
       return;
     }
     listContacts({ q: debouncedQuery, limit: 6 })
-      .then((rows) =>
-        setContacts(rows.map((r: any) => ({ id: r.id, name: r.name, e164: r.e164 })))
+      .then((res) =>
+        setContacts(res.data.map((r: any) => ({ id: r.id, name: r.name, e164: r.e164 })))
       )
       .catch(() => {});
   }, [debouncedQuery]);

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function AdminUsers() {
   const [result, setResult] = useState<PaginatedResult<AdminUser> | null>(null);
@@ -198,30 +199,18 @@ export default function AdminUsers() {
             {/* Suspend Account Action */}
             <div className="space-y-2 flex flex-col justify-end">
               <label className="text-xs text-muted-foreground font-medium block">Account Status</label>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full" disabled={suspendLoading}>
-                    {suspendLoading ? "Suspending..." : "Suspend Account"}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will suspend this user's account immediately. They will not be able to log in or access platform features.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
-                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                      onClick={handleSuspendAccount}
-                    >
-                      Suspend
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <ConfirmDialog
+                title="Are you absolutely sure?"
+                description="This will suspend this user's account immediately. They will not be able to log in or access platform features."
+                actionLabel="Suspend"
+                variant="destructive"
+                disabled={suspendLoading}
+                onConfirm={handleSuspendAccount}
+              >
+                <Button variant="destructive" className="w-full" disabled={suspendLoading}>
+                  {suspendLoading ? "Suspending..." : "Suspend Account"}
+                </Button>
+              </ConfirmDialog>
             </div>
 
           </div>
@@ -284,17 +273,13 @@ export default function AdminUsers() {
           </table>
         </div>
 
-        {result && totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-            <span className="text-xs text-muted-foreground">
-              {result.total} total users
-            </span>
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Prev</Button>
-              <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalEntries={result?.total}
+          entryLabel="total users"
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

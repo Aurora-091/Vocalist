@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor, Trash2, LogOut, Loader as Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -23,17 +23,10 @@ import { VERTICAL_REGISTRY, listVerticals, type VerticalKey } from "../config/ve
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Field, FieldLabel, FieldGroup, FieldDescription } from "@/components/ui/field";
@@ -354,32 +347,17 @@ function SecurityPanel() {
         <div className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="font-medium">Active Sessions</div>
-            {sessions && sessions.length > 1 && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button className="text-xs text-danger hover:text-danger/80 font-medium">
-                    Revoke all others
-                  </button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Revoke all other sessions?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will immediately sign out all other active devices. You will remain signed in on this device.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={revokeAllOthers}
-                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                    >
-                      Revoke all others
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+              <ConfirmDialog
+                title="Revoke all other sessions?"
+                description="This will immediately sign out all other active devices. You will remain signed in on this device."
+                actionLabel="Revoke all others"
+                variant="destructive"
+                onConfirm={revokeAllOthers}
+              >
+                <button className="text-xs text-danger hover:text-danger/80 font-medium">
+                  Revoke all others
+                </button>
+              </ConfirmDialog>
           </div>
         </div>
         <CardContent className="px-6 py-5">
@@ -402,36 +380,21 @@ function SecurityPanel() {
                       {s.ip_address || "Unknown IP"} — Last active {new Date(s.last_active_at).toLocaleDateString()}
                     </div>
                   </div>
-                  {i !== 0 && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <button
-                          className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
-                          aria-label={`Revoke session on ${s.device_info || "Unknown device"}`}
-                          title="Revoke session"
-                        >
-                          <LogOut className="w-4 h-4" />
-                        </button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Revoke session?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to sign out of the session on "{s.device_info || "Unknown device"}" ({s.ip_address || "Unknown IP"})?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleRevokeSession(s.id)}
-                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                          >
-                            Revoke session
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
+                    <ConfirmDialog
+                      title="Revoke session?"
+                      description={`Are you sure you want to sign out of the session on "${s.device_info || "Unknown device"}" (${s.ip_address || "Unknown IP"})?`}
+                      actionLabel="Revoke session"
+                      variant="destructive"
+                      onConfirm={() => handleRevokeSession(s.id)}
+                    >
+                      <button
+                        className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
+                        aria-label={`Revoke session on ${s.device_info || "Unknown device"}`}
+                        title="Revoke session"
+                      >
+                        <LogOut className="w-4 h-4" />
+                      </button>
+                    </ConfirmDialog>
                 </div>
               ))}
             </div>
@@ -694,10 +657,25 @@ function Toggle({
   );
 }
 
+const webhookSchema = z.object({
+  url: z.string().url("Please enter a valid URL (e.g. https://your.app/webhook)."),
+});
+
+type WebhookFormValues = z.infer<typeof webhookSchema>;
+
 function WebhooksPanel() {
   const [hooks, setHooks] = useState<any[] | null>(null);
-  const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<WebhookFormValues>({
+    resolver: zodResolver(webhookSchema),
+    defaultValues: { url: "" },
+  });
 
   async function load() {
     setHooks(await listWebhookEndpoints());
@@ -707,14 +685,14 @@ function WebhooksPanel() {
     load();
   }, []);
 
-  async function add() {
+  async function add(data: WebhookFormValues) {
     setBusy(true);
     try {
       await createWebhookEndpoint({
-        url,
+        url: data.url,
         events: ["call.completed", "call.failed"],
       });
-      setUrl("");
+      setValue("url", "");
       await load();
     } finally {
       setBusy(false);
@@ -730,18 +708,24 @@ function WebhooksPanel() {
         <p className="text-sm text-muted-foreground mb-4">
           We sign every event with HMAC-SHA256 in the <code className="font-mono">X-Weeber-Signature</code> header.
         </p>
-        <div className="flex gap-2 mb-4">
-          <Input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://your.app/webhook"
-            aria-label="Webhook endpoint URL"
-            className="flex-1"
-          />
-          <Button onClick={add} disabled={busy || !url}>
-            {busy ? "Adding..." : "Add endpoint"}
-          </Button>
-        </div>
+        <form onSubmit={handleSubmit(add)} className="space-y-4 mb-4">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                {...register("url")}
+                placeholder="https://your.app/webhook"
+                aria-label="Webhook endpoint URL"
+                className={errors.url ? "border-danger focus-visible:ring-danger" : ""}
+              />
+            </div>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Adding..." : "Add endpoint"}
+            </Button>
+          </div>
+          {errors.url && (
+            <p className="text-xs text-danger">{errors.url.message}</p>
+          )}
+        </form>
         {hooks === null ? (
           <Skeleton className="h-16" />
         ) : hooks.length === 0 ? (
