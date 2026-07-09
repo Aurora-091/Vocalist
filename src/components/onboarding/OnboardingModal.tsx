@@ -3,6 +3,7 @@ import { Check, ArrowRight, Loader as Loader2, Mic, ShoppingBag, Activity, Build
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { WeeberLogo } from "@/components/WeeberLogo";
 import { ConversationPanel } from "./ConversationPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -38,6 +39,20 @@ type Voice = {
 
 const STEP_KEYS = ["template", "business", "voice", "test"] as const;
 type StepKey = (typeof STEP_KEYS)[number];
+
+// Draft is only ever restored up to the "voice" step (index 2) — never straight into "test",
+// since agent creation is a side effect tied to a specific session and we can't safely assume
+// a prior session already created one.
+const DRAFT_KEY = "weeber_onboarding_draft_v1";
+const MAX_RESTORABLE_STEP = 2;
+
+type OnboardingDraft = {
+  step: number;
+  activeVerticalTab: string;
+  selectedPresetId: string | null;
+  businessName: string;
+  selectedVoice: string;
+};
 
 const STEP_LABELS: Record<StepKey, string> = {
   template: "Template",
@@ -95,6 +110,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
 
   const [previewingVoiceId, setPreviewingVoiceId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasRestoredDraftRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -145,9 +161,54 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
     })();
     (async () => {
       const org = await getOrg();
-      if (org?.name) setBusinessName(org.name);
+      // Functional form: don't clobber a value the draft restore (below) may have just set.
+      if (org?.name) setBusinessName((prev) => prev || org.name);
     })();
   }, [open]);
+
+  // Restore an in-progress draft (survives refresh/remount) once presets have loaded, so we can
+  // resolve the saved preset id back to a real object. Runs at most once per mount.
+  useEffect(() => {
+    if (!open || presets === null || hasRestoredDraftRef.current) return;
+    hasRestoredDraftRef.current = true;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft: OnboardingDraft = JSON.parse(raw);
+      if (draft.selectedPresetId) {
+        const match = presets.find((p) => p.id === draft.selectedPresetId);
+        if (match) {
+          setSelectedPreset(match);
+          setActiveVerticalTab(draft.activeVerticalTab || "all");
+        }
+      }
+      if (draft.businessName) setBusinessName((prev) => prev || draft.businessName);
+      if (draft.selectedVoice) setSelectedVoice((prev) => prev || draft.selectedVoice);
+      if (typeof draft.step === "number") {
+        setStep((prev) => (prev === 0 ? Math.min(draft.step, MAX_RESTORABLE_STEP) : prev));
+      }
+    } catch {
+      /* malformed or inaccessible draft — ignore, start fresh */
+    }
+  }, [open, presets]);
+
+  // Persist the draft on every meaningful change, once restoration has had its chance to run
+  // first (otherwise we'd overwrite a saved draft with the blank initial state).
+  useEffect(() => {
+    if (!open || !hasRestoredDraftRef.current || finished) return;
+    try {
+      const draft: OnboardingDraft = {
+        step,
+        activeVerticalTab,
+        selectedPresetId: selectedPreset?.id ?? null,
+        businessName,
+        selectedVoice,
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* localStorage unavailable (private mode, quota) — draft persistence is best-effort */
+    }
+  }, [open, step, activeVerticalTab, selectedPreset, businessName, selectedVoice, finished]);
 
   useEffect(() => {
     if (step === 2 && voices.length === 0) {
@@ -227,6 +288,11 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
     }
     setFinished(true);
     updateOnboardingStep("test_and_golive", true);
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
     setTimeout(() => {
       onOpenChange(false);
       onComplete?.();
@@ -257,8 +323,8 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
     if (finished) {
       return (
         <div className="flex flex-col items-center justify-center h-full gap-4 py-12">
-          <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
-            <Check className="w-7 h-7 text-emerald-500" />
+          <div className="w-14 h-14 rounded-full bg-success/15 flex items-center justify-center">
+            <Check className="w-7 h-7 text-success" />
           </div>
           <div className="text-center">
             <p className="text-lg font-semibold text-foreground">You're all set</p>
@@ -304,8 +370,14 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
           {/* Preset grid */}
           <div className="flex-1 overflow-y-auto -mx-1 px-1">
             {presets === null ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="p-5 rounded-xl border border-border h-[104px] space-y-2.5">
+                    <Skeleton className="h-3.5 w-20" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                ))}
               </div>
             ) : visiblePresets.length === 0 ? (
               <div className="flex items-center justify-center h-full">
@@ -333,7 +405,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                           {p.vertical_key}
                         </span>
                         {selectedPreset?.id === p.id && (
-                          <Check className="w-3.5 h-3.5 text-emerald-500 ml-auto" />
+                          <Check className="w-3.5 h-3.5 text-success ml-auto" />
                         )}
                       </div>
                       <p className="text-sm font-semibold text-foreground leading-snug">{p.name}</p>
@@ -404,8 +476,16 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
           {/* Voice list */}
           <div className="flex-1 overflow-y-auto -mx-1 px-1">
             {voices.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="px-4 py-3 rounded-xl border border-border flex items-center gap-3">
+                    <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <Skeleton className="h-3.5 w-24" />
+                      <Skeleton className="h-2.5 w-16" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
@@ -443,7 +523,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                       )}
                     </div>
                     {selectedVoice === v.voice_id && (
-                      <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <Check className="w-4 h-4 text-success shrink-0" />
                     )}
                   </button>
                 ))}
@@ -600,7 +680,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                   className={cn(
                     "w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold transition-colors",
                     isDone
-                      ? "bg-emerald-500 text-white"
+                      ? "bg-success text-white"
                       : isActive
                       ? "bg-foreground text-background"
                       : "bg-muted border border-border text-muted-foreground"
@@ -612,7 +692,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                   <div
                     className={cn(
                       "w-px flex-1 my-1 min-h-[24px]",
-                      isDone ? "bg-emerald-500/40" : "bg-border"
+                      isDone ? "bg-success/40" : "bg-border"
                     )}
                   />
                 )}
@@ -657,7 +737,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
           className={cn(
             "flex-1 h-1 rounded-full transition-colors",
             i < step
-              ? "bg-emerald-500"
+              ? "bg-success"
               : i === step
               ? "bg-foreground"
               : "bg-muted"
@@ -716,7 +796,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
             className={cn(
               "flex-1 h-1 rounded-full transition-colors",
               i < step
-                ? "bg-emerald-500"
+                ? "bg-success"
                 : i === step
                 ? "bg-foreground"
                 : "bg-muted"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Megaphone, ChevronRight } from "lucide-react";
 import { listCampaigns } from "../lib/db";
@@ -77,7 +77,7 @@ export default function Campaigns() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("campaigns")}</h1>
-          <p className="text-sm text-text-muted mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Outbound runs against a list. Live monitor + retries built in.
           </p>
         </div>
@@ -101,7 +101,7 @@ export default function Campaigns() {
               className={`px-3 h-8 rounded-full text-xs font-medium transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border ${
                 filter === f
                   ? "bg-primary text-primary-foreground"
-                  : "bg-surface border border-border text-text-muted hover:text-text"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {f}
@@ -134,7 +134,7 @@ export default function Campaigns() {
           </EmptyContent>
         </Empty>
       ) : visible.length === 0 ? (
-        <div className="text-sm text-text-muted text-center py-12">
+        <div className="text-sm text-muted-foreground text-center py-12">
           No {filter} campaigns.
         </div>
       ) : (
@@ -197,20 +197,20 @@ export default function Campaigns() {
               <li key={c.id}>
                 <Link
                   to={`/campaigns/${c.id}`}
-                  className="flex items-center justify-between bg-surface border border-border rounded-md shadow-card p-4 active:bg-surface-2 hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
+                  className="flex items-center justify-between bg-card border border-border rounded-md shadow-card p-4 active:bg-muted hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
                   aria-label={`Campaign: ${c.name}, status: ${c.status}`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <Megaphone className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
+                      <Megaphone className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
                       <span className="font-medium truncate">{c.name}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-text-muted">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <StatusBadge status={c.status} />
                       <time dateTime={c.created_at}>{new Date(c.created_at).toLocaleDateString()}</time>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-text-muted shrink-0 ml-3" aria-hidden="true" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 ml-3" aria-hidden="true" />
                 </Link>
               </li>
             ))}

@@ -53,17 +53,12 @@
   --font-sans: "Geist Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* Surface palette (light) */
-  --color-bg: #F8F9FB;
+  /* Compatibility shim (light) — kept only because TwilioAccountSection.tsx (Hands-Off Zone
+     per CLAUDE.md, not to be edited for non-Twilio reasons) still references these three
+     classes. Every other consumer has been migrated onto the shadcn tokens above. */
   --color-surface: #FFFFFF;
   --color-surface-2: #F1F3F7;
-  --color-border-subtle: #E4E7EE;
-
-  /* Text palette (light) — WCAG AA or better */
-  --color-text: #0F172A;        /* slate-900  — primary heading/body */
-  --color-text-secondary: #475569;  /* slate-600  — secondary body */
-  --color-text-muted: #64748B;  /* slate-500  — captions, labels */
-  --color-text-placeholder: #94A3B8; /* slate-400 — placeholder */
+  --color-text-muted: #64748B;  /* slate-500 */
 
   /* Semantic */
   --color-success: #16a34a;
@@ -142,15 +137,16 @@
     --sidebar-border: var(--border);
     --sidebar-ring: var(--ring);
 
-    /* Dark-mode overrides for legacy surface/text tokens — Vercel pure black */
-    --color-bg: #000000;
+    /* Dark-mode overrides for semantic status tokens — lighter shade for contrast on near-black */
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+    --color-danger: #f87171;
+    --color-info: #22d3ee;
+
+    /* Dark values for the Twilio-component compatibility shim (see @theme block above) */
     --color-surface: #0A0A0A;
     --color-surface-2: #141414;
-    --color-border-subtle: rgba(255,255,255,0.08);
-    --color-text: #FAFAFA;
-    --color-text-secondary: #A1A1A1;
     --color-text-muted: #888888;
-    --color-text-placeholder: #555555;
   }
   * {
     @apply border-border outline-ring/50;
@@ -227,7 +223,7 @@ body {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  color: var(--muted-foreground);
 }
 
 /* ─── Global interactive states ─── */
@@ -240,7 +236,7 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--color-text-placeholder);
+  color: color-mix(in oklch, var(--muted-foreground) 70%, transparent);
 }
 
 input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -338,7 +334,7 @@ textarea:disabled {
   outline: none;
 }
 .focus-ring:focus-visible {
-  box-shadow: 0 0 0 2px var(--color-bg, #fff), 0 0 0 4px var(--color-primary);
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--color-primary);
 }
 
 /* Scrollbar styling */
@@ -349,7 +345,7 @@ textarea:disabled {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--color-text) 15%, transparent);
+  background: color-mix(in oklch, var(--foreground) 15%, transparent);
   border-radius: 3px;
 }
 

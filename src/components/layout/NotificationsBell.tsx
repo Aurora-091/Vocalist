@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { getOrgId } from "../../lib/db";
@@ -77,7 +77,7 @@ export function NotificationsBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2"
+        className="relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
         aria-label="Notifications"
       >
         <Bell className="w-4 h-4" />
@@ -89,7 +89,7 @@ export function NotificationsBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-surface border border-border rounded-md shadow-card overflow-hidden z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-md shadow-card overflow-hidden z-50">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div className="text-sm font-medium">Notifications</div>
             {unread > 0 && (
@@ -103,9 +103,9 @@ export function NotificationsBell() {
           </div>
           <div className="max-h-96 overflow-y-auto">
             {items === null ? (
-              <div className="px-4 py-6 text-sm text-text-muted">Loading...</div>
+              <div className="px-4 py-6 text-sm text-muted-foreground">Loading...</div>
             ) : items.length === 0 ? (
-              <div className="px-4 py-6 text-sm text-text-muted text-center">
+              <div className="px-4 py-6 text-sm text-muted-foreground text-center">
                 You're all caught up.
               </div>
             ) : (
@@ -113,7 +113,7 @@ export function NotificationsBell() {
                 <button
                   key={n.id}
                   onClick={() => markOne(n.id)}
-                  className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-surface-2 ${
+                  className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted ${
                     !n.read_at ? "bg-primary/[0.03]" : ""
                   }`}
                 >
@@ -126,11 +126,11 @@ export function NotificationsBell() {
                     )}
                   </div>
                   {n.payload?.message && (
-                    <div className="mt-1 text-xs text-text-muted line-clamp-2">
+                    <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
                       {n.payload.message}
                     </div>
                   )}
-                  <div className="mt-1 text-[11px] text-text-muted">
+                  <div className="mt-1 text-[11px] text-muted-foreground">
                     {new Date(n.created_at).toLocaleString()}
                   </div>
                 </button>

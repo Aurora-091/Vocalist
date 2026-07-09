@@ -127,7 +127,7 @@ export function VariablesPanel({ promptText, onInsert }: VariablesPanelProps) {
                 {label}
               </span>
               {id === "unknown" && (
-                <span className="text-[10px] text-red-600">
+                <span className="text-[10px] text-danger">
                   — not recognized, check spelling
                 </span>
               )}

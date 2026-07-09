@@ -138,7 +138,7 @@ export default function AdminBilling() {
                                     aria-label="Copy Subscription ID"
                                   >
                                     {copiedId === entry.stripe_subscription_id ? (
-                                      <Check className="h-3.5 w-3.5 text-green-500" />
+                                      <Check className="h-3.5 w-3.5 text-success" />
                                     ) : (
                                       <Copy className="h-3.5 w-3.5" />
                                     )}

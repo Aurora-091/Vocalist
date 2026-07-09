@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ShoppingBag, MessageCircle, Calendar, Table, CircleDot,
@@ -175,18 +175,18 @@ export default function IntegrationConnect() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Connect {catalogEntry.name}</h1>
-        <p className="text-sm text-text-muted mt-1">{catalogEntry.description}</p>
+        <p className="text-sm text-muted-foreground mt-1">{catalogEntry.description}</p>
       </div>
 
       {existingConfig?.status === "active" ? (
-        <div className="bg-surface border border-success/30 rounded-md p-6">
+        <div className="bg-card border border-success/30 rounded-md p-6">
           <div className="flex items-center gap-3">
             <span className="w-10 h-10 rounded-full bg-success/10 text-success flex items-center justify-center">
               <Icon className="w-5 h-5" />
             </span>
             <div>
               <div className="font-medium">{catalogEntry.name} is connected</div>
-              <div className="text-xs text-text-muted mt-0.5">
+              <div className="text-xs text-muted-foreground mt-0.5">
                 Connected {existingConfig.connected_at ? new Date(existingConfig.connected_at).toLocaleDateString() : ""}
               </div>
             </div>
@@ -194,7 +194,7 @@ export default function IntegrationConnect() {
           <div className="mt-4 flex gap-3">
             <button
               onClick={() => navigate("/integrations")}
-              className="text-sm text-text-muted hover:text-text transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Back to integrations
             </button>

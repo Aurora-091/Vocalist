@@ -148,7 +148,7 @@ export default function Signup() {
                 placeholder="Bloom Dental"
               />
               {errors.orgName && (
-                <p className="mt-1 text-xs text-red-600">{errors.orgName.message}</p>
+                <p className="mt-1 text-xs text-danger">{errors.orgName.message}</p>
               )}
             </div>
             <div>
@@ -162,7 +162,7 @@ export default function Signup() {
                 placeholder="you@company.com"
               />
               {errors.email && (
-                <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+                <p className="mt-1 text-xs text-danger">{errors.email.message}</p>
               )}
             </div>
             <div>
@@ -176,7 +176,7 @@ export default function Signup() {
                 placeholder="8+ characters"
               />
               {errors.password && (
-                <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+                <p className="mt-1 text-xs text-danger">{errors.password.message}</p>
               )}
             </div>
             <button

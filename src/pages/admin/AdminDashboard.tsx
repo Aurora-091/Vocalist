@@ -24,7 +24,7 @@ function StatCard({
       const pct = (diff / prev) * 100;
       const isPositive = diff > 0;
       trendElement = (
-        <div className={`text-xs font-semibold mt-2 flex items-center gap-0.5 ${isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+        <div className={`text-xs font-semibold mt-2 flex items-center gap-0.5 ${isPositive ? "text-success" : "text-danger"}`}>
           <span>{isPositive ? "▲" : "▼"}</span>
           <span>{Math.abs(pct).toFixed(0)}%</span>
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Bot, Trash2, Copy } from "lucide-react";
 import { listAgents, deleteAgent as deleteAgentDb } from "../lib/db";
@@ -147,7 +147,7 @@ export default function AgentsList() {
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Agents</h1>
-          <p className="text-sm text-text-muted mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             One per role. Inbound, outbound, or both.
           </p>
         </div>
@@ -158,7 +158,7 @@ export default function AgentsList() {
       </div>
 
       {mode === "preset" && (
-        <div className="bg-surface border border-border rounded-md shadow-card p-6">
+        <div className="bg-card border border-border rounded-md shadow-card p-6">
           <AgentPresetPicker
             verticalKey={vertical || undefined}
             showAllVerticals={true}
@@ -169,33 +169,33 @@ export default function AgentsList() {
       )}
 
       {mode === "manual" && (
-        <div className="bg-surface border border-border rounded-md shadow-card">
+        <div className="bg-card border border-border rounded-md shadow-card">
           <div className="px-6 py-4">
             {!voiceStep ? (
               <form onSubmit={create} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-text-muted mb-1">Name</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Name</label>
                   <input
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-border bg-surface"
+                    className="w-full h-10 px-3 rounded-md border border-border bg-card"
                     placeholder="Front Desk"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-text-muted mb-1">Direction</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Direction</label>
                   <select
                     value={direction}
                     onChange={(e) => setDirection(e.target.value as any)}
-                    className="w-full h-10 px-3 rounded-md border border-border bg-surface"
+                    className="w-full h-10 px-3 rounded-md border border-border bg-card"
                   >
                     <option value="inbound">Inbound only</option>
                     <option value="outbound">Outbound only</option>
                     <option value="both">Both</option>
                   </select>
                   {direction !== "inbound" && (
-                    <p className="mt-2 text-xs text-text-muted">
+                    <p className="mt-2 text-xs text-muted-foreground">
                       Outbound agents require consent on file. This is locked on and cannot be turned off.
                     </p>
                   )}
@@ -209,8 +209,8 @@ export default function AgentsList() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-medium text-sm">Choose a voice <span className="text-text-muted font-normal">(optional)</span></div>
-                    <p className="text-xs text-text-muted mt-0.5">Skip to use the default voice — you can change it later.</p>
+                    <div className="font-medium text-sm">Choose a voice <span className="text-muted-foreground font-normal">(optional)</span></div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Skip to use the default voice — you can change it later.</p>
                   </div>
                   {pendingVoiceName && (
                     <span className="text-xs text-success font-medium">{pendingVoiceName} selected</span>
@@ -269,10 +269,10 @@ export default function AgentsList() {
             <div key={a.id} className="relative group">
               <Link
                 to={`/agents/${a.id}`}
-                className={`block bg-surface border border-border rounded-md shadow-card p-5 hover:bg-surface-2 transition-colors ${!isActive && !isFailed ? "opacity-75" : ""}`}
+                className={`block bg-card border border-border rounded-md shadow-card p-5 hover:bg-muted transition-colors ${!isActive && !isFailed ? "opacity-75" : ""}`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-9 h-9 rounded-md bg-surface-2 border border-border text-text-muted flex items-center justify-center">
+                  <span className="w-9 h-9 rounded-md bg-muted border border-border text-muted-foreground flex items-center justify-center">
                     <Bot className="w-4 h-4" />
                   </span>
                   <div className="flex-1 min-w-0">
@@ -280,12 +280,12 @@ export default function AgentsList() {
                       <span className="font-medium truncate">{a.name}</span>
                       <span
                         className={`shrink-0 w-2 h-2 rounded-full ${
-                          isFailed ? "bg-danger" : isActive ? "bg-success" : "bg-text-muted/40"
+                          isFailed ? "bg-danger" : isActive ? "bg-success" : "bg-muted-foreground/40"
                         }`}
                         title={isFailed ? "Sync failed" : isActive ? "Active" : "Not deployed"}
                       />
                     </div>
-                    <div className="text-xs text-text-muted">
+                    <div className="text-xs text-muted-foreground">
                       {isFailed ? "Sync failed" : isActive ? a.provider : "Not deployed"}
                     </div>
                   </div>
@@ -307,7 +307,7 @@ export default function AgentsList() {
                 <button
                   onClick={(e) => { e.preventDefault(); cloneAgent(a.id, a.name); }}
                   disabled={cloningId === a.id}
-                  className="p-1.5 rounded text-text-muted hover:text-text hover:bg-surface-2 transition-all disabled:opacity-50"
+                  className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all disabled:opacity-50"
                   aria-label="Duplicate agent"
                   title="Duplicate"
                 >
@@ -320,7 +320,7 @@ export default function AgentsList() {
                         e.preventDefault();
                         e.stopPropagation();
                       }}
-                      className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
+                      className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
                       disabled={deletingId === a.id}
                       aria-label="Delete agent"
                       title="Delete"
@@ -356,7 +356,7 @@ export default function AgentsList() {
           {/* New from template tile */}
           <button
             onClick={() => setMode("preset")}
-            className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-5 text-text-muted hover:text-text hover:border-foreground/20 hover:bg-surface-2 transition-all cursor-pointer min-h-[120px]"
+            className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-5 text-muted-foreground hover:text-foreground hover:border-foreground/20 hover:bg-muted transition-all cursor-pointer min-h-[120px]"
           >
             <Plus className="w-5 h-5" />
             <span className="text-sm font-medium">New from template</span>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ShoppingBag,
@@ -160,7 +160,7 @@ export default function Integrations() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
-          <p className="text-sm text-text-muted mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Connect your tools so agents can access live data during calls.
           </p>
         </div>
@@ -177,13 +177,13 @@ export default function Integrations() {
             onClick={() => setTab(t.key)}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
               tab === t.key
-                ? "border-text text-text"
-                : "border-transparent text-text-muted hover:text-text"
+                ? "border-foreground text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.label}
             {t.key === "connected" && connections.filter((c) => c.status === "active").length > 0 && (
-              <span className="ml-1.5 text-xs bg-surface-2 text-text-muted border border-border px-1.5 py-0.5 rounded-full">
+              <span className="ml-1.5 text-xs bg-muted text-muted-foreground border border-border px-1.5 py-0.5 rounded-full">
                 {connections.filter((c) => c.status === "active").length}
               </span>
             )}
@@ -194,18 +194,18 @@ export default function Integrations() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search integrations..."
-            className="w-full h-10 pl-9 pr-3 rounded-md border border-border bg-surface text-sm"
+            className="w-full h-10 pl-9 pr-3 rounded-md border border-border bg-card text-sm"
           />
         </div>
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="h-10 px-3 rounded-md border border-border bg-surface text-sm"
+          className="h-10 px-3 rounded-md border border-border bg-card text-sm"
         >
           <option value="">All categories</option>
           {categories.map((cat) => (
@@ -221,8 +221,8 @@ export default function Integrations() {
         </div>
       ) : filteredCatalog.length === 0 ? (
         <div className="text-center py-16">
-          <Plug className="w-8 h-8 text-text-muted mx-auto mb-3" />
-          <div className="text-sm text-text-muted">
+          <Plug className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+          <div className="text-sm text-muted-foreground">
             {tab === "connected"
               ? "No integrations connected yet."
               : "No integrations match your filters."}
@@ -244,12 +244,12 @@ export default function Integrations() {
               <Link
                 key={entry.id}
                 to={route}
-                className={`group bg-surface border rounded-md p-5 shadow-card transition-all hover:border-text/20 hover:shadow-md ${
+                className={`group bg-card border rounded-md p-5 shadow-card transition-all hover:border-foreground/20 hover:shadow-md ${
                   isConnected ? "border-success/30" : "border-border"
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <span className="w-10 h-10 rounded-md bg-surface-2 border border-border text-text-muted flex items-center justify-center">
+                  <span className="w-10 h-10 rounded-md bg-muted border border-border text-muted-foreground flex items-center justify-center">
                     <Icon className="w-5 h-5" />
                   </span>
                   <div className="flex items-center gap-2">
@@ -265,18 +265,18 @@ export default function Integrations() {
                 <div className="mt-4">
                   <div className="font-medium flex items-center gap-2">
                     {entry.name}
-                    <ExternalLink className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <p className="mt-1.5 text-sm text-text-muted leading-relaxed line-clamp-2">
+                  <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed line-clamp-2">
                     {entry.description}
                   </p>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between">
-                  <span className="text-xs text-text-muted bg-surface-2 px-2 py-0.5 rounded">
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                     {CATEGORY_LABELS[entry.category] || entry.category}
                   </span>
-                  <span className="text-xs text-text-muted">
+                  <span className="text-xs text-muted-foreground">
                     {entry.auth_type === "oauth2" ? "One-click" : "API key"}
                   </span>
                 </div>

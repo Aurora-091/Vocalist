@@ -161,7 +161,7 @@ export default function Playbooks() {
                         <div className="font-medium text-sm flex items-center gap-2">
                           {meta.label}
                           {draft.enabled && (
-                            <span className="text-[10px] uppercase tracking-widest font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                            <span className="text-[10px] uppercase tracking-widest font-medium text-success bg-success/10 border border-success/30 rounded-full px-2 py-0.5">
                               Active
                             </span>
                           )}

@@ -654,7 +654,7 @@ function VoiceCard({
           : isPlaying
             ? "border-foreground/40 bg-muted/10 shadow-sm hover:shadow-md"
             : !compatible
-              ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/50"
+              ? "border-warning/30 bg-warning/5 hover:bg-warning/10 hover:border-warning/50"
               : "border-border bg-card hover:border-foreground/20 hover:shadow-md hover:-translate-y-0.5"
       } ${isSelector ? "cursor-pointer" : ""}`}
     >
@@ -771,7 +771,7 @@ function VoiceCard({
             </span>
           )}
           {!compatible && (
-            <span className="text-amber-500 shrink-0" title="May not support requested languages">
+            <span className="text-warning shrink-0" title="May not support requested languages">
               <AlertTriangle className="size-3" />
             </span>
           )}

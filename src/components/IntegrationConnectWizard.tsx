@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Check, ArrowRight, ExternalLink, Loader, Eye, EyeOff, CircleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -106,7 +106,7 @@ export function IntegrationConnectWizard({
                   ? "bg-primary text-primary-foreground"
                   : i < currentStep || done
                   ? "bg-success/15 text-success"
-                  : "bg-surface-2 text-text-muted"
+                  : "bg-muted text-muted-foreground"
               }`}
             >
               {i < currentStep || done ? (
@@ -120,7 +120,7 @@ export function IntegrationConnectWizard({
         ))}
       </div>
 
-      <div className="bg-surface border border-border rounded-md shadow-card overflow-hidden">
+      <div className="bg-card border border-border rounded-md shadow-card overflow-hidden">
         {/* Done state */}
         {done && (
           <div className="p-6 text-center py-12">
@@ -128,7 +128,7 @@ export function IntegrationConnectWizard({
               <Check className="w-7 h-7" />
             </span>
             <div className="font-medium text-lg">{providerName} connected</div>
-            <p className="mt-2 text-sm text-text-muted">
+            <p className="mt-2 text-sm text-muted-foreground">
               Your agents can now access {providerName} data during calls.
             </p>
             <div className="mt-8 flex justify-center gap-3">
@@ -153,13 +153,13 @@ export function IntegrationConnectWizard({
               </span>
               <div>
                 <div className="font-medium">Connect {providerName}</div>
-                <div className="text-xs text-text-muted">Sign in with your {providerName} account to authorize access</div>
+                <div className="text-xs text-muted-foreground">Sign in with your {providerName} account to authorize access</div>
               </div>
             </div>
 
             {setupInstructions.length > 0 && (
-              <div className="bg-surface-2 rounded-md p-4 space-y-2">
-                <div className="text-xs font-medium text-text-muted mb-2">What happens next:</div>
+              <div className="bg-muted rounded-md p-4 space-y-2">
+                <div className="text-xs font-medium text-muted-foreground mb-2">What happens next:</div>
                 {setupInstructions.map((inst) => (
                   <div key={inst.step} className="flex gap-2 text-sm">
                     <span className="font-mono text-xs text-primary bg-primary/10 w-5 h-5 rounded flex items-center justify-center shrink-0">
@@ -192,11 +192,11 @@ export function IntegrationConnectWizard({
               </span>
               <div>
                 <div className="font-medium">Connect {providerName}</div>
-                <div className="text-xs text-text-muted">Follow these steps to get your API credentials</div>
+                <div className="text-xs text-muted-foreground">Follow these steps to get your API credentials</div>
               </div>
             </div>
 
-            <div className="bg-surface-2 rounded-md p-4 space-y-3">
+            <div className="bg-muted rounded-md p-4 space-y-3">
               {setupInstructions.map((inst) => (
                 <div key={inst.step} className="flex gap-2 text-sm">
                   <span className="font-mono text-xs text-primary bg-primary/10 w-5 h-5 rounded flex items-center justify-center shrink-0">
@@ -226,19 +226,19 @@ export function IntegrationConnectWizard({
         {!done && isFields && (
           <div className="p-6">
             <div className="font-medium mb-1">Enter your {providerName} credentials</div>
-            <p className="text-xs text-text-muted mb-4">
+            <p className="text-xs text-muted-foreground mb-4">
               Credentials are encrypted and stored securely. Never displayed again.
             </p>
             <form onSubmit={handleSubmit} className="space-y-4">
               {fields.map((field) => (
                 <div key={field.key}>
-                  <label className="block text-xs font-medium text-text-muted mb-1.5">
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                     {field.label}
                     {field.required !== false && <span className="text-danger ml-0.5">*</span>}
                   </label>
                   <div className="relative">
                     {field.prefix && (
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-text-muted">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                         {field.prefix}
                       </span>
                     )}
@@ -248,7 +248,7 @@ export function IntegrationConnectWizard({
                       value={values[field.key] || ""}
                       onChange={(e) => setValue(field.key, e.target.value)}
                       placeholder={field.placeholder}
-                      className={`w-full h-10 px-3 rounded-md border border-border bg-surface text-sm font-mono ${
+                      className={`w-full h-10 px-3 rounded-md border border-border bg-card text-sm font-mono ${
                         field.prefix ? "pl-16" : ""
                       } ${field.type === "password" ? "pr-10" : ""}`}
                     />
@@ -256,14 +256,14 @@ export function IntegrationConnectWizard({
                       <button
                         type="button"
                         onClick={() => toggleSecret(field.key)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         {showSecret[field.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     )}
                   </div>
                   {field.helpText && (
-                    <p className="mt-1.5 text-xs text-text-muted">{field.helpText}</p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">{field.helpText}</p>
                   )}
                 </div>
               ))}
@@ -299,7 +299,7 @@ export function IntegrationConnectWizard({
           <div className="p-6 flex flex-col items-center py-12">
             <Loader className="w-8 h-8 text-primary animate-spin" />
             <div className="mt-4 font-medium">Connecting to {providerName}...</div>
-            <p className="mt-1 text-sm text-text-muted">Validating your credentials</p>
+            <p className="mt-1 text-sm text-muted-foreground">Validating your credentials</p>
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader, Check, CircleAlert } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -100,13 +100,13 @@ export default function OAuthCallback() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg">
-      <div className="bg-surface border border-border rounded-md shadow-card p-8 max-w-sm w-full text-center">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="bg-card border border-border rounded-md shadow-card p-8 max-w-sm w-full text-center">
         {status === "loading" && (
           <>
             <Loader className="w-8 h-8 text-primary animate-spin mx-auto" />
             <div className="mt-4 font-medium">Completing authorization...</div>
-            <p className="mt-1 text-sm text-text-muted">Exchanging token with {providerName}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Exchanging token with {providerName}</p>
           </>
         )}
 
@@ -116,7 +116,7 @@ export default function OAuthCallback() {
               <Check className="w-7 h-7" />
             </span>
             <div className="font-medium text-lg">Connected!</div>
-            <p className="mt-2 text-sm text-text-muted">Redirecting you back...</p>
+            <p className="mt-2 text-sm text-muted-foreground">Redirecting you back...</p>
           </>
         )}
 
@@ -126,7 +126,7 @@ export default function OAuthCallback() {
               <CircleAlert className="w-7 h-7" />
             </span>
             <div className="font-medium text-lg">Connection failed</div>
-            <p className="mt-2 text-sm text-text-muted">{error}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             <Button className="mt-6" onClick={() => navigate("/integrations")}>
               Back to integrations
             </Button>

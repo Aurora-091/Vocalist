@@ -286,7 +286,7 @@ export default function AdminBroadcasts() {
                     <td className="px-4 py-3 font-medium max-w-[200px] truncate">{entry.subject}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{entry.recipient_count}</td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      <Badge variant="secondary" className="text-xs bg-emerald-500/10 text-emerald-600">{entry.status}</Badge>
+                      <Badge variant="secondary" className="text-xs bg-success/10 text-success">{entry.status}</Badge>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{entry.sent_by_email || "---"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{new Date(entry.sent_at).toLocaleDateString()}</td>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ShoppingBag, Check, Loader as Loader2, ArrowRight, ExternalLink, RefreshCw, Users, Settings } from "lucide-react";
 import { getShopifyIntegration, getOrgId } from "../lib/db";
@@ -109,7 +109,7 @@ export default function ShopifyConnect() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Connect Shopify</h1>
-        <p className="text-sm text-text-muted mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Link your Shopify store so agents can access orders, carts, and customer data.
         </p>
       </div>
@@ -123,7 +123,7 @@ export default function ShopifyConnect() {
                   ? "bg-primary text-primary-foreground"
                   : step === "done" && i === 0
                   ? "bg-success/15 text-success"
-                  : "bg-surface-2 text-text-muted"
+                  : "bg-muted text-muted-foreground"
               }`}
             >
               {step === "done" && i === 0 ? (
@@ -137,7 +137,7 @@ export default function ShopifyConnect() {
         ))}
       </div>
 
-      <div className="bg-surface border border-border rounded-md shadow-card overflow-hidden">
+      <div className="bg-card border border-border rounded-md shadow-card overflow-hidden">
         {step === "domain" && (
           <div className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -146,12 +146,12 @@ export default function ShopifyConnect() {
               </span>
               <div>
                 <div className="font-medium">Connect your Shopify store</div>
-                <div className="text-xs text-text-muted">Enter your store domain to authorize Weeber</div>
+                <div className="text-xs text-muted-foreground">Enter your store domain to authorize Weeber</div>
               </div>
             </div>
             <form onSubmit={handleConnect} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-text-muted mb-1.5">
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                   Store domain
                 </label>
                 <input
@@ -159,9 +159,9 @@ export default function ShopifyConnect() {
                   value={domain}
                   onChange={(e) => setDomain(e.target.value)}
                   placeholder="mystore.myshopify.com"
-                  className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
+                  className="w-full h-10 px-3 rounded-md border border-border bg-card text-sm"
                 />
-                <p className="mt-1.5 text-xs text-text-muted">
+                <p className="mt-1.5 text-xs text-muted-foreground">
                   Your .myshopify.com domain or custom domain
                 </p>
               </div>
@@ -177,7 +177,7 @@ export default function ShopifyConnect() {
           <div className="p-6 flex flex-col items-center py-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <div className="mt-4 font-medium">Redirecting to Shopify...</div>
-            <p className="mt-1 text-sm text-text-muted">
+            <p className="mt-1 text-sm text-muted-foreground">
               You'll be asked to authorize Weeber in your Shopify admin
             </p>
           </div>
@@ -194,7 +194,7 @@ export default function ShopifyConnect() {
                   {shopStats.shop_name || "Shopify store"} connected
                 </div>
                 {shopDomain && (
-                  <p className="text-xs text-text-muted font-mono mt-0.5 truncate">{shopDomain}</p>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">{shopDomain}</p>
                 )}
               </div>
               <Badge variant="secondary" className="bg-success/15 text-success shrink-0">
@@ -205,28 +205,28 @@ export default function ShopifyConnect() {
             {(shopStats.customer_count != null || shopStats.order_count_30d != null || shopStats.product_count != null) && (
               <div className="grid grid-cols-3 gap-3">
                 {shopStats.customer_count != null && (
-                  <div className="bg-surface-2 rounded-md px-3 py-2.5 text-center">
+                  <div className="bg-muted rounded-md px-3 py-2.5 text-center">
                     <div className="text-lg font-semibold font-mono">{shopStats.customer_count.toLocaleString()}</div>
-                    <div className="text-xs text-text-muted mt-0.5">Customers</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Customers</div>
                   </div>
                 )}
                 {shopStats.order_count_30d != null && (
-                  <div className="bg-surface-2 rounded-md px-3 py-2.5 text-center">
+                  <div className="bg-muted rounded-md px-3 py-2.5 text-center">
                     <div className="text-lg font-semibold font-mono">{shopStats.order_count_30d.toLocaleString()}</div>
-                    <div className="text-xs text-text-muted mt-0.5">Orders (30d)</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Orders (30d)</div>
                   </div>
                 )}
                 {shopStats.product_count != null && (
-                  <div className="bg-surface-2 rounded-md px-3 py-2.5 text-center">
+                  <div className="bg-muted rounded-md px-3 py-2.5 text-center">
                     <div className="text-lg font-semibold font-mono">{shopStats.product_count.toLocaleString()}</div>
-                    <div className="text-xs text-text-muted mt-0.5">Products</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Products</div>
                   </div>
                 )}
               </div>
             )}
 
             <div className="space-y-2">
-              <div className="text-xs font-medium text-text-muted mb-2">Actions</div>
+              <div className="text-xs font-medium text-muted-foreground mb-2">Actions</div>
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="secondary"
@@ -274,9 +274,9 @@ export default function ShopifyConnect() {
       </div>
 
       {step === "domain" && (
-        <div className="bg-surface-2 rounded-md p-4">
-          <div className="text-xs font-medium text-text-muted mb-1">What happens after connecting?</div>
-          <ul className="text-xs text-text-muted space-y-1">
+        <div className="bg-muted rounded-md p-4">
+          <div className="text-xs font-medium text-muted-foreground mb-1">What happens after connecting?</div>
+          <ul className="text-xs text-muted-foreground space-y-1">
             <li>You'll authorize Weeber in your Shopify admin (takes 30 seconds)</li>
             <li>Your agents can look up orders, carts, and customers during calls</li>
             <li>Abandoned checkout events trigger automated recovery calls</li>

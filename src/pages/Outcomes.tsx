@@ -250,7 +250,7 @@ export default function Outcomes() {
                     <tr key={key}>
                       <td className="py-3 font-medium">{PLAYBOOK_LABELS[key] || key}</td>
                       <td className="py-3 text-right font-mono">{stats.scheduled}</td>
-                      <td className="py-3 text-right font-mono text-emerald-600">{stats.recovered}</td>
+                      <td className="py-3 text-right font-mono text-success">{stats.recovered}</td>
                       <td className="py-3 text-right font-mono">
                         {stats.scheduled > 0 ? pct((stats.recovered / stats.scheduled) * 100) : "—"}
                       </td>

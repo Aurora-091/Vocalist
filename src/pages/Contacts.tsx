@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+﻿import { useEffect, useState, useRef } from "react";
 import { Plus, Upload, Search, Trash2, ShieldOff } from "lucide-react";
 import { listContacts, createContact, deleteContact as deleteContactDb } from "../lib/db";
 import { api } from "../lib/api";
@@ -102,7 +102,7 @@ export default function Contacts() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("contacts")}</h1>
-          <p className="text-sm text-text-muted mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Numbers we can dial. Consent-aware by default.
           </p>
         </div>
@@ -238,12 +238,12 @@ export default function Contacts() {
           {/* Mobile cards */}
           <div className="md:hidden space-y-3">
             {contacts.map((c) => (
-              <div key={c.id} className="bg-surface border border-border rounded-md shadow-card p-4">
+              <div key={c.id} className="bg-card border border-border rounded-md shadow-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-medium truncate">{c.name || <span className="text-text-muted">No name</span>}</div>
-                    <div className="font-mono text-sm text-text-muted mt-0.5">{c.e164}</div>
-                    {c.email && <div className="text-xs text-text-muted mt-0.5 truncate">{c.email}</div>}
+                    <div className="font-medium truncate">{c.name || <span className="text-muted-foreground">No name</span>}</div>
+                    <div className="font-mono text-sm text-muted-foreground mt-0.5">{c.e164}</div>
+                    {c.email && <div className="text-xs text-muted-foreground mt-0.5 truncate">{c.email}</div>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {c.consent_status === "granted" && (
@@ -264,7 +264,7 @@ export default function Contacts() {
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <button
-                          className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                          className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
                           disabled={deletingId === c.id}
                           aria-label={`Delete ${c.name || c.e164}`}
                         >
@@ -295,7 +295,7 @@ export default function Contacts() {
             ))}
           </div>
 
-          <div className="text-xs text-text-muted text-right">
+          <div className="text-xs text-muted-foreground text-right">
             {contacts.length} contact{contacts.length !== 1 ? "s" : ""}
           </div>
         </>
@@ -451,7 +451,7 @@ function ImportForm({ onClose, onDone }: { onClose: () => void; onDone: () => vo
         <div className="space-y-3">
           <div>
             <p className="text-sm font-medium mb-1">Import contacts from CSV</p>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-muted-foreground">
               Columns: <code className="font-mono">phone, name (optional), email (optional)</code>. First row can be a header.
             </p>
           </div>

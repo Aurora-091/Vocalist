@@ -608,7 +608,7 @@ function CopyableId({ id }: { id: string }) {
         className="text-muted-foreground hover:text-foreground transition-colors"
         aria-label="Copy full ID"
       >
-        {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+        {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
       </button>
     </span>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, lazy, Suspense } from "react";
+﻿import { useEffect, useState, useRef, useCallback, lazy, Suspense } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Zap, Globe, LayoutTemplate, MessageSquare, WrapText, Clock, MoveHorizontal as MoreHorizontal, Trash2, History } from "lucide-react";
 import { toast } from "sonner";
@@ -560,7 +560,7 @@ export default function AgentDetail() {
       </div>
     );
   }
-  if (!agent) return <div className="p-6 text-sm text-text-muted">Agent not found.</div>;
+  if (!agent) return <div className="p-6 text-sm text-muted-foreground">Agent not found.</div>;
 
   const direction = agent.persona?.direction || "inbound";
   const syncBadge = (() => {
@@ -671,7 +671,7 @@ export default function AgentDetail() {
           <div className="flex items-center gap-3 px-6 py-2 bg-danger/10 border-b border-danger/20 text-xs">
             <AlertTriangle className="w-3.5 h-3.5 text-danger shrink-0" />
             <span className="text-danger font-medium">Provider sync failed.</span>
-            {agent.sync_error && <span className="text-text-muted truncate">{agent.sync_error}</span>}
+            {agent.sync_error && <span className="text-muted-foreground truncate">{agent.sync_error}</span>}
             <Button variant="outline" size="sm" onClick={retrySync} disabled={syncing} className="ml-auto shrink-0 h-6 text-xs">
               <RefreshCw className={`w-3 h-3 mr-1 ${syncing ? "animate-spin" : ""}`} />
               Retry
@@ -687,14 +687,14 @@ export default function AgentDetail() {
           {/* from_call banner */}
           {fromCallId && (
             <div className="mx-6 mt-4">
-              <Card className="gap-0 overflow-visible py-0 shadow-card border-amber-200 bg-amber-50/30">
-                <div className="border-b border-amber-200 px-5 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-800">
+              <Card className="gap-0 overflow-visible py-0 shadow-card border-info/30 bg-info/5">
+                <div className="border-b border-info/30 px-5 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-info">
                     <MessageSquare className="w-4 h-4" />
                     <span className="text-sm font-medium">Improving from call</span>
                     <span className="font-mono text-xs opacity-70">{fromCallId.slice(0, 8)}…</span>
                   </div>
-                  <Link to={`/agents/${id}`} replace className="p-1 rounded text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-colors" aria-label="Dismiss">
+                  <Link to={`/agents/${id}`} replace className="p-1 rounded text-info hover:opacity-80 hover:bg-info/10 transition-colors" aria-label="Dismiss">
                     <X className="w-4 h-4" />
                   </Link>
                 </div>
@@ -702,7 +702,7 @@ export default function AgentDetail() {
                   <div className="px-5 py-4 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-20 w-full" /></div>
                 ) : fromCall ? (
                   <CardContent className="px-5 py-4 space-y-3">
-                    <div className="flex items-center gap-4 text-xs text-amber-700 flex-wrap">
+                    <div className="flex items-center gap-4 text-xs text-info flex-wrap">
                       <span className="capitalize font-medium">{fromCall.status?.replace(/_/g, " ")}</span>
                       {fromCall.duration_sec != null && <span>{fromCall.duration_sec}s</span>}
                       {fromCall.hangup_by && <span>Hung up by <span className="capitalize">{fromCall.hangup_by}</span></span>}
@@ -711,13 +711,13 @@ export default function AgentDetail() {
                     {Array.isArray(fromCall.transcript) && fromCall.transcript.length > 0 && (
                       <div>
                         <p className="section-label mb-2">Transcript</p>
-                        <div className="max-h-36 overflow-y-auto space-y-1.5 rounded-md border border-amber-200 bg-white/60 p-3">
+                        <div className="max-h-36 overflow-y-auto space-y-1.5 rounded-md border border-info/30 bg-card/60 p-3">
                           {fromCall.transcript.map((t: any, i: number) => {
                             const speaker = t.role || t.speaker || "agent";
                             const isAgent = speaker === "agent" || speaker === "assistant";
                             return (
                               <div key={i} className="text-xs">
-                                <span className={`font-medium mr-1.5 ${isAgent ? "text-amber-800" : "text-zinc-500"}`}>{isAgent ? "Agent" : "User"}:</span>
+                                <span className={`font-medium mr-1.5 ${isAgent ? "text-info" : "text-zinc-500"}`}>{isAgent ? "Agent" : "User"}:</span>
                                 <span className="text-zinc-700">{t.text || t.content}</span>
                               </div>
                             );
@@ -727,7 +727,7 @@ export default function AgentDetail() {
                     )}
                   </CardContent>
                 ) : (
-                  <div className="px-5 py-4 text-sm text-amber-700">Call not found.</div>
+                  <div className="px-5 py-4 text-sm text-info">Call not found.</div>
                 )}
               </Card>
             </div>
@@ -825,7 +825,7 @@ export default function AgentDetail() {
                   <div>
                     <button
                       type="button"
-                      className="text-sm text-text-muted hover:text-text flex items-center gap-1"
+                      className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
                       onClick={async () => {
                         if (!promptOpen && !promptPreview) await loadPromptPreview();
                         setPromptOpen((v) => !v);
@@ -903,7 +903,7 @@ export default function AgentDetail() {
                     <button
                       type="button"
                       onClick={() => setShowLanguageOverrides(!showLanguageOverrides)}
-                      className="flex items-center justify-between w-full text-sm font-medium text-text hover:text-primary transition-colors"
+                      className="flex items-center justify-between w-full text-sm font-medium text-foreground hover:text-primary transition-colors"
                     >
                       <span>Opening message per language (optional)</span>
                       {showLanguageOverrides ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -1045,7 +1045,7 @@ export default function AgentDetail() {
                         >
                           <div className="flex items-center justify-between mb-1.5">
                             <span className="text-sm font-medium">{skill.name}</span>
-                            <div className={cn("w-8 h-4 rounded-full transition-colors flex items-center px-0.5", isActive ? "bg-emerald-500 justify-end" : "bg-border justify-start")}>
+                            <div className={cn("w-8 h-4 rounded-full transition-colors flex items-center px-0.5", isActive ? "bg-success justify-end" : "bg-border justify-start")}>
                               <div className="w-3 h-3 rounded-full bg-white shadow-sm" />
                             </div>
                           </div>
@@ -1080,7 +1080,7 @@ export default function AgentDetail() {
                       const isFailed = ["failed", "no_answer", "busy"].includes(call.status);
                       return (
                         <div key={call.id} className="flex items-center gap-4 px-4 py-3 text-sm hover:bg-muted/30 transition-colors">
-                          <div className={cn("w-2 h-2 rounded-full shrink-0", isSuccess ? "bg-emerald-500" : isFailed ? "bg-red-400" : "bg-amber-400")} />
+                          <div className={cn("w-2 h-2 rounded-full shrink-0", isSuccess ? "bg-success" : isFailed ? "bg-danger" : "bg-warning")} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium capitalize text-xs">{call.status?.replace(/_/g, " ")}</span>
@@ -1305,7 +1305,7 @@ export default function AgentDetail() {
                   const isFailed = ["failed", "no_answer", "busy"].includes(call.status);
                   return (
                     <div key={call.id} className="flex items-center gap-2.5 text-xs">
-                      <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", isSuccess ? "bg-emerald-500" : isFailed ? "bg-red-400" : "bg-amber-400")} />
+                      <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", isSuccess ? "bg-success" : isFailed ? "bg-danger" : "bg-warning")} />
                       <span className="text-muted-foreground capitalize flex-1 truncate">{call.status?.replace(/_/g, " ")}</span>
                       <span className="text-muted-foreground/60 shrink-0">{call.created_at ? formatRelative(call.created_at) : "—"}</span>
                     </div>

@@ -139,7 +139,7 @@ export default function Login() {
                 placeholder="you@company.com"
               />
               {errors.email && (
-                <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+                <p className="mt-1 text-xs text-danger">{errors.email.message}</p>
               )}
             </div>
             <div>
@@ -162,7 +162,7 @@ export default function Login() {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+                <p className="mt-1 text-xs text-danger">{errors.password.message}</p>
               )}
             </div>
             <button

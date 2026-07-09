@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { listPlanTiers, getUsageSummary, getSubscription } from "../lib/db";
 import { api } from "../lib/api";
@@ -137,7 +137,7 @@ export default function Billing() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
-        <p className="text-sm text-text-muted mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Plan, usage, and overage settings.
         </p>
       </div>
@@ -169,11 +169,11 @@ export default function Billing() {
             <>
               <div className="font-mono text-4xl font-bold">
                 {used}{" "}
-                <span className="text-text-muted text-base">
+                <span className="text-muted-foreground text-base">
                   / {included || "—"} min
                 </span>
               </div>
-              <div className="mt-4 h-2 rounded-full bg-surface-2 overflow-hidden">
+              <div className="mt-4 h-2 rounded-full bg-muted overflow-hidden">
                 <div
                   className={`h-full transition-all duration-500 ${
                     tone === "danger"
@@ -185,7 +185,7 @@ export default function Billing() {
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <div className="mt-3 text-xs text-text-muted">
+              <div className="mt-3 text-xs text-muted-foreground">
                 Overage at ${Number(usage.overage_cost_usd || 0).toFixed(2)} per minute.
               </div>
             </>
@@ -216,7 +216,7 @@ export default function Billing() {
           </div>
           <CardContent className="px-6 py-5">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-text-muted">
+              <div className="text-sm text-muted-foreground">
                 {subscription.period_end
                   ? `${isCanceling ? "Ends" : "Renews"} ${new Date(subscription.period_end).toLocaleDateString()}`
                   : "No active period"}
@@ -243,7 +243,7 @@ export default function Billing() {
       )}
 
       <section>
-        <h2 className="text-sm font-medium text-text-muted uppercase tracking-widest mb-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-3">
           Plans
         </h2>
         <div className="grid md:grid-cols-3 gap-4">
@@ -257,7 +257,7 @@ export default function Billing() {
                 return (
                   <div
                     key={t.id}
-                    className={`bg-surface border rounded-md p-6 shadow-card ${
+                    className={`bg-card border rounded-md p-6 shadow-card ${
                       isCurrent ? "border-primary" : "border-border"
                     }`}
                   >
@@ -271,7 +271,7 @@ export default function Billing() {
                     </div>
                     <div className="mt-4 font-mono text-3xl font-bold">
                       ${Number(t.monthly_usd)}
-                      <span className="text-text-muted text-sm font-sans"> / mo</span>
+                      <span className="text-muted-foreground text-sm font-sans"> / mo</span>
                     </div>
                     <ul className="mt-4 space-y-2 text-sm">
                       <li>

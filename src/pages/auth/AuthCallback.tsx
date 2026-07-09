@@ -53,7 +53,7 @@ export default function AuthCallback() {
           </>
         ) : (
           <>
-            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto">
               <AlertCircle className="w-6 h-6" />
             </div>
             <h2 className="mt-4 text-lg font-semibold text-[#0F172A]">

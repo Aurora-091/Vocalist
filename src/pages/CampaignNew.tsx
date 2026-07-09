@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Loader as Loader2 } from "lucide-react";
 import { listAgents, createCampaign } from "../lib/db";
@@ -66,13 +66,13 @@ export default function CampaignNew() {
       <div>
         <Link
           to="/campaigns"
-          className="inline-flex items-center text-sm text-text-muted hover:text-text"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to campaigns
         </Link>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight">New campaign</h1>
-        <p className="text-sm text-text-muted mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Weeber dials only contacts with consent on file. Opt-outs are honored
           immediately.
         </p>
@@ -84,7 +84,7 @@ export default function CampaignNew() {
         </div>
         <CardContent className="px-6 py-5">
           {agents.length === 0 ? (
-            <div className="text-sm text-text-muted">
+            <div className="text-sm text-muted-foreground">
               You need an agent before creating a campaign.{" "}
               <Link to="/agents" className="text-primary hover:text-primary-700">
                 Create one

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+﻿import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { identifyUser, resetUser } from "../lib/posthog";
@@ -31,7 +31,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (status === "loading") {
     return (
-      <div className="h-full flex items-center justify-center text-sm text-text-muted">
+      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
         Loading...
       </div>
     );
@@ -63,7 +63,7 @@ export function PublicOnly({ children }: { children: ReactNode }) {
 
   if (status === "loading") {
     return (
-      <div className="h-full flex items-center justify-center text-sm text-text-muted">
+      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
         Loading...
       </div>
     );

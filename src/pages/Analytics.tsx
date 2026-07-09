@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { ChartBar as BarChart2, TrendingDown, Phone, CircleCheck as CheckCircle, UserMinus } from "lucide-react";
 import { api } from "../lib/api";
 import { StatCard } from "@/components/ui/stat-card";
@@ -75,7 +75,7 @@ function SparkLine({
 }) {
   if (!series || series.length === 0) {
     return (
-      <div className="flex items-center justify-center h-28 text-xs text-text-muted">
+      <div className="flex items-center justify-center h-28 text-xs text-muted-foreground">
         No data for this period
       </div>
     );
@@ -103,7 +103,7 @@ function SparkLine({
 
   return (
     <div>
-      {label && <div className="text-xs text-text-muted mb-2">{label}</div>}
+      {label && <div className="text-xs text-muted-foreground mb-2">{label}</div>}
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24" preserveAspectRatio="none">
         <defs>
           <linearGradient id={`grad-${label}`} x1="0" y1="0" x2="0" y2="1">
@@ -117,7 +117,7 @@ function SparkLine({
           <circle key={i} cx={p.x} cy={p.y} r="2.5" fill={color} />
         ))}
       </svg>
-      <div className="flex justify-between text-xs text-text-muted mt-1">
+      <div className="flex justify-between text-xs text-muted-foreground mt-1">
         <span>{series[0]?.day?.slice(5)}</span>
         <span>{series[series.length - 1]?.day?.slice(5)}</span>
       </div>
@@ -209,19 +209,19 @@ export default function Analytics() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-          <p className="text-sm text-text-muted mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Call performance, outcomes, and opt-out trends.
           </p>
         </div>
-        <div className="flex gap-1 p-1 bg-surface-2 rounded-md border border-border">
+        <div className="flex gap-1 p-1 bg-muted rounded-md border border-border">
           {RANGES.map((r) => (
             <button
               key={r.value}
               onClick={() => setRange(r.value)}
               className={`px-3 py-1.5 text-xs rounded transition-colors ${
                 range === r.value
-                  ? "bg-surface text-text font-medium shadow-sm border border-border"
-                  : "text-text-muted hover:text-text"
+                  ? "bg-card text-foreground font-medium shadow-sm border border-border"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {r.label}
@@ -272,7 +272,7 @@ export default function Analytics() {
               </div>
               <CardContent className="px-6 py-5">
                 {!outcomes || outcomes.length === 0 ? (
-                  <div className="text-sm text-text-muted py-8 text-center">No outcome data yet</div>
+                  <div className="text-sm text-muted-foreground py-8 text-center">No outcome data yet</div>
                 ) : (
                   <div className="space-y-3">
                     {outcomes
@@ -280,10 +280,10 @@ export default function Analytics() {
                       .map((o) => (
                         <div key={o.outcome}>
                           <div className="flex justify-between text-sm mb-1">
-                            <span className="capitalize text-text-muted">
+                            <span className="capitalize text-muted-foreground">
                               {o.outcome.replace(/_/g, " ")}
                             </span>
-                            <span className="font-mono text-text">{o.count}</span>
+                            <span className="font-mono text-foreground">{o.count}</span>
                           </div>
                           <MiniBar
                             value={o.count}
@@ -325,7 +325,7 @@ export default function Analytics() {
                 <Skeleton className="h-28" />
               )}
               {optouts && optouts.length > 0 && (
-                <p className="text-xs text-text-muted mt-3">
+                <p className="text-xs text-muted-foreground mt-3">
                   High opt-out rates may indicate consent or timing issues. Review
                   your agent's opening script if you see a spike.
                 </p>

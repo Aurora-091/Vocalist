@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
-  approved: "bg-emerald-500/10 text-emerald-600",
+  approved: "bg-success/10 text-success",
   rejected: "bg-destructive/10 text-destructive",
 };
 
@@ -161,7 +161,7 @@ export default function AdminWaitlist() {
                   <td className="px-4 py-3 font-medium">{entry.name || "---"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{entry.email}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{entry.phone || "---"}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{entry.source}{entry.referred_by ? <span className="ml-2 text-[10px] font-semibold bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded">Referred</span> : null}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{entry.source}{entry.referred_by ? <span className="ml-2 text-[10px] font-semibold bg-info/10 text-info px-1.5 py-0.5 rounded">Referred</span> : null}</td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     {entry.referral_code ? (
                       <span className="font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded">{entry.referral_code}</span>
@@ -169,7 +169,7 @@ export default function AdminWaitlist() {
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     {entry.referrals_count > 0 ? (
-                      <span className="text-[12px] font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">{entry.referrals_count}</span>
+                      <span className="text-[12px] font-semibold text-success bg-success/10 px-2 py-0.5 rounded">{entry.referrals_count}</span>
                     ) : <span className="text-muted-foreground text-[12px]">0</span>}
                   </td>
                   <td className="px-4 py-3">
@@ -183,7 +183,7 @@ export default function AdminWaitlist() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       {entry.status !== "approved" && (
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-600" onClick={() => handleSingleAction(entry.id, "approved")}>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-success" onClick={() => handleSingleAction(entry.id, "approved")}>
                           <Check className="w-3.5 h-3.5" />
                         </Button>
                       )}

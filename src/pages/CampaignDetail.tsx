@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+﻿import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -138,7 +138,7 @@ export default function CampaignDetail() {
       <div>
         <Link
           to="/campaigns"
-          className="inline-flex items-center text-sm text-text-muted hover:text-text"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to campaigns
@@ -151,7 +151,7 @@ export default function CampaignDetail() {
                 {status}
               </Badge>
             </div>
-            <p className="text-sm text-text-muted mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Concurrency {campaign.concurrency} · Max retries {campaign.max_retries}
             </p>
           </div>
@@ -236,19 +236,19 @@ export default function CampaignDetail() {
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <div className="text-text-muted text-xs mb-1">Eligible (consented)</div>
+                  <div className="text-muted-foreground text-xs mb-1">Eligible (consented)</div>
                   <div className="font-mono text-lg font-semibold text-success">{review.consented}</div>
                 </div>
                 <div>
-                  <div className="text-text-muted text-xs mb-1">Excluded (DNC/revoked)</div>
+                  <div className="text-muted-foreground text-xs mb-1">Excluded (DNC/revoked)</div>
                   <div className="font-mono text-lg font-semibold text-danger">{review.excluded_dnc}</div>
                 </div>
                 <div>
-                  <div className="text-text-muted text-xs mb-1">No consent yet</div>
+                  <div className="text-muted-foreground text-xs mb-1">No consent yet</div>
                   <div className="font-mono text-lg font-semibold text-warning">{review.excluded_no_consent}</div>
                 </div>
                 <div>
-                  <div className="text-text-muted text-xs mb-1">Estimated cost</div>
+                  <div className="text-muted-foreground text-xs mb-1">Estimated cost</div>
                   <div className="font-mono text-lg font-semibold">${review.estimated_cost_usd.toFixed(2)}</div>
                 </div>
               </div>
@@ -312,15 +312,15 @@ export default function CampaignDetail() {
                 key={k}
                 className="flex items-center justify-between py-2 border-b border-border last:border-0"
               >
-                <span className="text-sm text-text-muted capitalize">{k.replace(/_/g, " ")}</span>
+                <span className="text-sm text-muted-foreground capitalize">{k.replace(/_/g, " ")}</span>
                 <span className="font-mono text-sm">{v as number}</span>
               </div>
             ))}
             {Object.keys(stats).length === 0 && (
-              <div className="text-sm text-text-muted sm:col-span-2">
+              <div className="text-sm text-muted-foreground sm:col-span-2">
                 No targets yet.{" "}
                 {isDraft && (
-                  <button className="underline text-text" onClick={() => setShowAddContacts(true)}>
+                  <button className="underline text-foreground" onClick={() => setShowAddContacts(true)}>
                     Add contacts from your list
                   </button>
                 )}
@@ -491,7 +491,7 @@ function AddContactsPanel({
             <Users className="w-4 h-4" />
             Add contacts to campaign
           </div>
-          <button onClick={onClose} className="text-text-muted hover:text-text">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -499,11 +499,11 @@ function AddContactsPanel({
       <CardContent className="px-6 py-5">
         <div className="space-y-3">
           {/* Tab switcher */}
-          <div className="flex gap-1 p-1 bg-surface-2 rounded-md border border-border w-fit">
+          <div className="flex gap-1 p-1 bg-muted rounded-md border border-border w-fit">
             <button
               type="button"
               onClick={() => setTab("list")}
-              className={`px-3 py-1.5 text-xs rounded transition-colors ${tab === "list" ? "bg-surface text-text font-medium border border-border" : "text-text-muted hover:text-text"}`}
+              className={`px-3 py-1.5 text-xs rounded transition-colors ${tab === "list" ? "bg-card text-foreground font-medium border border-border" : "text-muted-foreground hover:text-foreground"}`}
             >
               <Users className="w-3 h-3 inline mr-1.5" />
               Select from list
@@ -511,7 +511,7 @@ function AddContactsPanel({
             <button
               type="button"
               onClick={() => setTab("csv")}
-              className={`px-3 py-1.5 text-xs rounded transition-colors ${tab === "csv" ? "bg-surface text-text font-medium border border-border" : "text-text-muted hover:text-text"}`}
+              className={`px-3 py-1.5 text-xs rounded transition-colors ${tab === "csv" ? "bg-card text-foreground font-medium border border-border" : "text-muted-foreground hover:text-foreground"}`}
             >
               <FileSpreadsheet className="w-3 h-3 inline mr-1.5" />
               Import CSV
@@ -521,18 +521,18 @@ function AddContactsPanel({
           {tab === "list" && (
             <>
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex gap-1 p-1 bg-surface-2 rounded-md border border-border">
+                <div className="flex gap-1 p-1 bg-muted rounded-md border border-border">
                   <button
                     type="button"
                     onClick={() => { setFilter("granted"); setSelected(new Set()); }}
-                    className={`px-3 py-1 text-xs rounded transition-colors ${filter === "granted" ? "bg-surface text-text font-medium border border-border" : "text-text-muted hover:text-text"}`}
+                    className={`px-3 py-1 text-xs rounded transition-colors ${filter === "granted" ? "bg-card text-foreground font-medium border border-border" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     Consented only
                   </button>
                   <button
                     type="button"
                     onClick={() => { setFilter("all"); setSelected(new Set()); }}
-                    className={`px-3 py-1 text-xs rounded transition-colors ${filter === "all" ? "bg-surface text-text font-medium border border-border" : "text-text-muted hover:text-text"}`}
+                    className={`px-3 py-1 text-xs rounded transition-colors ${filter === "all" ? "bg-card text-foreground font-medium border border-border" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     All contacts
                   </button>
@@ -541,12 +541,12 @@ function AddContactsPanel({
                   value={q}
                   onChange={(e) => handleQ(e.target.value)}
                   placeholder="Search…"
-                  className="h-8 px-3 rounded-md border border-border bg-surface text-sm flex-1 min-w-0"
+                  className="h-8 px-3 rounded-md border border-border bg-card text-sm flex-1 min-w-0"
                 />
                 <button
                   type="button"
                   onClick={selectAll}
-                  className="text-xs text-text-muted hover:text-text px-2 py-1 rounded border border-border hover:bg-surface-2 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted transition-colors"
                 >
                   Select all
                 </button>
@@ -555,7 +555,7 @@ function AddContactsPanel({
               {contacts === null ? (
                 <Skeleton className="h-40" />
               ) : contacts.length === 0 ? (
-                <div className="text-sm text-text-muted py-6 text-center">
+                <div className="text-sm text-muted-foreground py-6 text-center">
                   {filter === "granted"
                     ? "No contacts with granted consent. Switch to 'All contacts' or add consent to your contacts."
                     : "No contacts found."}
@@ -565,7 +565,7 @@ function AddContactsPanel({
                   {contacts.map((c) => (
                     <label
                       key={c.id}
-                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-2 cursor-pointer"
+                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -575,9 +575,9 @@ function AddContactsPanel({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">
-                          {c.name || <span className="text-text-muted font-normal">No name</span>}
+                          {c.name || <span className="text-muted-foreground font-normal">No name</span>}
                         </div>
-                        <div className="text-xs font-mono text-text-muted">{c.e164}</div>
+                        <div className="text-xs font-mono text-muted-foreground">{c.e164}</div>
                       </div>
                       {c.consent_status === "granted" && (
                         <Check className="w-3.5 h-3.5 text-success shrink-0" />
@@ -588,7 +588,7 @@ function AddContactsPanel({
               )}
 
               <div className="flex justify-between items-center">
-                <span className="text-xs text-text-muted">
+                <span className="text-xs text-muted-foreground">
                   {selected.size} contact{selected.size !== 1 ? "s" : ""} selected
                 </span>
                 <div className="flex gap-2">
@@ -608,23 +608,23 @@ function AddContactsPanel({
           {tab === "csv" && (
             <>
               <div className="space-y-3">
-                <p className="text-sm text-text-muted">
-                  Upload a CSV with columns: <code className="text-xs bg-surface-2 px-1.5 py-0.5 rounded">phone</code> (required), <code className="text-xs bg-surface-2 px-1.5 py-0.5 rounded">name</code>, <code className="text-xs bg-surface-2 px-1.5 py-0.5 rounded">email</code>
+                <p className="text-sm text-muted-foreground">
+                  Upload a CSV with columns: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">phone</code> (required), <code className="text-xs bg-muted px-1.5 py-0.5 rounded">name</code>, <code className="text-xs bg-muted px-1.5 py-0.5 rounded">email</code>
                 </p>
-                <label className="flex items-center justify-center gap-2 h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/40 hover:bg-surface-2/50 transition-colors">
+                <label className="flex items-center justify-center gap-2 h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/40 hover:bg-muted/50 transition-colors">
                   <input
                     type="file"
                     accept=".csv,text/csv"
                     className="hidden"
                     onChange={handleCsvFile}
                   />
-                  <FileSpreadsheet className="w-5 h-5 text-text-muted" />
-                  <span className="text-sm text-text-muted">
+                  <FileSpreadsheet className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
                     {csvFile ? csvFile : "Click to select CSV file"}
                   </span>
                 </label>
 
-                {csvParsing && <p className="text-sm text-text-muted animate-pulse">Parsing...</p>}
+                {csvParsing && <p className="text-sm text-muted-foreground animate-pulse">Parsing...</p>}
 
                 {csvRows.length > 0 && (
                   <div className="space-y-2">
@@ -634,13 +634,13 @@ function AddContactsPanel({
                     <div className="max-h-40 overflow-y-auto border border-border rounded-md divide-y divide-border text-xs">
                       {csvRows.slice(0, 20).map((row, i) => (
                         <div key={i} className="flex items-center gap-3 px-3 py-2">
-                          <span className="font-mono text-text-muted">{row.phone}</span>
+                          <span className="font-mono text-muted-foreground">{row.phone}</span>
                           <span className="flex-1 truncate">{row.name || ""}</span>
-                          <span className="text-text-muted truncate">{row.email || ""}</span>
+                          <span className="text-muted-foreground truncate">{row.email || ""}</span>
                         </div>
                       ))}
                       {csvRows.length > 20 && (
-                        <div className="px-3 py-2 text-text-muted text-center">
+                        <div className="px-3 py-2 text-muted-foreground text-center">
                           + {csvRows.length - 20} more
                         </div>
                       )}
@@ -649,10 +649,10 @@ function AddContactsPanel({
                 )}
               </div>
 
-              {result && <div className="text-sm text-text-muted">{result}</div>}
+              {result && <div className="text-sm text-muted-foreground">{result}</div>}
 
               <div className="flex justify-between items-center">
-                <span className="text-xs text-text-muted">
+                <span className="text-xs text-muted-foreground">
                   {csvRows.length > 0 ? `${csvRows.length} rows ready` : "No file selected"}
                 </span>
                 <div className="flex gap-2">
@@ -669,7 +669,7 @@ function AddContactsPanel({
             </>
           )}
 
-          {tab === "list" && result && <div className="text-sm text-text-muted">{result}</div>}
+          {tab === "list" && result && <div className="text-sm text-muted-foreground">{result}</div>}
         </div>
       </CardContent>
     </Card>
@@ -735,7 +735,7 @@ function SchedulePanel({
             <Clock className="w-4 h-4" />
             Dialing schedule
           </div>
-          <button onClick={onClose} className="text-text-muted hover:text-text">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -744,11 +744,11 @@ function SchedulePanel({
         <form onSubmit={save} className="space-y-4">
           <div className="grid sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-text-muted mb-1.5">Timezone</label>
+              <label className="block text-xs text-muted-foreground mb-1.5">Timezone</label>
               <select
                 value={tz}
                 onChange={(e) => setTz(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
+                className="w-full h-10 px-3 rounded-md border border-border bg-card text-sm"
               >
                 {TZ_OPTIONS.map((t) => (
                   <option key={t} value={t}>{t}</option>
@@ -756,25 +756,25 @@ function SchedulePanel({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-text-muted mb-1.5">Start (optional)</label>
+              <label className="block text-xs text-muted-foreground mb-1.5">Start (optional)</label>
               <input
                 type="datetime-local"
                 value={windowStart}
                 onChange={(e) => setWindowStart(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
+                className="w-full h-10 px-3 rounded-md border border-border bg-card text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-text-muted mb-1.5">End (optional)</label>
+              <label className="block text-xs text-muted-foreground mb-1.5">End (optional)</label>
               <input
                 type="datetime-local"
                 value={windowEnd}
                 onChange={(e) => setWindowEnd(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm"
+                className="w-full h-10 px-3 rounded-md border border-border bg-card text-sm"
               />
             </div>
           </div>
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-muted-foreground">
             Calls are only placed between 9 AM – 7 PM in the selected timezone regardless of window settings.
           </p>
           {err && <div className="text-sm text-danger">{err}</div>}

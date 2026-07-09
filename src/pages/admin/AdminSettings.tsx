@@ -48,7 +48,7 @@ function TagValidationStatus() {
     return (
       <div className="rounded-md border border-border bg-muted/30 p-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertTriangle className="h-4 w-4 text-warning" />
           Tag status not available yet
         </div>
         <Button variant="ghost" size="sm" onClick={checkStatus}>
@@ -69,10 +69,10 @@ function TagValidationStatus() {
   }
 
   const statusConfig = {
-    loaded: { icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Active" },
-    disabled: { icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-500/10 border-amber-500/20", label: "Disabled" },
-    error: { icon: XCircle, color: "text-red-500", bg: "bg-red-500/10 border-red-500/20", label: "Error" },
-    pending: { icon: Loader2, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20", label: "Loading" },
+    loaded: { icon: CheckCircle2, color: "text-success", bg: "bg-success/10 border-success/20", label: "Active" },
+    disabled: { icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10 border-warning/20", label: "Disabled" },
+    error: { icon: XCircle, color: "text-danger", bg: "bg-danger/10 border-danger/20", label: "Error" },
+    pending: { icon: Loader2, color: "text-info", bg: "bg-info/10 border-info/20", label: "Loading" },
   };
 
   const config = statusConfig[tagStatus!.status];
@@ -101,7 +101,7 @@ function TagValidationStatus() {
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">PostHog</span>
-          <span className={`font-medium ${tagStatus!.posthog ? "text-emerald-600" : "text-muted-foreground"}`}>
+          <span className={`font-medium ${tagStatus!.posthog ? "text-success" : "text-muted-foreground"}`}>
             {tagStatus!.posthog ? "Connected" : "Not configured"}
           </span>
         </div>
@@ -116,7 +116,7 @@ function TagValidationStatus() {
       </div>
 
       {tagStatus!.error && (
-        <div className="text-xs text-red-600 bg-red-500/5 rounded px-2 py-1.5 border border-red-500/10">
+        <div className="text-xs text-danger bg-danger/5 rounded px-2 py-1.5 border border-danger/10">
           {tagStatus!.error}
         </div>
       )}

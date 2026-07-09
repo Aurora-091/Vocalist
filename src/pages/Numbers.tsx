@@ -281,7 +281,7 @@ export default function Numbers() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <ShieldCheck className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                <ShieldCheck className="h-4 w-4 text-success mt-0.5 shrink-0" />
                 <div className="text-sm text-muted-foreground">
                   All numbers include recording disclosure and comply with calling-window regulations.
                   For US toll-free outbound, complete A2P verification in your telephony provider console.

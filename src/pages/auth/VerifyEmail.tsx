@@ -183,7 +183,7 @@ export default function VerifyEmail() {
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 disabled={verifying}
                 className={`w-12 h-14 text-center text-xl font-semibold border rounded-md bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0F172A] transition-all disabled:opacity-50 ${
-                  error ? "border-red-400" : "border-[#E2E8F0]"
+                  error ? "border-danger" : "border-[#E2E8F0]"
                 }`}
               />
             ))}
@@ -197,7 +197,7 @@ export default function VerifyEmail() {
           )}
 
           {error && (
-            <p className="text-sm text-red-600 text-center mt-4">{error}</p>
+            <p className="text-sm text-danger text-center mt-4">{error}</p>
           )}
 
           <p className="text-sm text-[#64748B] text-center mt-6">

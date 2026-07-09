@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor, Trash2, LogOut, Loader as Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -212,7 +212,7 @@ function AppearancePanel() {
           <div className="font-medium">Appearance</div>
         </div>
         <CardContent className="px-6 py-5">
-          <p className="text-sm text-text-muted mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Choose how Weeber looks for you. This syncs across devices.
           </p>
           <div className="grid grid-cols-3 gap-3 max-w-sm">
@@ -222,8 +222,8 @@ function AppearancePanel() {
                 onClick={() => saveTheme(key)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-md border transition-colors ${
                   theme === key
-                    ? "border-text bg-surface-2 text-text"
-                    : "border-border hover:border-text/30 text-text-muted hover:text-text"
+                    ? "border-foreground bg-muted text-foreground"
+                    : "border-border hover:border-foreground/30 text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -239,7 +239,7 @@ function AppearancePanel() {
           <div className="font-medium text-danger">Diagnostics & Telemetry</div>
         </div>
         <CardContent className="px-6 py-5">
-          <p className="text-sm text-text-muted mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Test and verify your Sentry error tracking integration. Clicking this button will trigger an intentional JavaScript exception.
           </p>
           <Button
@@ -386,7 +386,7 @@ function SecurityPanel() {
           {sessions === null ? (
             <Skeleton className="h-20" />
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-text-muted">No active sessions recorded yet.</p>
+            <p className="text-sm text-muted-foreground">No active sessions recorded yet.</p>
           ) : (
             <div className="divide-y divide-border">
               {sessions.map((s, i) => (
@@ -395,10 +395,10 @@ function SecurityPanel() {
                     <div className="text-sm font-medium flex items-center gap-2">
                       {s.device_info || "Unknown device"}
                       {i === 0 && (
-                        <span className="text-xs bg-surface-2 text-text-muted border border-border px-1.5 py-0.5 rounded">Current</span>
+                        <span className="text-xs bg-muted text-muted-foreground border border-border px-1.5 py-0.5 rounded">Current</span>
                       )}
                     </div>
-                    <div className="text-xs text-text-muted mt-0.5">
+                    <div className="text-xs text-muted-foreground mt-0.5">
                       {s.ip_address || "Unknown IP"} — Last active {new Date(s.last_active_at).toLocaleDateString()}
                     </div>
                   </div>
@@ -406,7 +406,7 @@ function SecurityPanel() {
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <button
-                          className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                          className="p-1.5 rounded text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
                           aria-label={`Revoke session on ${s.device_info || "Unknown device"}`}
                           title="Revoke session"
                         >
@@ -444,7 +444,7 @@ function SecurityPanel() {
           <div className="font-medium text-danger">Danger Zone</div>
         </div>
         <CardContent className="px-6 py-5">
-          <p className="text-sm text-text-muted mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             Permanently delete your account and all associated data. This cannot be undone.
           </p>
           <Button
@@ -534,7 +534,7 @@ function OrgPanel() {
           <div className="font-medium">Business type</div>
         </div>
         <CardContent className="px-6 py-5">
-          <p className="text-sm text-text-muted mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             This controls which agent templates, integrations, and dashboard metrics you see.
             Changing this re-scopes your workspace.
           </p>
@@ -560,7 +560,7 @@ function OrgPanel() {
                     <span className="font-medium text-sm">{v.label}</span>
                   </div>
                   {!v.enabled && (
-                    <span className="text-[10px] text-text-muted mt-1 block">Coming soon</span>
+                    <span className="text-[10px] text-muted-foreground mt-1 block">Coming soon</span>
                   )}
                 </button>
               );
@@ -580,22 +580,22 @@ function CompliancePanel() {
           <div className="font-medium">Compliance posture</div>
         </div>
         <CardContent className="px-6 py-5">
-          <p className="text-sm text-text-muted">
+          <p className="text-sm text-muted-foreground">
             Weeber enforces consent on every outbound dial. Opt-outs propagate
             instantly across active campaigns. Recording disclosure is part of
             every outbound persona by default.
           </p>
           <div className="mt-4 grid sm:grid-cols-3 gap-4">
             <div className="border border-border rounded-md p-4">
-              <div className="text-xs uppercase tracking-widest text-text-muted mb-1">Consent gate</div>
+              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Consent gate</div>
               <div className="text-sm font-medium text-success">Active</div>
             </div>
             <div className="border border-border rounded-md p-4">
-              <div className="text-xs uppercase tracking-widest text-text-muted mb-1">DNC enforcement</div>
+              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">DNC enforcement</div>
               <div className="text-sm font-medium text-success">Active</div>
             </div>
             <div className="border border-border rounded-md p-4">
-              <div className="text-xs uppercase tracking-widest text-text-muted mb-1">Recording disclosure</div>
+              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Recording disclosure</div>
               <div className="text-sm font-medium text-success">Auto-prepended</div>
             </div>
           </div>
@@ -607,7 +607,7 @@ function CompliancePanel() {
           <div className="font-medium">GDPR / data subject requests</div>
         </div>
         <CardContent className="px-6 py-5">
-          <p className="text-sm text-text-muted">
+          <p className="text-sm text-muted-foreground">
             Use the Compliance API to export or erase contact data. Look up by phone
             number. Export returns contact, consent, and call history as JSON. Erase
             revokes consent, deletes contact data, and adds the number to your DNC list.
@@ -727,7 +727,7 @@ function WebhooksPanel() {
         <div className="font-medium">Webhooks</div>
       </div>
       <CardContent className="px-6 py-5">
-        <p className="text-sm text-text-muted mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           We sign every event with HMAC-SHA256 in the <code className="font-mono">X-Weeber-Signature</code> header.
         </p>
         <div className="flex gap-2 mb-4">
@@ -745,13 +745,13 @@ function WebhooksPanel() {
         {hooks === null ? (
           <Skeleton className="h-16" />
         ) : hooks.length === 0 ? (
-          <div className="text-sm text-text-muted">No endpoints yet.</div>
+          <div className="text-sm text-muted-foreground">No endpoints yet.</div>
         ) : (
           <div className="divide-y divide-border">
             {hooks.map((h) => (
               <div key={h.id} className="py-3">
                 <div className="font-mono text-sm">{h.url}</div>
-                <div className="text-xs text-text-muted mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   Events: {(h.events || []).join(", ")}
                 </div>
               </div>
@@ -855,7 +855,7 @@ function PlaybooksPanel() {
             <div className="border-b px-6 py-4 flex items-center justify-between">
               <div>
                 <div className="font-medium">{meta.label}</div>
-                <div className="text-xs text-text-muted mt-0.5">{meta.description}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{meta.description}</div>
               </div>
               <Switch
                 checked={pb.enabled}
@@ -916,7 +916,7 @@ function PlaybooksPanel() {
                       value={pb.call_hours_start}
                       onChange={(e) => update(key, { call_hours_start: parseInt(e.target.value) || 9 })}
                     />
-                    <span className="text-xs text-text-muted">to</span>
+                    <span className="text-xs text-muted-foreground">to</span>
                     <Input
                       type="number"
                       min={1}

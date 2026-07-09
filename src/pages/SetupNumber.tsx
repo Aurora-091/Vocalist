@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Phone, ShieldCheck, CircleAlert as AlertCircle, Link2, Server, Loader as Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { listPhoneNumbers } from "../lib/db";
@@ -55,7 +55,7 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
 
   if (loadingAccount) {
     return (
-      <div className="flex items-center gap-2 text-text-muted text-sm py-8">
+      <div className="flex items-center gap-2 text-muted-foreground text-sm py-8">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading Twilio account status…
       </div>
@@ -66,7 +66,7 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Get a phone number</h2>
-        <p className="text-sm text-text-muted mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Numbers are provisioned through Twilio. Use your own account or let Weeber manage one for you.
         </p>
       </div>
@@ -81,10 +81,10 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
               {numbers.map((n) => (
                 <div key={n.id} className="py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-text-muted" />
+                    <Phone className="w-4 h-4 text-muted-foreground" />
                     <div>
                       <div className="font-mono text-sm">{n.e164}</div>
-                      <div className="text-xs text-text-muted">
+                      <div className="text-xs text-muted-foreground">
                         {n.byo ? "BYO" : "Weeber-managed"} · {n.status || "active"}
                       </div>
                     </div>
@@ -133,7 +133,7 @@ export function SetupNumber({ onComplete, onSkip, embedded }: SetupNumberProps) 
 
       {embedded && onSkip && (
         <div className="flex justify-end pt-2">
-          <button onClick={onSkip} className="text-sm text-text-muted hover:text-text">
+          <button onClick={onSkip} className="text-sm text-muted-foreground hover:text-foreground">
             Skip for now
           </button>
         </div>

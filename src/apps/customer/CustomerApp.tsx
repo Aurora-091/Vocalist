@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { RequireAuth, PublicOnly } from "@/components/RequireAuth";
 import { AppShell } from "@/components/layout/AppShell";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import Waitlist from "@/pages/Waitlist";
 import About from "@/pages/About";
@@ -35,16 +36,16 @@ const Knowledge = lazy(() => import("@/pages/Knowledge"));
 const Playbooks = lazy(() => import("@/pages/Playbooks"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
+// Fallback for the top-level Suspense boundary — in practice this only ever fires for the
+// standalone auth pages (Login, Signup, VerifyEmail, ...), which have no sidebar/header chrome.
+// Authenticated app routes suspend at AppShell's own inner boundary (see PageSkeleton) instead.
 function PageLoader() {
   return (
-    <div className="h-screen flex flex-col items-center justify-center gap-3">
-      <img
-        src="/weeber_favicon_transparent.png"
-        alt="Loading"
-        width={32}
-        height={32}
-        className="h-8 w-8 object-contain dark:invert animate-pulse"
-      />
+    <div className="h-screen flex items-center justify-center px-6">
+      <div className="w-full max-w-sm space-y-4">
+        <Skeleton className="h-8 w-32 mx-auto" />
+        <Skeleton className="h-40 w-full rounded-lg" />
+      </div>
     </div>
   );
 }

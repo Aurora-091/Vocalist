@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Check, Sparkles, Phone, Bot, Megaphone } from "lucide-react";
 import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls, countAgents } from "../lib/db";
@@ -30,6 +30,10 @@ const STEP_LINKS: Record<string, string> = {
   get_number: "/numbers",
   test_and_golive: "/agents",
 };
+
+// The onboarding wizard only walks through these three — connect_tools/add_knowledge/get_number
+// each have their own dedicated page instead. Keep this in sync with OnboardingModal's STEP_KEYS.
+const MODAL_COVERED_STEPS = ["pick_vertical", "create_agent", "test_and_golive"];
 
 export default function Dashboard() {
   usePageTitle("Dashboard");
@@ -119,6 +123,7 @@ export default function Dashboard() {
 
   const checklistDone = steps && Object.values(steps).every(Boolean);
   const isEmpty = !loading && (overview?.calls_total ?? 0) === 0;
+  const modalStepsRemaining = !!steps && MODAL_COVERED_STEPS.some((key) => !steps[key]);
 
   function getMetricValue(key: string): number | string {
     if (!overview) return 0;
@@ -142,7 +147,7 @@ export default function Dashboard() {
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Home</h1>
-          <p className="text-sm text-text-muted mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Live operations across your agents and campaigns.
           </p>
         </div>
@@ -155,15 +160,15 @@ export default function Dashboard() {
       </div>
 
       {isEmpty && !steps && (
-        <Card className="gap-0 overflow-visible py-0 shadow-card border-border bg-surface-2">
+        <Card className="gap-0 overflow-visible py-0 shadow-card border-border bg-muted">
           <CardContent className="px-6 py-5">
             <div className="flex items-start gap-4">
-              <span className="w-9 h-9 rounded-md bg-surface border border-border text-text-muted flex items-center justify-center shrink-0">
+              <span className="w-9 h-9 rounded-md bg-card border border-border text-muted-foreground flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />
               </span>
               <div className="flex-1">
                 <div className="font-medium">{emptyStates.dashboard.title}</div>
-                <p className="text-sm text-text-muted mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {emptyStates.dashboard.description}
                 </p>
                 <div className="mt-4">
@@ -187,7 +192,7 @@ export default function Dashboard() {
         <Card data-checklist className="gap-0 overflow-visible py-0 shadow-card">
           <div className="border-b px-6 py-4">
             <div className="font-medium">Finish setting up Weeber</div>
-            <p className="text-xs text-text-muted mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {Object.values(steps).filter(Boolean).length} of{" "}
               {Object.keys(steps).length} done
             </p>
@@ -199,12 +204,12 @@ export default function Dashboard() {
                   <div className="flex items-center gap-3">
                     <span
                       className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                        done ? "bg-success/15 text-success" : "bg-surface-2 text-text-muted"
+                        done ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {done ? <Check className="w-3 h-3" /> : null}
                     </span>
-                    <span className={done ? "text-text-muted line-through" : ""}>
+                    <span className={done ? "text-muted-foreground line-through" : ""}>
                       {STEP_LABELS[key] || key}
                     </span>
                   </div>
@@ -224,11 +229,16 @@ export default function Dashboard() {
                 </li>
               ))}
             </ul>
-            <div className="mt-4 pt-3 border-t border-border">
-              <Button variant="outline" size="sm" onClick={() => setOnboardingOpen(true)}>
-                Resume setup
-              </Button>
-            </div>
+            {modalStepsRemaining && (
+              <div className="mt-4 pt-3 border-t border-border">
+                <Button variant="outline" size="sm" onClick={() => setOnboardingOpen(true)}>
+                  Resume setup
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Covers picking your business type, creating your agent, and the test call. Connecting tools, adding knowledge, and getting a number each have their own page above.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -254,8 +264,8 @@ export default function Dashboard() {
         {dashboard.cards.map((card) => {
           const CardIcon = card.icon;
           const bgColor = card.color === "blue"
-            ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
-            : "bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400";
+            ? "bg-info/10 text-info"
+            : "bg-success/10 text-success";
           return (
             <Card key={card.id} className="gap-0 overflow-visible py-0 shadow-card hover:border-primary/30 transition-colors">
               <CardContent className="px-6 py-5">
@@ -265,7 +275,7 @@ export default function Dashboard() {
                   </span>
                   <div className="flex-1">
                     <div className="font-medium">{card.title}</div>
-                    <p className="text-sm text-text-muted mt-1">{card.description}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {card.links.map((link, i) => (
                         <Link key={link.to} to={link.to}>
@@ -299,11 +309,11 @@ export default function Dashboard() {
                   <Link
                     key={action.key}
                     to={action.route}
-                    className="group border border-border rounded-md p-4 hover:border-primary/30 hover:bg-surface-2/50 transition-colors"
+                    className="group border border-border rounded-md p-4 hover:border-primary/30 hover:bg-muted/50 transition-colors"
                   >
-                    <ActionIcon className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors mb-2" />
+                    <ActionIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
                     <div className="font-medium text-sm">{action.label}</div>
-                    <p className="text-xs text-text-muted mt-1">{action.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
                   </Link>
                 );
               })}
@@ -325,7 +335,7 @@ export default function Dashboard() {
               </span>
               <span className="font-medium">Live now</span>
               {liveCalls.length > 0 && (
-                <span className="text-xs text-text-muted ml-1">({liveCalls.length})</span>
+                <span className="text-xs text-muted-foreground ml-1">({liveCalls.length})</span>
               )}
             </div>
           </div>
@@ -333,7 +343,7 @@ export default function Dashboard() {
             {liveCalls.length === 0 ? (
               recentCalls.length > 0 ? (
                 <div>
-                  <p className="text-xs text-text-muted mb-3">No live calls right now. Recent activity:</p>
+                  <p className="text-xs text-muted-foreground mb-3">No live calls right now. Recent activity:</p>
                   <ul className="space-y-2">
                     {recentCalls.map((call) => (
                       <li key={call.id} className="flex items-center justify-between text-sm">
@@ -341,7 +351,7 @@ export default function Dashboard() {
                           <Phone className="w-3.5 h-3.5 text-muted-foreground" />
                           <span className="font-mono text-xs" title={call.to_number}>{formatPhone(call.to_number) || "Unknown"}</span>
                         </div>
-                        <span className="text-xs text-text-muted capitalize">
+                        <span className="text-xs text-muted-foreground capitalize">
                           {call.status?.replace("_", " ") || call.direction}
                         </span>
                       </li>
@@ -349,7 +359,7 @@ export default function Dashboard() {
                   </ul>
                 </div>
               ) : (
-                <div className="text-sm text-text-muted">
+                <div className="text-sm text-muted-foreground">
                   {emptyStates.calls.description}
                 </div>
               )
@@ -361,7 +371,7 @@ export default function Dashboard() {
                       <Phone className="w-3.5 h-3.5 text-success" />
                       <span className="font-mono text-xs" title={call.to_number}>{formatPhone(call.to_number) || "Unknown"}</span>
                     </div>
-                    <span className="text-xs text-text-muted">
+                    <span className="text-xs text-muted-foreground">
                       {call.direction === "inbound" ? "Inbound" : "Outbound"}
                     </span>
                   </li>
@@ -379,15 +389,15 @@ export default function Dashboard() {
               <>
                 <div className="font-mono text-3xl font-bold">
                   {Math.round(Number(usage.used_minutes) || 0)}{" "}
-                  <span className="text-text-muted text-base">/ {usage.included_minutes || "\u2014"} min</span>
+                  <span className="text-muted-foreground text-base">/ {usage.included_minutes || "\u2014"} min</span>
                 </div>
-                <div className="mt-3 h-2 rounded-full bg-surface-2 overflow-hidden">
+                <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full bg-primary animate-grow"
                     style={{ width: `${Math.min(100, Number(usage.pct_used) || 0)}%` }}
                   />
                 </div>
-                <div className="mt-2 text-xs text-text-muted">
+                <div className="mt-2 text-xs text-muted-foreground">
                   Renews monthly. Overage at $
                   {Number(usage.overage_cost_usd || 0).toFixed(2)}/min.
                 </div>

@@ -142,8 +142,8 @@ export function WebTestPanel({
         <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 border border-border">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
             </span>
             <span className="text-xs font-medium text-foreground">
               {conversation.isSpeaking ? "Agent speaking" : "Listening"}
