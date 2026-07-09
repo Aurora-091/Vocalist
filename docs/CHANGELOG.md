@@ -2,6 +2,14 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.20] — Friday, 2026-07-10 01:30 IST
+
+### Fix: ElevenLabs Pong Schema and Microphone Worklet Reconnect Crash
+
+- **`src/hooks/useAgentConversation.ts`**: Flat-mapped the client-to-server pong response payload to match the expected ElevenLabs gateway schema (`{ type: "pong", event_id: number }`), resolving the Code 1008 disconnection loop on pings.
+- **`src/hooks/useAgentConversation.ts`**: Wrapped `audioContext.audioWorklet.addModule` within a `try/catch` block to handle and ignore duplicate processor registration errors gracefully, preventing the crash when reconnecting the microphone.
+- **`docs/testing/edge_cases.md`**: Added a verification row `EL-WSA-2` documenting manual verification steps for testing pongs and mic reconnects in staging.
+
 ## [1.16.19] — Thursday, 2026-07-09 12:22 IST
 
 ### Fix: ElevenLabs Post-Call Webhook Signature Verification
