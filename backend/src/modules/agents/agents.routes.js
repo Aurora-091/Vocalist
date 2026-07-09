@@ -366,6 +366,7 @@ router.post(
   webSessionLimiter,
   validate({ params: z.object({ id: z.string().uuid() }) }),
   asyncHandler(async (req, res) => {
+    console.log(`[WEB_TEST_CALL_STEP_1] Initializing and fetching Agent ID from DB for ${req.params.id}`);
     const { data: agent, error: agentErr } = await req.supabase
       .from("agents")
       .select("*")
@@ -379,13 +380,16 @@ router.post(
       throw BadRequest("Agent not provisioned with ElevenLabs. Save the agent first.");
     }
 
+    console.log(`[WEB_TEST_CALL_STEP_2] DB fetch success, displaying provider_ref: ${agent.provider_ref}`);
+
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
       throw BadRequest("ElevenLabs API key not configured");
     }
 
+    console.log(`[WEB_TEST_CALL_STEP_3] Fetching signed URL from ElevenLabs for agent: ${agent.provider_ref}`);
     let response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agent.provider_ref}`,
+      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agent.provider_ref}`,
       { method: "GET", headers: { "xi-api-key": apiKey } }
     );
 
@@ -432,8 +436,9 @@ router.post(
         agent.provider_ref = newProviderRef;
 
         // Re-try fetching the signed URL with the newly created agent ID
+        console.log(`[WEB_TEST_CALL_STEP_3] Fetching signed URL from ElevenLabs for agent (auto-healed): ${newProviderRef}`);
         response = await fetch(
-          `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${newProviderRef}`,
+          `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${newProviderRef}`,
           { method: "GET", headers: { "xi-api-key": apiKey } }
         );
       } catch (healErr) {
@@ -444,11 +449,14 @@ router.post(
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
+      console.error(`[WEB_TEST_CALL_STEP_4] Failure response from ElevenLabs: ${response.status}`, detail);
       throw BadRequest(`ElevenLabs signed URL failed: ${response.status}`, detail);
     }
 
     const { signed_url } = await response.json();
+    console.log(`[WEB_TEST_CALL_STEP_4] Success response from ElevenLabs, signed_url: ${signed_url}`);
 
+    console.log(`[WEB_TEST_CALL_STEP_5] Pre-creating the local DB call log row`);
     // Pre-create a calls row so the ElevenLabs webhook can link the conversation
     // back to this session and so the test flag is queryable from the start.
     const { data: callRow, error: callErr } = await req.supabase

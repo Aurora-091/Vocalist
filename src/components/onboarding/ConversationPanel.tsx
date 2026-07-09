@@ -36,6 +36,7 @@ export function ConversationPanel({
 
   const conversation = useConversation({
     onConnect: () => {
+      console.log("ConversationPanel: useConversation onConnect triggered");
       setPhase("active");
       setError(null);
       onSessionStart?.();
@@ -45,19 +46,22 @@ export function ConversationPanel({
         api.patch(`/v1/calls/${pendingCallIdRef.current}`, { conversation_id: convId }).catch(() => {});
       }
     },
-    onDisconnect: () => {
+    onDisconnect: (details) => {
+      console.warn("ConversationPanel: useConversation onDisconnect triggered with details:", details);
       setPhase("ended");
       stopTimer();
       onSessionEnd?.();
       captureEvent("web_test_ended", { agent_id: agentId, duration_sec: elapsed });
     },
-    onError: (message: string) => {
+    onError: (message: string, context: any) => {
+      console.error("ConversationPanel: useConversation onError triggered. Message:", message, "Context:", context);
       setError(message);
       setPhase("ended");
       stopTimer();
       captureEvent("web_test_error", { agent_id: agentId, error: message });
     },
     onMessage: ({ message, source }) => {
+      console.log("ConversationPanel: useConversation onMessage triggered:", { message, source });
       setMessages((prev) => [...prev, { source, text: message }]);
     },
   });

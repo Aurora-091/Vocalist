@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useConversation } from "@elevenlabs/react";
+import { useAgentConversation } from "@/hooks/useAgentConversation";
 import { Mic, MicOff, Phone, PhoneOff, Volume2, Wrench, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,8 +38,9 @@ export function WebTestPanel({
   const transcriptRef = useRef<HTMLDivElement>(null);
   const pendingCallIdRef = useRef<string | null>(null);
 
-  const conversation = useConversation({
+  const conversation = useAgentConversation({
     onConnect: () => {
+      console.log("WebTestPanel: useAgentConversation onConnect triggered");
       setPhase("active");
       setError(null);
       onSessionStart?.();
@@ -49,18 +50,21 @@ export function WebTestPanel({
         api.patch(`/v1/calls/${pendingCallIdRef.current}`, { conversation_id: convId }).catch(() => {});
       }
     },
-    onDisconnect: () => {
+    onDisconnect: (details) => {
+      console.warn("WebTestPanel: useAgentConversation onDisconnect triggered with details:", details);
       setPhase("ended");
       stopTimer();
       captureEvent("web_test_ended", { agent_id: agentId, duration_sec: elapsed });
     },
-    onError: (message: string) => {
+    onError: (message: string, context: any) => {
+      console.error("WebTestPanel: useAgentConversation onError triggered. Message:", message, "Context:", context);
       setError(message);
       setPhase("ended");
       stopTimer();
       captureEvent("web_test_error", { agent_id: agentId, error: message });
     },
     onMessage: ({ message, source }) => {
+      console.log("WebTestPanel: useAgentConversation onMessage triggered:", { message, source });
       setMessages((prev) => [...prev, { source, text: message }]);
     },
   });
@@ -99,23 +103,29 @@ export function WebTestPanel({
     setError(null);
     setPhase("requesting-mic");
     try {
+      console.log("[UI_PANEL_STEP_A] Querying browser microphone permissions.");
       await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
+      console.error("[UI_PANEL_FATAL_ERROR] Microphone access denied.");
       setError("Microphone access denied. Please allow microphone permissions.");
       setPhase("idle");
       return;
     }
     setPhase("connecting");
     try {
+      console.log("[UI_PANEL_STEP_B] Fetching the tokenized profile from the backend.");
       const { signed_url, call_id } = await api.post<{
         signed_url: string;
         agent_id: string;
         call_id: string;
       }>(`/v1/agents/${agentId}/web-session`);
       pendingCallIdRef.current = call_id ?? null;
-      await conversation.startSession({ signedUrl: signed_url });
+      
+      console.log("[UI_PANEL_STEP_C] Forwarding the signed token URL down to the custom socket hook.");
+      await conversation.startConversation(signed_url);
       startTimer();
     } catch (e: any) {
+      console.error("[UI_PANEL_FATAL_ERROR] Catching and logging any initialization crashes:", e);
       setError(e.message || "Failed to start conversation");
       setPhase("idle");
     }
