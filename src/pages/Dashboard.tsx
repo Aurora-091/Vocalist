@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Check, Sparkles, Phone, Bot, Megaphone } from "lucide-react";
-import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls } from "../lib/db";
+import { getOverview, getUsageSummary, getOnboardingSteps, listRecentCalls, countAgents } from "../lib/db";
 import { supabase } from "../lib/supabase";
 import { useVertical } from "../lib/VerticalContext";
 import { toast } from "sonner";
@@ -46,10 +46,11 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const [o, u, s] = await Promise.all([
+        const [o, u, s, agentCount] = await Promise.all([
           getOverview(),
           getUsageSummary(),
           getOnboardingSteps(),
+          countAgents(),
         ]);
         setOverview(o);
         setUsage(u);
@@ -57,7 +58,7 @@ export default function Dashboard() {
 
         const hasWelcome = searchParams.get("welcome") === "1";
         const isIncomplete = s && !Object.values(s).every(Boolean);
-        const hasNoAgents = (o?.calls_total ?? 0) === 0;
+        const hasNoAgents = agentCount === 0;
 
         if ((hasWelcome || isIncomplete) && hasNoAgents) {
           setOnboardingOpen(true);

@@ -7,7 +7,7 @@ import { WeeberLogo } from "@/components/WeeberLogo";
 import { ConversationPanel } from "./ConversationPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { api } from "@/lib/api";
-import { listAgentPresets, listVoices, getOrg, updateOnboardingStep } from "@/lib/db";
+import { listAgentPresets, listVoices, getOrg, updateOrg, updateOnboardingStep } from "@/lib/db";
 import { toast } from "sonner";
 import type { VerticalKey } from "@/config/verticals";
 import { useVertical } from "@/lib/VerticalContext";
@@ -89,6 +89,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   const [selectedVoice, setSelectedVoice] = useState<string>("");
   const [createdAgentId, setCreatedAgentId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [finished, setFinished] = useState(false);
 
@@ -139,6 +140,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   const createAgent = useCallback(async () => {
     if (!selectedPreset || !businessName.trim() || creating) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const persona = {
         ...selectedPreset.persona,
@@ -157,9 +159,13 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
         provider: "elevenlabs",
       });
       setCreatedAgentId(res.agent.id);
+      // The wizard's business name is the org's name, not just agent persona —
+      // merchants expect to find it again in Settings.
+      updateOrg({ name: businessName.trim() }).catch(() => {});
       await updateOnboardingStep("create_agent", true);
       await updateOnboardingStep("pick_vertical", true);
     } catch (e: any) {
+      setCreateError(e.message || "Failed to create agent.");
       toast.error(e.message || "Failed to create agent.");
     } finally {
       setCreating(false);
@@ -175,6 +181,12 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   }
 
   function handleFinish() {
+    // "Go live" is only true if the merchant actually talked to the agent —
+    // skipping the test closes the wizard without marking the step.
+    if (!sessionStarted) {
+      onOpenChange(false);
+      return;
+    }
     setFinished(true);
     updateOnboardingStep("test_and_golive", true);
     setTimeout(() => {
@@ -403,6 +415,19 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
         );
       }
       if (!createdAgentId) {
+        if (createError) {
+          return (
+            <div className="flex flex-col items-center justify-center h-full gap-4 py-12">
+              <div className="text-center max-w-sm">
+                <p className="text-sm font-semibold text-foreground">We couldn't set up your agent</p>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{createError}</p>
+              </div>
+              <Button size="sm" onClick={() => createAgent()}>
+                Try again
+              </Button>
+            </div>
+          );
+        }
         return (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

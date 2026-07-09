@@ -19,6 +19,15 @@ export async function listAgents() {
   return data || [];
 }
 
+export async function countAgents(): Promise<number> {
+  const { count, error } = await supabase
+    .from("agents")
+    .select("*", { count: "exact", head: true })
+    .is("deleted_at", null);
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export async function getAgent(id: string) {
   const { data, error } = await supabase
     .from("agents")

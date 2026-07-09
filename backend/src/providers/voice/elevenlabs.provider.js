@@ -219,6 +219,13 @@ class ElevenLabsProvider extends VoiceProvider {
       },
       tts: {
         voice_id: voiceId,
+        // Twilio Media Streams carry µ-law 8 kHz; the stream bridge does no
+        // transcoding, so both directions must be ulaw_8000 or phone audio is
+        // undecodable noise. The web SDK handles ulaw_8000 playback.
+        agent_output_audio_format: "ulaw_8000",
+      },
+      asr: {
+        user_input_audio_format: "ulaw_8000",
       },
     };
 
@@ -248,7 +255,7 @@ class ElevenLabsProvider extends VoiceProvider {
 
     const dedupedKeywords = [...new Set(rawKeywords.map((k) => String(k).trim()).filter(Boolean))].slice(0, 50);
     if (dedupedKeywords.length > 0) {
-      conversationConfig.asr = { keywords: dedupedKeywords };
+      conversationConfig.asr.keywords = dedupedKeywords;
     }
 
     // Multi-language: build language_presets for secondary languages

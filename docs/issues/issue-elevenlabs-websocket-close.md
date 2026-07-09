@@ -1,6 +1,6 @@
 # Issue: ElevenLabs ConvAI WebSocket Closes Unexpectedly
 
-**Status:** Open  
+**Status:** Resolved (Fixed in [1.16.13])  
 **Priority:** High  
 **Reported:** 2026-07-09  
 **Component:** Frontend (React + Vite) / ElevenLabs SDK Integration
@@ -29,7 +29,7 @@ The backend session creation succeeds, the signed URL is valid, and the WebSocke
 | `src/components/WebTestPanel.tsx` | Migrated from `@11labs/react` to `@elevenlabs/react` |
 | `backend/src/modules/agents/agents.routes.js` | Added self-healing agent recreation on 404, expanded agent SELECT to `*` |
 | `backend/src/modules/agents/agent.service.js` | Refactored updateAgent sync logic with proper variable scoping |
-| `backend/src/providers/voice/elevenlabs.provider.js` | No significant functional changes |
+| `backend/src/providers/voice/elevenlabs.provider.js` | Added `auth: { enable_auth: true }` to the agent payload to explicitly enable authenticated sessions on the voice provider side. |
 
 ---
 

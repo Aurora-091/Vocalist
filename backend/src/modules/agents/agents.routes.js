@@ -465,7 +465,6 @@ router.post(
       .single();
 
     if (callErr) throw callErr;
-    console.log("Test Agent Response:", { signed_url, agent_id: agent.provider_ref, call_id: callRow.id })
 
     res.json({ signed_url, agent_id: agent.provider_ref, call_id: callRow.id });
   })

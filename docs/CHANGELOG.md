@@ -2,6 +2,25 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.14] — Thursday, 2026-07-09 09:55 IST
+
+### Phone-Call Audio Bridge Fix (agent never spoke on calls) + Onboarding UX Hardening
+
+Calls initiated but hung up with no agent audio — the TwiML `<Connect><Stream>` bridge died after connect, falling through to the goodbye-hangup. Two root causes fixed in the bridge/provisioning path, plus onboarding fixes from the user-flow case study.
+
+#### Backend
+
+- **`backend/src/services/twilio-stream.service.js`**: The bridge now fetches a **signed URL** (`GET /v1/convai/conversation/get_signed_url`) before opening the ElevenLabs WebSocket. Since 1.16.13 all agents are provisioned with `auth: { enable_auth: true }`, which rejects the previous raw `?agent_id=` handshake. Falls back to the direct connect (with a warning log) if the signed-URL fetch fails.
+- **`backend/src/providers/voice/elevenlabs.provider.js`**: Agents are now provisioned with telephony audio formats — `tts.agent_output_audio_format: "ulaw_8000"` and `asr.user_input_audio_format: "ulaw_8000"`. Twilio Media Streams carry µ-law 8 kHz and the bridge does no transcoding, so the previous PCM-16 kHz defaults made caller audio undecodable to the agent (and vice-versa). **Note:** existing ElevenLabs agents keep the old formats until re-synced — edit/save each agent (or trigger the update path) to push the new config.
+- **`backend/src/modules/agents/agents.routes.js`**: Removed a `console.log` that leaked signed URLs into server logs on every web-session request.
+
+#### Frontend (onboarding case-study findings F5–F8)
+
+- **`src/components/onboarding/OnboardingModal.tsx`**: Failed agent creation no longer strands the merchant on an infinite "Initializing…" spinner — the test step now shows the error with a "Try again" button. "Skip test" no longer marks `test_and_golive`; the step is only completed after a real connected session. The wizard's business name is now persisted to the org (`updateOrg`), not just the agent persona.
+- **`src/pages/Dashboard.tsx` + `src/lib/db.ts`**: The onboarding modal auto-reopen now gates on the actual agent count (new `countAgents()` in `db.ts`) instead of using `calls_total === 0` as a proxy — merchants who built an agent through the main UI no longer get the beginner wizard pushed at them on every dashboard visit.
+
+Verification: `npx tsc --noEmit` clean; backend `npm test` 140/140 pass; `node --check` clean across backend.
+
 ## [1.16.13] — Thursday, 2026-07-09 00:10 IST
 
 ### ElevenLabs Agent Auto-Recreation (Self-Healing on 404) & Signed URL Authentication Fix

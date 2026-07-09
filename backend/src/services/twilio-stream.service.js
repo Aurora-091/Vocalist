@@ -8,11 +8,32 @@ const EL_CONNECT_TIMEOUT_MS = 10_000;
 const EL_PING_INTERVAL_MS = 20_000;
 const MAX_BUFFERED_BYTES = 64 * 1024;
 
-async function connectElevenLabsWs(agentRef, apiKey, callId) {
-  const socket = new WebSocket(
-    `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentRef}`,
+async function getSignedWsUrl(agentRef, apiKey) {
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentRef}`,
     { headers: { "xi-api-key": apiKey } }
   );
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`get_signed_url failed: ${res.status} ${detail}`);
+  }
+  const { signed_url } = await res.json();
+  if (!signed_url) throw new Error("get_signed_url returned no signed_url");
+  return signed_url;
+}
+
+async function connectElevenLabsWs(agentRef, apiKey, callId) {
+  // Agents are provisioned with enable_auth: true, so the WS handshake must use
+  // a signed URL — a raw ?agent_id= connect is rejected for authenticated agents.
+  let wsUrl;
+  try {
+    wsUrl = await getSignedWsUrl(agentRef, apiKey);
+  } catch (err) {
+    logger.warn({ err: err.message, callId, agentRef }, "get_signed_url failed — falling back to direct agent_id connect");
+    wsUrl = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentRef}`;
+  }
+
+  const socket = new WebSocket(wsUrl, { headers: { "xi-api-key": apiKey } });
 
   await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
