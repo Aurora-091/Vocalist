@@ -2,6 +2,17 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.17] — Thursday, 2026-07-09 20:15 IST
+
+### Backend Metrics — Fix Crash on Every Error Response, Split Sentry/PostHog Responsibilities
+
+Production logs showed `TypeError: Sentry.metrics.increment is not a function` on every 500 and every self-healing agent-recreation attempt: `backend/src/utils/metrics.js` called `Sentry.metrics.*`, an API Sentry sunset and removed from `@sentry/node` (currently `^10.64.0`). Since `error.middleware.js` calls `metrics.increment()` before responding, this was crashing inside the error handler itself on the `agents/:id/web-session` and `agents/:id` (self-heal) paths, corrupting the intended JSON error body.
+
+- **`backend/src/utils/metrics.js`**: no longer touches `Sentry.metrics`. Sentry now only receives a breadcrumb (`category: "metric"`) for context on whatever exception it later captures; PostHog (`posthog-node`, new dependency) is the actual counter/distribution/gauge sink via `capture()` with event name `metric.<name>`. Both are no-ops when their respective env var (`SENTRY_DSN` / `POSTHOG_KEY`) is unset, so this never throws regardless of configuration.
+- **`backend/src/config/posthog.js`** (new): lazy singleton `PostHog` client + `shutdownPostHog()` to flush the event buffer on graceful shutdown.
+- **`backend/server.js`, `backend/worker-entry.js`**: call `shutdownPostHog()` in the existing `SIGTERM`/`SIGINT` handlers so buffered events aren't dropped on deploy.
+- **`backend/.env.example`**: documented `POSTHOG_KEY` / `POSTHOG_HOST`.
+
 ## [1.16.16] — Thursday, 2026-07-09 18:40 IST
 
 ### UI/UX Case-Study Fixes — Design Token Consolidation, Onboarding Reconciliation, Draft Persistence, Loading States

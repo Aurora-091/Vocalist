@@ -1,4 +1,5 @@
 const logger = require("./src/config/logger");
+const { shutdownPostHog } = require("./src/config/posthog");
 
 const dialerWorker = require("./src/workers/dialer.worker");
 const retryWorker = require("./src/workers/retry.worker");
@@ -48,6 +49,7 @@ function shutdown(signal) {
   logger.info({ signal }, "Worker service shutting down");
   stoppers.forEach((stop) => { try { stop(); } catch {} });
   healthServer.close();
+  shutdownPostHog().catch(() => {});
   setTimeout(() => process.exit(0), 5_000).unref();
 }
 

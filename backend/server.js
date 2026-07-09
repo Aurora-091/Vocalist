@@ -1,6 +1,7 @@
 const env = require("./src/config/env");
 const logger = require("./src/config/logger");
 const Sentry = require("@sentry/node");
+const { shutdownPostHog } = require("./src/config/posthog");
 
 if (process.env.SENTRY_DSN) {
   const pkg = require("./package.json");
@@ -114,6 +115,7 @@ function shutdown(signal) {
   stoppers.forEach((stop) => { try { stop(); } catch {} });
   for (const ws of wss.clients) ws.terminate();
   for (const ws of waitlistWss.clients) ws.terminate();
+  shutdownPostHog().catch(() => {});
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 10_000).unref();
 }
