@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const env = require("../../config/env");
 const logger = require("../../config/logger");
 const asyncHandler = require("../../utils/asyncHandler");
-const { verifyVapiSignature, verifyTwilioSignature, verifyHmacSha256 } = require("../../utils/signature");
+const { verifyVapiSignature, verifyTwilioSignature, verifyElevenLabsSignature } = require("../../utils/signature");
 const { logWebhookEvent, markProcessed } = require("./webhook.service");
 const { webhookLimiter } = require("../../middleware/rate-limit.middleware");
 
@@ -77,7 +77,7 @@ router.post(
       logger.error("ELEVENLABS_WEBHOOK_SECRET not configured — refusing webhook");
       return res.status(503).json({ error: { code: "webhook_not_configured" } });
     }
-    const signatureOk = verifyHmacSha256(webhookSecret, rawString, sigHeader);
+    const signatureOk = verifyElevenLabsSignature(webhookSecret, rawString, sigHeader);
     if (!signatureOk) {
       logger.warn("Invalid ElevenLabs signature");
       return res.status(401).json({ error: { code: "invalid_signature" } });

@@ -258,3 +258,15 @@ This document tracks all major product, architecture, and technology decisions m
   - `backend/src/workers/dialer.worker.js`
   - `backend/src/modules/webhooks/handlers/elevenlabs.handler.js` (metadata lookup path, lines 101-112)
 
+---
+
+## DEC-020: ElevenLabs Webhook Registration Is a Manual, Workspace-Level Dashboard Step (No API)
+* **Date**: Thursday, 2026-07-09
+* **Status**: Accepted
+* **Context**: Every call in `calls` (31/31, full history) was stuck at `queued`/`in_progress` forever, and `webhook_events` (all partitions) plus `webhook_dlq` had zero rows ever. Root cause: no post-call webhook was ever registered in the ElevenLabs dashboard, so ElevenLabs had nothing to POST to — confirmed by zero HTTP hits of any kind (not even rejected ones) to `/webhooks/elevenlabs` in Railway logs. ElevenLabs does not expose a REST API to create/assign post-call webhooks; it's dashboard-only and restricted to workspace admins (confirmed against ElevenLabs docs). Once the webhook was added in the dashboard, a second latent bug surfaced: `webhook.routes.js` verified the ElevenLabs signature with the generic bare-hex-digest `verifyHmacSha256`, but ElevenLabs actually signs with a Stripe-style `t=<timestamp>,v0=<hmac>` header over `${timestamp}.${body}` — every real webhook would have 401'd silently.
+* **Decision**: The webhook was registered manually in the ElevenLabs dashboard pointing at `https://vocalist-production.up.railway.app/webhooks/elevenlabs`, and `ELEVENLABS_WEBHOOK_SECRET` was updated in Railway to match. `verifyElevenLabsSignature` (`backend/src/utils/signature.js`) now correctly parses and verifies the `t=`/`v0=` header with a 30-minute replay tolerance. Because ElevenLabs has no webhook-assignment API, there is no way to make new-agent webhook coverage fully code-driven; the workspace dashboard has a "send to all agents" setting distinct from per-agent audio-data overrides, which should be used instead of toggling each agent individually. This is a standing manual step to verify whenever a new ElevenLabs workspace/account is provisioned.
+* **Key Files**:
+  - `backend/src/utils/signature.js` (`verifyElevenLabsSignature`)
+  - `backend/src/modules/webhooks/webhook.routes.js`
+  - `backend/src/tests/invariants/webhook-sig.test.js`
+

@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { hmacSha256, verifyHmacSha256, verifyVapiSignature, verifyTwilioSignature } = require("../../utils/signature");
+const { hmacSha256, verifyHmacSha256, verifyVapiSignature, verifyElevenLabsSignature, verifyTwilioSignature } = require("../../utils/signature");
 
 test("HMAC SHA256 produces consistent output", () => {
   const sig = hmacSha256("secret", "payload");
@@ -32,6 +32,36 @@ test("verifyVapiSignature requires secret in production-like flow", () => {
   const sig = hmacSha256("vapi-secret", payload);
   assert.equal(verifyVapiSignature("vapi-secret", payload, sig), true);
   assert.equal(verifyVapiSignature("vapi-secret", payload, "deadbeef"), false);
+});
+
+test("verifyElevenLabsSignature accepts correctly signed t=/v0= header", () => {
+  const payload = JSON.stringify({ event_id: "evt_1", data: { conversation_id: "conv_1" } });
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const sig = hmacSha256("el-secret", `${timestamp}.${payload}`);
+  const header = `t=${timestamp},v0=${sig}`;
+  assert.equal(verifyElevenLabsSignature("el-secret", payload, header), true);
+});
+
+test("verifyElevenLabsSignature rejects a bare hex digest (no t=/v0= framing)", () => {
+  const payload = JSON.stringify({ event_id: "evt_1" });
+  const sig = hmacSha256("el-secret", payload);
+  assert.equal(verifyElevenLabsSignature("el-secret", payload, sig), false);
+});
+
+test("verifyElevenLabsSignature rejects stale timestamps outside tolerance", () => {
+  const payload = JSON.stringify({ event_id: "evt_1" });
+  const staleTimestamp = (Math.floor(Date.now() / 1000) - 3600).toString();
+  const sig = hmacSha256("el-secret", `${staleTimestamp}.${payload}`);
+  const header = `t=${staleTimestamp},v0=${sig}`;
+  assert.equal(verifyElevenLabsSignature("el-secret", payload, header), false);
+});
+
+test("verifyElevenLabsSignature rejects wrong secret", () => {
+  const payload = JSON.stringify({ event_id: "evt_1" });
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const sig = hmacSha256("right-secret", `${timestamp}.${payload}`);
+  const header = `t=${timestamp},v0=${sig}`;
+  assert.equal(verifyElevenLabsSignature("wrong-secret", payload, header), false);
 });
 
 test("verifyTwilioSignature returns false for wrong signature", () => {

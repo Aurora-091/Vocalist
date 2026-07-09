@@ -2,7 +2,17 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
-## [1.16.18] — Thursday, 2026-07-09 22:30 IST
+## [1.16.19] — Thursday, 2026-07-09 12:22 IST
+
+### Fix: ElevenLabs Post-Call Webhook Signature Verification
+
+Root-caused the platform-wide webhook ingestion outage (0 rows ever in `webhook_events`/`webhook_dlq`, every call stuck at `queued`/`in_progress`): the ElevenLabs post-call webhook was never registered in the ElevenLabs dashboard (workspace-level, no API for it) — now added, pointing at `/webhooks/elevenlabs` with `ELEVENLABS_WEBHOOK_SECRET` updated in Railway to match. While fixing, found a second latent bug that would have silently 401'd every real webhook once the URL was registered:
+
+- **`backend/src/utils/signature.js`**: Added `verifyElevenLabsSignature`, matching ElevenLabs' actual Stripe-style `t=<timestamp>,v0=<hmac>` header format (HMAC over `${timestamp}.${body}`, with a 30-minute timestamp tolerance) instead of the generic bare-hex-digest `verifyHmacSha256` the route was previously (incorrectly) using.
+- **`backend/src/modules/webhooks/webhook.routes.js`**: `/webhooks/elevenlabs` now uses `verifyElevenLabsSignature` instead of `verifyHmacSha256`.
+- **`backend/src/tests/invariants/webhook-sig.test.js`**: Added coverage for correct signature acceptance, bare-digest rejection, stale-timestamp rejection, and wrong-secret rejection.
+
+
 
 ### Modern Visual Design Hues, useDebounce/useCopy Hooks Refactor, ESLint Strictness, Empty State Standardization
 
