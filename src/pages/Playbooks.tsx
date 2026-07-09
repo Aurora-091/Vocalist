@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { ShoppingCart, PackageCheck, Star, ChevronDown, ChevronUp, Save, Loader as Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useVertical } from "@/lib/VerticalContext";
 import { listAgents } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,7 @@ function formatDelay(minutes: number): string {
 }
 
 export default function Playbooks() {
+  const { t } = useVertical();
   const [playbooks, setPlaybooks] = useState<Playbook[] | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -202,10 +204,10 @@ export default function Playbooks() {
                               onValueChange={(v) => setDraft(key, { agent_id: v === "__none__" ? null : v })}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select an agent" />
+                                <SelectValue placeholder={`Select an ${t("agent")}`} />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__none__">No agent selected</SelectItem>
+                                <SelectItem value="__none__">No {t("agent")} selected</SelectItem>
                                 {agents.map((a) => (
                                   <SelectItem key={a.id} value={a.id}>
                                     {a.name}

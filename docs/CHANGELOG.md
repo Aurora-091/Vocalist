@@ -2,6 +2,33 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.18] — Thursday, 2026-07-09 22:30 IST
+
+### Modern Visual Design Hues, useDebounce/useCopy Hooks Refactor, ESLint Strictness, Empty State Standardization
+
+Implemented multiple UI/UX, linter strictness, and structural enhancements across the frontend to align with modern design paradigms:
+
+#### Styling & Visual Polish
+- **`src/index.css`**: Added actual colourful OKLCH hue scales for `--chart-1` through `--chart-5` in both light/dark modes (instead of the previous five shades of gray).
+- **`src/index.css`**: Created the `.card-lift-sm` hover micro-animation wrapper (with reduced-motion compatibility override) to introduce dynamic premium hover treatments to cards.
+
+#### Hooks Refactoring
+- **`src/hooks/useDebounce.ts`**: Created a centralized hook to manage search queries.
+- **`src/pages/Contacts.tsx`**, **`src/pages/CampaignDetail.tsx`**, **`src/components/layout/CommandPalette.tsx`**: Replaced custom `setTimeout`/`clearTimeout` mechanisms with the new `useDebounce` hook.
+- **`src/pages/admin/AdminAgents.tsx`**, **`src/pages/admin/AdminBilling.tsx`**: Refactored the inline expand rows to use the standard `useCopy` hook, removing ~20 lines of duplicate clipboard state.
+
+#### ESLint & Library Cleanup
+- **`eslint.config.js`**: Enabled `@typescript-eslint/no-explicit-any` at the `"warn"` level to stop bleeding and prevent new `any` declarations. Integrated `eslint-plugin-jsx-a11y` configured to `"warn"` across all accessibility rules.
+- **`src/components/ui/`**: Deleted unused/dead shadcn primitives: `alert.tsx`, `avatar.tsx`, `navigation-menu.tsx`, `progress.tsx`, and `radio-group.tsx`.
+- **`src/pages/auth/AuthCallback.tsx`**: Resolved `prefer-const` check on timeout declaration.
+
+#### Translation & Jargon Auditing
+- **Pages**: Wired `AgentDetail.tsx`, `Analytics.tsx`, `Billing.tsx`, `Calls.tsx`, `CampaignDetail.tsx`, `CampaignNew.tsx`, `Knowledge.tsx`, `Numbers.tsx`, `Outcomes.tsx`, and `Playbooks.tsx` through `VerticalContext`/`t()` to translate key terms like "agent", "agents", "contacts", and "campaigns" dynamically depending on business vertical.
+- **Copy**: Audited and simplified technical jargon for merchants.
+
+#### Component Standardization
+- **`src/pages/`**: Replaced 14 hand-rolled/inline empty states in `Integrations.tsx`, `Campaigns.tsx`, `Calls.tsx`, `Analytics.tsx`, `AgentDetail.tsx`, `CampaignDetail.tsx`, `AdminSupport.tsx`, and `AdminDashboard.tsx` with the standard `<Empty>` component composition library.
+
 ## [1.16.17] — Thursday, 2026-07-09 20:15 IST
 
 ### Backend Metrics — Fix Crash on Every Error Response, Split Sentry/PostHog Responsibilities

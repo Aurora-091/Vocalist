@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Megaphone, ChevronRight } from "lucide-react";
 import { listCampaigns } from "../lib/db";
@@ -134,9 +134,12 @@ export default function Campaigns() {
           </EmptyContent>
         </Empty>
       ) : visible.length === 0 ? (
-        <div className="text-sm text-muted-foreground text-center py-12">
-          No {filter} campaigns.
-        </div>
+        <Empty className="py-12 border-none">
+          <EmptyHeader>
+            <EmptyTitle>No campaigns found</EmptyTitle>
+            <EmptyDescription>There are no {filter} campaigns currently matching your selected tab.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <>
           {/* Desktop table */}

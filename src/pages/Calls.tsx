@@ -29,6 +29,7 @@ import { listCalls, getCallsSummary, getCall, listAgents } from "../lib/db";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
 import { StatCard } from "@/components/ui/stat-card";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +54,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useCopy } from "../hooks/useCopy";
+import { useVertical } from "../lib/VerticalContext";
 import { formatRelative, formatPhone } from "../lib/format";
 
 type Agent = { id: string; name: string };
@@ -137,6 +139,7 @@ function defaultDateFrom() {
 }
 
 export default function Conversations() {
+  const { t } = useVertical();
   usePageTitle("Calls");
   const [searchParams, setSearchParams] = useSearchParams();
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -323,10 +326,10 @@ export default function Conversations() {
       <div className="flex flex-wrap items-center gap-3">
         <Select value={agentId || "__all__"} onValueChange={(v) => setParam("agent", v)}>
           <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="All agents" />
+            <SelectValue placeholder={`All ${t("agents")}`} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">All agents</SelectItem>
+            <SelectItem value="__all__">All {t("agents")}</SelectItem>
             {agents.map((a) => (
               <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
             ))}
@@ -430,13 +433,18 @@ export default function Conversations() {
           <Skeleton className="h-64 w-full" />
         </div>
       ) : conversations.length === 0 ? (
-        <div className="text-center py-16 border border-border rounded-lg bg-card">
-          <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No conversations match your filters.</p>
-          <Button variant="ghost" size="sm" className="mt-3" onClick={resetFilters}>
-            Clear filters
-          </Button>
-        </div>
+        <Empty className="py-16 bg-card border border-dashed border-border rounded-lg">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><MessageSquare className="w-6 h-6 text-muted-foreground" /></EmptyMedia>
+            <EmptyTitle>No conversations found</EmptyTitle>
+            <EmptyDescription>No conversations match your currently selected filters.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button variant="outline" size="sm" onClick={resetFilters}>
+              Clear filters
+            </Button>
+          </EmptyContent>
+        </Empty>
       ) : (
         <>
           {/* Mobile card list */}

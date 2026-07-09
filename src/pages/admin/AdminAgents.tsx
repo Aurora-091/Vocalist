@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useCopy } from "../../hooks/useCopy";
 
 export default function AdminAgents() {
   const [searchParams] = useSearchParams();
@@ -21,7 +22,7 @@ export default function AdminAgents() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detailsLoading, setDetailsLoading] = useState<Record<string, boolean>>({});
   const [details, setDetails] = useState<Record<string, any>>({});
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { copied, copy } = useCopy({ message: "Copied to clipboard", timeout: 2000 });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,12 +61,6 @@ export default function AdminAgents() {
     }
   };
 
-  const handleCopy = (txt: string) => {
-    navigator.clipboard.writeText(txt);
-    setCopiedId(txt);
-    toast.success("Copied to clipboard");
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   const totalPages = result ? Math.ceil(result.total / result.limit) : 1;
 
@@ -150,11 +145,11 @@ export default function AdminAgents() {
                                         className="h-7 w-7"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(detail.id);
+                                          copy(detail.id);
                                         }}
                                         aria-label="Copy Agent ID"
                                       >
-                                        {copiedId === detail.id ? (
+                                        {copied ? (
                                           <Check className="h-3.5 w-3.5 text-success" />
                                         ) : (
                                           <Copy className="h-3.5 w-3.5" />

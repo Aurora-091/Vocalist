@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Phone, Plus, Trash2, Unlink, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useVertical } from "../lib/VerticalContext";
 import { listPhoneNumbers, listAgents, unlinkPhoneNumberAgent, deletePhoneNumber } from "../lib/db";
 import { api } from "../lib/api";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ type PhoneNumber = {
 type Agent = { id: string; name: string };
 
 export default function Numbers() {
+  const { t } = useVertical();
   const [numbers, setNumbers] = useState<PhoneNumber[] | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,10 +92,10 @@ export default function Numbers() {
   async function unlinkAgent(numberId: string) {
     try {
       await unlinkPhoneNumberAgent(numberId);
-      toast.success("Agent unlinked from number");
+      toast.success(`${t("agent")} unlinked from number`);
       load();
     } catch {
-      toast.error("Failed to unlink agent");
+      toast.error(`Failed to unlink ${t("agent")}`);
     }
   }
 
@@ -114,7 +116,7 @@ export default function Numbers() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Phone Numbers</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your phone numbers, assign agents, and track renewals.
+            Manage your phone numbers, assign {t("agents")}, and track renewals.
           </p>
         </div>
         {account && (
@@ -185,12 +187,12 @@ export default function Numbers() {
                     <TableRow className="bg-muted/50">
                       <TableHead className="text-xs font-medium">Phone number</TableHead>
                       <TableHead className="text-xs font-medium">Status</TableHead>
-                      <TableHead className="text-xs font-medium">Agent answering</TableHead>
+                      <TableHead className="text-xs font-medium">{t("agent")} answering</TableHead>
                       <TableHead className="text-xs font-medium">Telephony</TableHead>
                       <TableHead className="text-xs font-medium">Purchased on</TableHead>
                       <TableHead className="text-xs font-medium">Renews on</TableHead>
                       <TableHead className="text-xs font-medium">Monthly rent</TableHead>
-                      <TableHead className="text-xs font-medium">Unlink agent</TableHead>
+                      <TableHead className="text-xs font-medium">Unlink {t("agent")}</TableHead>
                       <TableHead className="text-xs font-medium">Delete</TableHead>
                     </TableRow>
                   </TableHeader>

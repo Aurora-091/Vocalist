@@ -5,6 +5,7 @@ const { validate } = require("../../middleware/validation.middleware");
 const { requireAuth, requireOrg, requireRole } = require("../../middleware/auth.middleware");
 const { webSessionLimiter } = require("../../middleware/rate-limit.middleware");
 const { NotFound, BadRequest, UnprocessableEntity } = require("../../utils/errors");
+const { toE164 } = require("../../utils/phone");
 const agentService = require("./agent.service");
 const callService = require("../calls/call.service");
 const { updateOnboardingStep } = require("../onboarding/onboarding.routes");
@@ -101,7 +102,7 @@ router.post(
     }).refine((b) => b.to_number || b.to, { message: "to_number is required" }),
   }),
   asyncHandler(async (req, res) => {
-    const toNumber = req.body.to_number || req.body.to;
+    const toNumber = toE164(req.body.to_number || req.body.to, req.body.default_country || "US");
     const { data: agent, error: agentErr } = await req.supabase
       .from("agents")
       .select("id, name, provider, provider_ref, inbound_number")

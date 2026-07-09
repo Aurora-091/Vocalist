@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -79,9 +80,12 @@ export default function AdminSupport() {
       </form>
 
       {noResult && (
-        <div className="bg-card border border-border rounded-lg p-8 text-center text-muted-foreground text-sm">
-          No user found matching "{q}"
-        </div>
+        <Empty className="bg-card border border-dashed border-border py-8">
+          <EmptyHeader>
+            <EmptyTitle>No user found</EmptyTitle>
+            <EmptyDescription>No user found matching "{q}". Check the email address or organization ID.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
 
       {user && (
@@ -172,16 +176,21 @@ export default function AdminSupport() {
             </form>
           )}
 
-          <div className="bg-muted/50 border border-dashed border-border rounded-lg p-6 text-center">
-            <p className="text-sm text-muted-foreground">Ticket system coming soon</p>
-          </div>
+          <Empty className="py-6 bg-muted/30 border border-dashed border-border">
+            <EmptyHeader>
+              <EmptyTitle className="text-muted-foreground font-normal">Ticket system coming soon</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         </div>
       )}
 
       {!user && !noResult && (
-        <div className="bg-card border border-border rounded-lg p-12 text-center">
-          <p className="text-muted-foreground text-sm">Search for a user to view their activity and troubleshoot issues.</p>
-        </div>
+        <Empty className="bg-card border border-dashed border-border py-12">
+          <EmptyHeader>
+            <EmptyTitle>Troubleshooting console</EmptyTitle>
+            <EmptyDescription>Search for a user to view their activity and troubleshoot issues.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
     </div>
   );

@@ -1,7 +1,8 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Loader as Loader2 } from "lucide-react";
 import { listAgents, createCampaign } from "../lib/db";
+import { useVertical } from "../lib/VerticalContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import {
 
 export default function CampaignNew() {
   const navigate = useNavigate();
+  const { t } = useVertical();
   const [agents, setAgents] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [agentId, setAgentId] = useState("");
@@ -55,7 +57,7 @@ export default function CampaignNew() {
       });
       navigate(`/campaigns/${campaign.id}`);
     } catch (e: any) {
-      setErr(e.message || "Couldn't create campaign.");
+      setErr(e.message || `Couldn't create ${t("campaign")}.`);
     } finally {
       setSubmitting(false);
     }
@@ -69,11 +71,11 @@ export default function CampaignNew() {
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to campaigns
+          Back to {t("campaigns")}
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">New campaign</h1>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight">New {t("campaign")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Weeber dials only contacts with consent on file. Opt-outs are honored
+          Weeber dials only {t("contacts")} with consent on file. Opt-outs are honored
           immediately.
         </p>
       </div>
@@ -85,7 +87,7 @@ export default function CampaignNew() {
         <CardContent className="px-6 py-5">
           {agents.length === 0 ? (
             <div className="text-sm text-muted-foreground">
-              You need an agent before creating a campaign.{" "}
+              You need an {t("agent")} before creating a {t("campaign")}.{" "}
               <Link to="/agents" className="text-primary hover:text-primary-700">
                 Create one
               </Link>
@@ -105,10 +107,10 @@ export default function CampaignNew() {
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="campaign-agent">Agent</FieldLabel>
+                <FieldLabel htmlFor="campaign-agent">{t("agent")}</FieldLabel>
                 <Select value={agentId} onValueChange={setAgentId}>
                   <SelectTrigger id="campaign-agent" className="w-full">
-                    <SelectValue placeholder="Select an agent" />
+                    <SelectValue placeholder={`Select an ${t("agent")}`} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -160,7 +162,7 @@ export default function CampaignNew() {
                 </Button>
                 <Button type="submit" disabled={submitting}>
                   {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {submitting ? "Creating…" : "Create campaign"}
+                  {submitting ? "Creating…" : `Create ${t("campaign")}`}
                 </Button>
               </div>
               </FieldGroup>

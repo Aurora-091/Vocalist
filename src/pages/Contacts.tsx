@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Upload, Search, Trash2, ShieldOff } from "lucide-react";
 import { listContacts, createContact, deleteContact as deleteContactDb } from "../lib/db";
 import { api } from "../lib/api";
@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useVertical } from "../lib/VerticalContext";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { formatPhone } from "../lib/format";
+import { useDebounce } from "../hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,8 +53,9 @@ type Contact = {
 };
 
 export default function Contacts() {
-  usePageTitle("Contacts");
   const { t } = useVertical();
+  usePageTitle(t("contacts"));
+
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
@@ -61,7 +63,8 @@ export default function Contacts() {
   const [dncUploading, setDncUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const debouncedQ = useDebounce(q, 350);
 
   async function load(query?: string) {
     try {
@@ -73,14 +76,8 @@ export default function Contacts() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
-
-  function handleSearch(val: string) {
-    setQ(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => load(val), 350);
-  }
+    load(debouncedQ);
+  }, [debouncedQ]);
 
   async function deleteContact(id: string) {
     setDeletingId(id);
@@ -131,7 +128,7 @@ export default function Contacts() {
         </InputGroupAddon>
         <InputGroupInput
           value={q}
-          onChange={(e) => handleSearch(e.target.value)}
+          onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name, email, or phone"
           aria-label="Search contacts"
         />

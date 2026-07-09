@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getOverview, getOutcomesData } from "../lib/db";
 import { toast } from "sonner";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useVertical } from "../lib/VerticalContext";
 import { formatMoney } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import { StatCard } from "@/components/ui/stat-card";
@@ -78,6 +79,7 @@ function MiniSparkline({ data }: { data: { date: string; total: number; complete
 }
 
 export default function Outcomes() {
+  const { t } = useVertical();
   usePageTitle("Results");
   const [overview, setOverview] = useState<any>(null);
   const [data, setData] = useState<any>(null);

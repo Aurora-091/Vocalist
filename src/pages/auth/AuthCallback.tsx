@@ -10,7 +10,6 @@ export default function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
@@ -24,7 +23,7 @@ export default function AuthCallback() {
       }
     });
 
-    timeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
       setError("Email confirmation timed out. The link may have expired.");
     }, 15000);
 

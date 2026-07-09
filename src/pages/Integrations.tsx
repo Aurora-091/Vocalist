@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ShoppingBag,
@@ -24,6 +24,7 @@ import {
 } from "../lib/db";
 import { useVertical } from "../lib/VerticalContext";
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -220,19 +221,28 @@ export default function Integrations() {
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-44" />)}
         </div>
       ) : filteredCatalog.length === 0 ? (
-        <div className="text-center py-16">
-          <Plug className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-          <div className="text-sm text-muted-foreground">
-            {tab === "connected"
-              ? "No integrations connected yet."
-              : "No integrations match your filters."}
-          </div>
+        <Empty className="py-16 bg-card border border-dashed border-border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Plug className="w-6 h-6 text-muted-foreground" /></EmptyMedia>
+            <EmptyTitle>
+              {tab === "connected"
+                ? "No integrations connected yet"
+                : "No integrations found"}
+            </EmptyTitle>
+            <EmptyDescription>
+              {tab === "connected"
+                ? "Connect your tools and applications to sync data in real time."
+                : "No integrations match your active filters or search query."}
+            </EmptyDescription>
+          </EmptyHeader>
           {tab === "connected" && (
-            <Button variant="secondary" size="sm" className="mt-3" onClick={() => setTab("all")}>
-              Browse all integrations
-            </Button>
+            <EmptyContent>
+              <Button variant="secondary" size="sm" onClick={() => setTab("all")}>
+                Browse all integrations
+              </Button>
+            </EmptyContent>
           )}
-        </div>
+        </Empty>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCatalog.map((entry) => {

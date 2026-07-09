@@ -1,9 +1,10 @@
-﻿import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ChartBar as BarChart2, TrendingDown, Phone, CircleCheck as CheckCircle, UserMinus } from "lucide-react";
 import { api } from "../lib/api";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 type Range = "7d" | "30d" | "90d";
 
@@ -272,7 +273,11 @@ export default function Analytics() {
               </div>
               <CardContent className="px-6 py-5">
                 {!outcomes || outcomes.length === 0 ? (
-                  <div className="text-sm text-muted-foreground py-8 text-center">No outcome data yet</div>
+                  <Empty className="py-8 border-none">
+                    <EmptyHeader>
+                      <EmptyTitle className="text-muted-foreground font-normal">No outcome data yet</EmptyTitle>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
                   <div className="space-y-3">
                     {outcomes

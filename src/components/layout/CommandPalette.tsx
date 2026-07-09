@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   CommandDialog,
   CommandEmpty,
@@ -27,7 +28,7 @@ export function CommandPalette({ open, onOpenChange }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [query, setQuery] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debouncedQuery = useDebounce(query, 250);
 
   useEffect(() => {
     if (!open) {
@@ -40,24 +41,20 @@ export function CommandPalette({ open, onOpenChange }: Props) {
       .catch(() => {});
   }, [open]);
 
-  const searchContacts = useCallback((q: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (q.length < 2) {
+  useEffect(() => {
+    if (debouncedQuery.length < 2) {
       setContacts([]);
       return;
     }
-    debounceRef.current = setTimeout(() => {
-      listContacts({ q, limit: 6 })
-        .then((rows) =>
-          setContacts(rows.map((r: any) => ({ id: r.id, name: r.name, e164: r.e164 })))
-        )
-        .catch(() => {});
-    }, 250);
-  }, []);
+    listContacts({ q: debouncedQuery, limit: 6 })
+      .then((rows) =>
+        setContacts(rows.map((r: any) => ({ id: r.id, name: r.name, e164: r.e164 })))
+      )
+      .catch(() => {});
+  }, [debouncedQuery]);
 
   function handleValueChange(v: string) {
     setQuery(v);
-    searchContacts(v);
   }
 
   function go(to: string) {

@@ -3,6 +3,7 @@ import { Users, ClipboardList, Activity, Phone, DollarSign, CreditCard } from "l
 import { adminApi, type AdminStats, type AdminUser, type LogEntry } from "../../lib/admin-api";
 import { api } from "../../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 function StatCard({
   label,
@@ -210,7 +211,11 @@ export default function AdminDashboard() {
           </div>
           <div className="divide-y divide-border">
             {signups.length === 0 && (
-              <div className="px-5 py-8 text-sm text-muted-foreground text-center">No signups yet</div>
+              <Empty className="py-8 border-none">
+                <EmptyHeader>
+                  <EmptyTitle className="text-muted-foreground font-normal">No signups yet</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             )}
             {signups.slice(0, 8).map((u) => (
               <div key={u.id} className="px-5 py-3 flex items-center justify-between">
@@ -232,7 +237,11 @@ export default function AdminDashboard() {
           </div>
           <div className="divide-y divide-border">
             {errors.length === 0 && (
-              <div className="px-5 py-8 text-sm text-muted-foreground text-center">No errors</div>
+              <Empty className="py-8 border-none">
+                <EmptyHeader>
+                  <EmptyTitle className="text-muted-foreground font-normal">No errors</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             )}
             {errors.slice(0, 8).map((e) => (
               <div key={e.id} className="px-5 py-3">

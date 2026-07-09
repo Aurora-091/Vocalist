@@ -1,12 +1,14 @@
-﻿import { useEffect, useState, useRef, useCallback, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Loader as Loader2, ChevronDown, Check, Phone, X, Mic, RefreshCw, ChevronRight, TriangleAlert as AlertTriangle, Zap, Globe, LayoutTemplate, MessageSquare, WrapText, Clock, MoveHorizontal as MoreHorizontal, Trash2, History } from "lucide-react";
 import { toast } from "sonner";
 import { getAgent, listVoices, listAgentKnowledge, getCall, listCalls, listPhoneNumbers, unlinkPhoneNumberAgent } from "../lib/db";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
+import { useVertical } from "../lib/VerticalContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -141,6 +143,7 @@ function serializeDraft(d: DraftState): string {
 
 export default function AgentDetail() {
   const { id } = useParams();
+  const { t } = useVertical();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const fromCallId = searchParams.get("from_call");
@@ -149,7 +152,7 @@ export default function AgentDetail() {
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
-  usePageTitle(agent?.name ? `${agent.name} · Agent` : "Agent");
+  usePageTitle(agent?.name ? `${agent.name} · ${t("agent")}` : t("agent"));
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [knowledge, setKnowledge] = useState<any[]>([]);
@@ -1070,9 +1073,12 @@ export default function AgentDetail() {
                   </button>
                 </div>
                 {recentCalls.length === 0 ? (
-                  <div className="border border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
-                    No calls yet for this agent.
-                  </div>
+                  <Empty className="py-8 bg-card border border-dashed border-border rounded-lg">
+                    <EmptyHeader>
+                      <EmptyTitle>No calls yet</EmptyTitle>
+                      <EmptyDescription>There are no recorded calls for this agent.</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
                   <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
                     {recentCalls.map((call: any) => {

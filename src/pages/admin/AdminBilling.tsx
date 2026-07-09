@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useCopy } from "../../hooks/useCopy";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function AdminBilling() {
@@ -18,7 +19,7 @@ export default function AdminBilling() {
   const [page, setPage] = useState(1);
   const [orgId, setOrgId] = useState(initialOrg);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { copied, copy } = useCopy({ message: "Copied to clipboard", timeout: 2000 });
   const [cancelingId, setCancelingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -51,12 +52,6 @@ export default function AdminBilling() {
     }
   }
 
-  const handleCopy = (txt: string) => {
-    navigator.clipboard.writeText(txt);
-    setCopiedId(txt);
-    toast.success("Copied to clipboard");
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   const totalPages = result ? Math.ceil(result.total / result.limit) : 1;
 
@@ -133,11 +128,11 @@ export default function AdminBilling() {
                                     className="h-7 w-7"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleCopy(entry.stripe_subscription_id || "");
+                                      copy(entry.stripe_subscription_id || "");
                                     }}
                                     aria-label="Copy Subscription ID"
                                   >
-                                    {copiedId === entry.stripe_subscription_id ? (
+                                    {copied ? (
                                       <Check className="h-3.5 w-3.5 text-success" />
                                     ) : (
                                       <Copy className="h-3.5 w-3.5" />

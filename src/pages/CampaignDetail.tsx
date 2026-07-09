@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -17,10 +17,13 @@ import { getCampaign, listContacts, listCampaignTargets, updateCampaign } from "
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
+import { useDebounce } from "../hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useVertical } from "../lib/VerticalContext";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
 type ComplianceReview = {
   total_targets: number;
@@ -42,6 +45,7 @@ type Contact = {
 
 export default function CampaignDetail() {
   const { id } = useParams();
+  const { t } = useVertical();
   const [campaign, setCampaign] = useState<any>(null);
   const [stats, setStats] = useState<Record<string, number>>({});
   const [acting, setActing] = useState(false);
@@ -342,6 +346,10 @@ function AddContactsPanel({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { id } = useParams<{ id: string }>();
+  const { t } = useVertical();
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"list" | "csv">("list");
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -349,7 +357,7 @@ function AddContactsPanel({
   const [result, setResult] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "granted">("granted");
   const [q, setQ] = useState("");
-  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedQ = useDebounce(q, 300);
 
   // CSV state
   const [csvRows, setCsvRows] = useState<{ phone: string; name?: string; email?: string }[]>([]);
@@ -367,13 +375,7 @@ function AddContactsPanel({
     }
   }, [filter]);
 
-  useEffect(() => { load(); }, [filter, load]);
-
-  function handleQ(val: string) {
-    setQ(val);
-    if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => load(val), 300);
-  }
+  useEffect(() => { load(debouncedQ); }, [filter, debouncedQ, load]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -539,7 +541,7 @@ function AddContactsPanel({
                 </div>
                 <input
                   value={q}
-                  onChange={(e) => handleQ(e.target.value)}
+                  onChange={(e) => setQ(e.target.value)}
                   placeholder="Search…"
                   className="h-8 px-3 rounded-md border border-border bg-card text-sm flex-1 min-w-0"
                 />
@@ -555,11 +557,16 @@ function AddContactsPanel({
               {contacts === null ? (
                 <Skeleton className="h-40" />
               ) : contacts.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-6 text-center">
-                  {filter === "granted"
-                    ? "No contacts with granted consent. Switch to 'All contacts' or add consent to your contacts."
-                    : "No contacts found."}
-                </div>
+                <Empty className="py-6 border-none">
+                  <EmptyHeader>
+                    <EmptyTitle>No {t("contacts")} found</EmptyTitle>
+                    <EmptyDescription>
+                      {filter === "granted"
+                        ? `No ${t("contacts")} with granted consent. Switch to 'All contacts' or add consent to your ${t("contacts")}.`
+                        : `No ${t("contacts")} found.`}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 <div className="max-h-64 overflow-y-auto border border-border rounded-md divide-y divide-border">
                   {contacts.map((c) => (
@@ -589,7 +596,7 @@ function AddContactsPanel({
 
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">
-                  {selected.size} contact{selected.size !== 1 ? "s" : ""} selected
+                  {selected.size} {selected.size === 1 ? t("contact") : t("contacts")} selected
                 </span>
                 <div className="flex gap-2">
                   <Button variant="ghost" type="button" onClick={onClose}>Cancel</Button>
@@ -598,7 +605,7 @@ function AddContactsPanel({
                     disabled={busy || selected.size === 0}
                   >
                     <Upload className="w-4 h-4 mr-2" />
-                    {busy ? "Adding…" : `Add ${selected.size > 0 ? selected.size : ""} to campaign`}
+                    {busy ? "Adding…" : `Add ${selected.size > 0 ? selected.size : ""} to ${t("campaign")}`}
                   </Button>
                 </div>
               </div>
@@ -629,7 +636,7 @@ function AddContactsPanel({
                 {csvRows.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-sm font-medium">
-                      {csvRows.length} contact{csvRows.length !== 1 ? "s" : ""} parsed
+                      {csvRows.length} {csvRows.length === 1 ? t("contact") : t("contacts")} parsed
                     </div>
                     <div className="max-h-40 overflow-y-auto border border-border rounded-md divide-y divide-border text-xs">
                       {csvRows.slice(0, 20).map((row, i) => (

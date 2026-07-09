@@ -1,8 +1,9 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Globe, FileText, Trash2, RefreshCw, Link as LinkIcon, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Loader as Loader2, Inbox } from "lucide-react";
 import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
+import { useVertical } from "../lib/VerticalContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,6 +47,7 @@ const STATUS_LABEL = {
 };
 
 export default function Knowledge() {
+  const { t } = useVertical();
   const [sources, setSources] = useState<KnowledgeSource[] | null>(null);
   const [_tab, _setTab] = useState<"website" | "document">("website");
   const [adding, setAdding] = useState(false);
@@ -130,7 +132,7 @@ export default function Knowledge() {
           <EmptyHeader>
             <EmptyMedia variant="icon"><Inbox className="w-6 h-6" /></EmptyMedia>
             <EmptyTitle>No knowledge sources</EmptyTitle>
-            <EmptyDescription>Add a website URL or upload a document. Agents will reference it during live calls.</EmptyDescription>
+            <EmptyDescription>Add a website URL or upload a document. {t("agents")} will reference it during live calls.</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button onClick={() => setAdding(true)}>
