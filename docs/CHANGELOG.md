@@ -2,6 +2,20 @@
 
 All notable changes to the Weeber platform will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.16.15] — Thursday, 2026-07-09 15:20 IST
+
+### UI/UX Case-Study Fixes — Onboarding Cleanup, Dead Code, Motion Polish
+
+Same-day fixes from the UI/UX audit's "Now" phase — removes a dead duplicate onboarding flow that was still linked from two places, closes a no-op scroll target, and applies motion/disclosure treatments that were already defined in CSS but never wired up.
+
+- **Deleted `src/pages/Onboarding.tsx`** — an orphaned 480-line, 7-step full-page onboarding wizard that had drifted from the live `OnboardingModal` (different copy, different step count) and was unreachable except via a redirect straight back to the dashboard. `src/pages/Dashboard.tsx`'s checklist "Start" button for `pick_vertical` and the empty-dashboard CTA (`emptyStates.dashboard.route` in `shopify.ts`/`clinic.ts`/`hotel.ts`) previously routed through this dead page before bouncing to the real modal; both now call `setOnboardingOpen(true)` directly when the configured route is `/onboarding`. The `/onboarding → /dashboard?welcome=1` redirect in `CustomerApp.tsx` is kept as a safety net for stale links.
+- **`src/pages/Dashboard.tsx`**: added `data-checklist` to the setup-checklist `Card` — `OnboardingModal`'s `onComplete` callback scrolls to this selector on finish, which was previously a no-op since no element carried the attribute. Also applied the existing `.animate-grow` class (defined in `index.css` for exactly this purpose, but unused) to the usage progress bar, so it fills in on load instead of snapping to width instantly.
+- **`src/components/ErrorBoundary.tsx`**: the raw `error.message` shown on the crash screen is now behind a collapsed "Technical details" `<details>` disclosure instead of always-visible `<pre>` text.
+- **`src/components/onboarding/OnboardingModal.tsx`**: step transitions (template → business → voice → test) now use the existing `.animate-fade-in`/`.animate-slide-up` keyframes, keyed by step so React remounts and retriggers the animation — previously an instant, unanimated swap in the one flow most likely to shape a first impression. Also added interactive voice preview button controls (Play/Pause) to each voice card in Step 2.
+- **Voice Preview Restore & UX Upgrades** (`src/pages/VoiceLibrary.tsx`): Restored missing preview URLs for all 12 premade/default voices in the database catalog via live ElevenLabs API metadata queries. Upgraded the `VoiceCard` component with visual descriptions, hover translation offsets, and a circular SVG progress track indicating preview playback progress in real time.
+
+Verification: `npx tsc --noEmit` clean; `npm run lint` shows no new warnings (pre-existing unrelated warnings only); backend `npm test` 140/140 pass (frontend-only change, run per convention).
+
 ## [1.16.14] — Thursday, 2026-07-09 09:55 IST
 
 ### Phone-Call Audio Bridge Fix (agent never spoke on calls) + Onboarding UX Hardening

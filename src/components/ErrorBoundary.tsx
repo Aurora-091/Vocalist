@@ -49,9 +49,14 @@ export class ErrorBoundary extends Component<Props, State> {
           An unexpected error occurred. Try reloading the page or contact support if the problem persists.
         </p>
         {this.state.error && (
-          <pre className="mt-4 text-xs text-muted-foreground bg-muted rounded-md px-4 py-3 max-w-lg overflow-x-auto text-left">
-            {this.state.error.message}
-          </pre>
+          <details className="mt-4 max-w-lg text-left">
+            <summary className="text-xs text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors">
+              Technical details
+            </summary>
+            <pre className="mt-2 text-xs text-muted-foreground bg-muted rounded-md px-4 py-3 overflow-x-auto">
+              {this.state.error.message}
+            </pre>
+          </details>
         )}
         <div className="mt-6 flex gap-3">
           <Button variant="outline" size="sm" onClick={this.handleReset}>

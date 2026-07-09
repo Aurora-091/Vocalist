@@ -22,8 +22,8 @@ const STEP_LABELS: Record<string, string> = {
   test_and_golive: "Test and go live",
 };
 
+// pick_vertical has no standalone route — its "Start" button reopens OnboardingModal directly (see below).
 const STEP_LINKS: Record<string, string> = {
-  pick_vertical: "/onboarding",
   connect_tools: "/integrations",
   add_knowledge: "/knowledge",
   create_agent: "/agents",
@@ -167,9 +167,15 @@ export default function Dashboard() {
                   {emptyStates.dashboard.description}
                 </p>
                 <div className="mt-4">
-                  <Link to={emptyStates.dashboard.route}>
-                    <Button size="sm">{emptyStates.dashboard.cta}</Button>
-                  </Link>
+                  {emptyStates.dashboard.route === "/onboarding" ? (
+                    <Button size="sm" onClick={() => setOnboardingOpen(true)}>
+                      {emptyStates.dashboard.cta}
+                    </Button>
+                  ) : (
+                    <Link to={emptyStates.dashboard.route}>
+                      <Button size="sm">{emptyStates.dashboard.cta}</Button>
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -178,7 +184,7 @@ export default function Dashboard() {
       )}
 
       {steps && !checklistDone && (
-        <Card className="gap-0 overflow-visible py-0 shadow-card">
+        <Card data-checklist className="gap-0 overflow-visible py-0 shadow-card">
           <div className="border-b px-6 py-4">
             <div className="font-medium">Finish setting up Weeber</div>
             <p className="text-xs text-text-muted mt-1">
@@ -203,11 +209,17 @@ export default function Dashboard() {
                     </span>
                   </div>
                   {!done && (
-                    <Link to={STEP_LINKS[key] || "/"}>
-                      <Button variant="ghost" size="sm">
+                    key === "pick_vertical" ? (
+                      <Button variant="ghost" size="sm" onClick={() => setOnboardingOpen(true)}>
                         Start
                       </Button>
-                    </Link>
+                    ) : (
+                      <Link to={STEP_LINKS[key] || "/"}>
+                        <Button variant="ghost" size="sm">
+                          Start
+                        </Button>
+                      </Link>
+                    )
                   )}
                 </li>
               ))}
@@ -371,7 +383,7 @@ export default function Dashboard() {
                 </div>
                 <div className="mt-3 h-2 rounded-full bg-surface-2 overflow-hidden">
                   <div
-                    className="h-full bg-primary"
+                    className="h-full bg-primary animate-grow"
                     style={{ width: `${Math.min(100, Number(usage.pct_used) || 0)}%` }}
                   />
                 </div>

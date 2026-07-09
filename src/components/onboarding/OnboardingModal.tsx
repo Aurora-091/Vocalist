@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react";
-import { Check, ArrowRight, Loader as Loader2, Mic, ShoppingBag, Activity, Building2, Phone } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { Check, ArrowRight, Loader as Loader2, Mic, ShoppingBag, Activity, Building2, Phone, Play, Pause } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -92,6 +92,44 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   const [createError, setCreateError] = useState<string | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [finished, setFinished] = useState(false);
+
+  const [previewingVoiceId, setPreviewingVoiceId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      audioRef.current = null;
+    };
+  }, []);
+
+  const playPreview = useCallback((voice: Voice) => {
+    if (previewingVoiceId === voice.voice_id) {
+      audioRef.current?.pause();
+      setPreviewingVoiceId(null);
+      return;
+    }
+    audioRef.current?.pause();
+    if (!voice.preview_url) {
+      toast.error("No preview available for this voice.");
+      return;
+    }
+
+    const audio = new Audio(voice.preview_url);
+    audioRef.current = audio;
+    setPreviewingVoiceId(voice.voice_id);
+
+    audio.onended = () => {
+      setPreviewingVoiceId(null);
+    };
+    audio.onerror = () => {
+      setPreviewingVoiceId(null);
+      toast.error("Couldn't play this preview.");
+    };
+    audio.play().catch(() => {
+      setPreviewingVoiceId(null);
+    });
+  }, [previewingVoiceId]);
 
   const currentKey = STEP_KEYS[step];
 
@@ -376,14 +414,25 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
                     key={v.voice_id}
                     onClick={() => setSelectedVoice(v.voice_id)}
                     className={cn(
-                      "text-left px-4 py-3 rounded-xl border transition-all flex items-center gap-3",
+                      "text-left px-4 py-3 rounded-xl border transition-all flex items-center gap-3 relative group",
                       selectedVoice === v.voice_id
                         ? "ring-2 ring-foreground border-transparent bg-muted/60"
                         : "border-border bg-background hover:border-foreground/30 hover:bg-muted/30"
                     )}
                   >
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      <Mic className="w-3.5 h-3.5 text-muted-foreground" />
+                    <div 
+                      className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 relative overflow-hidden cursor-pointer hover:bg-muted/80 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playPreview(v);
+                      }}
+                      title="Preview voice"
+                    >
+                      {previewingVoiceId === v.voice_id ? (
+                        <Pause className="w-3.5 h-3.5 text-foreground fill-current" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 text-muted-foreground fill-current group-hover:text-foreground transition-colors" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{v.name}</p>
@@ -623,7 +672,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
   const contentPanel = (
     <div className="flex flex-col flex-1 overflow-hidden px-5 py-5 sm:px-8 sm:py-6">
       {!finished && (
-        <div className="mb-5 shrink-0">
+        <div key={`header-${step}`} className="mb-5 shrink-0 animate-fade-in">
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1.5">
             Step {step + 1} of {STEP_KEYS.length}
           </p>
@@ -634,7 +683,9 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
       )}
 
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-        {stepContent}
+        <div key={finished ? "finished" : step} className="flex-1 min-h-0 flex flex-col animate-slide-up">
+          {stepContent}
+        </div>
       </div>
 
       {footerActions}
@@ -675,7 +726,7 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
       </div>
 
       {!finished && (
-        <div className="px-4 pb-4 shrink-0">
+        <div key={`header-${step}`} className="px-4 pb-4 shrink-0 animate-fade-in">
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">
             {STEP_LABELS[currentKey]}
           </p>
@@ -687,7 +738,9 @@ export function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingMo
       )}
 
       <div className="flex-1 overflow-y-auto px-4 min-h-0">
-        {stepContent}
+        <div key={finished ? "finished" : step} className="animate-slide-up">
+          {stepContent}
+        </div>
       </div>
 
       <div className="px-4 pb-6 pt-2 shrink-0">

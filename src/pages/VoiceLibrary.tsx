@@ -638,6 +638,9 @@ function VoiceCard({
   const hasPreview = !!voice.preview_url;
   const multilingual = voice.language_codes.length > 1;
 
+  const circumference = 2 * Math.PI * 16;
+  const strokeDashoffset = circumference * (1 - (player.progress || 0));
+
   function handleCardClick() {
     if (isSelector && onSelect) onSelect(voice.voice_id, voice.name);
   }
@@ -645,90 +648,125 @@ function VoiceCard({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-150 ${
+      className={`group relative flex flex-col justify-between p-3.5 rounded-xl border transition-all duration-300 ${
         isSelected
-          ? "border-foreground/50 bg-muted/60 shadow-sm"
-          : !compatible
-            ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10"
-            : "border-border bg-card hover:border-foreground/20 hover:shadow-sm"
+          ? "border-foreground bg-muted/50 shadow-sm ring-1 ring-foreground/20"
+          : isPlaying
+            ? "border-foreground/40 bg-muted/10 shadow-sm hover:shadow-md"
+            : !compatible
+              ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/50"
+              : "border-border bg-card hover:border-foreground/20 hover:shadow-md hover:-translate-y-0.5"
       } ${isSelector ? "cursor-pointer" : ""}`}
     >
-      {/* Top row: avatar + name + play */}
-      <div className="flex items-center gap-2.5">
-        {/* Avatar with play overlay */}
-        <div className="relative size-9 shrink-0 rounded-full overflow-hidden">
-          <div
-            className="absolute inset-0"
-            style={{ background: getVoiceGradient(voice.name) }}
-          />
-          {hasPreview && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPlay(voice);
-              }}
-              aria-label={isPlaying ? `Pause ${voice.name}` : `Play ${voice.name}`}
-              className={`absolute inset-0 flex items-center justify-center bg-black/40 text-white transition-opacity duration-150 cursor-pointer ${
-                isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}
-            >
-              {isLoading ? (
-                <RefreshCw className="size-3.5 animate-spin" />
-              ) : isPlaying ? (
-                <Pause className="size-3.5 fill-current" />
-              ) : (
-                <Play className="size-3.5 fill-current" />
+      <div>
+        {/* Top row: avatar + name + play */}
+        <div className="flex items-center gap-2.5">
+          {/* Avatar with play overlay and circular progress */}
+          <div className="relative size-9 shrink-0">
+            <div className="size-full rounded-full overflow-hidden relative">
+              <div
+                className="absolute inset-0"
+                style={{ background: getVoiceGradient(voice.name) }}
+              />
+              {hasPreview && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPlay(voice);
+                  }}
+                  aria-label={isPlaying ? `Pause ${voice.name}` : `Play ${voice.name}`}
+                  className={`absolute inset-0 flex items-center justify-center bg-black/40 text-white transition-opacity duration-150 cursor-pointer ${
+                    isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  {isLoading ? (
+                    <RefreshCw className="size-3.5 animate-spin" />
+                  ) : isPlaying ? (
+                    <Pause className="size-3.5 fill-current" />
+                  ) : (
+                    <Play className="size-3.5 fill-current" />
+                  )}
+                </button>
               )}
-            </button>
+            </div>
+            {isPlaying && !isLoading && (
+              <svg className="absolute inset-0 size-full -rotate-90 pointer-events-none scale-[1.12]">
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="16"
+                  className="stroke-foreground/10"
+                  strokeWidth="1.5"
+                  fill="transparent"
+                />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="16"
+                  className="stroke-foreground transition-all duration-100"
+                  strokeWidth="1.5"
+                  fill="transparent"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                />
+              </svg>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-sm font-semibold text-foreground leading-tight">{voice.name}</span>
+              {isSelected && <Check className="size-3.5 shrink-0 text-foreground" />}
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {voice.gender && (
+                <span className="text-[10px] text-muted-foreground capitalize font-medium">{voice.gender}</span>
+              )}
+              {voice.accent && (
+                <>
+                  <span className="text-muted-foreground/30 text-[10px]">/</span>
+                  <span className="text-[10px] text-muted-foreground">{voice.accent}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Waveform */}
+          {isPlaying && !isLoading && (
+            <div className="flex items-center gap-[2px] h-3 px-1 select-none">
+              <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0s] origin-center" />
+              <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.2s] origin-center" />
+              <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.4s] origin-center" />
+            </div>
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-sm font-medium text-foreground leading-tight">{voice.name}</span>
-            {isSelected && <Check className="size-3.5 shrink-0 text-foreground" />}
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {voice.gender && (
-              <span className="text-[10px] text-muted-foreground capitalize">{voice.gender}</span>
-            )}
-            {voice.accent && (
-              <>
-                <span className="text-muted-foreground/40 text-[10px]">/</span>
-                <span className="text-[10px] text-muted-foreground">{voice.accent}</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Waveform */}
-        {isPlaying && !isLoading && (
-          <div className="flex items-center gap-[2px] h-3 px-1 select-none">
-            <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0s] origin-center" />
-            <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.2s] origin-center" />
-            <div className="w-[2px] h-full bg-foreground/70 rounded-full animate-[waveanim_1.2s_ease-in-out_infinite_0.4s] origin-center" />
-          </div>
+        {/* Description */}
+        {voice.description && (
+          <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2 leading-relaxed min-h-[32px]">
+            {voice.description}
+          </p>
         )}
       </div>
 
       {/* Bottom row: tags + action */}
-      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/50">
+      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border/50">
         <div className="flex items-center gap-1.5 flex-wrap min-w-0">
           {/* Use case pill */}
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide shrink-0">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[9px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
             <uc.icon className="size-2.5" />
             {uc.label}
           </span>
           {/* Multilingual badge */}
           {multilingual && (
-            <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 text-[10px] font-medium shrink-0">
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 text-[9px] font-semibold tracking-wide shrink-0">
               <Globe className="size-2.5" />
               {voice.language_codes.length} langs
             </span>
           )}
           {/* Language codes */}
           {!multilingual && voice.language_codes[0] && (
-            <span className="text-[10px] text-muted-foreground font-medium shrink-0">
+            <span className="text-[10px] text-muted-foreground font-semibold shrink-0">
               {LANGUAGE_FLAGS[voice.language_codes[0]] || voice.language_codes[0].toUpperCase()}
             </span>
           )}
@@ -744,7 +782,7 @@ function VoiceCard({
           <Button
             size="sm"
             variant={isSelected ? "outline" : "secondary"}
-            className="h-6 px-2 text-[10px] shrink-0"
+            className="h-6 px-2.5 text-[10px] font-medium shrink-0"
             onClick={(e) => {
               e.stopPropagation();
               onSelect?.(voice.voice_id, voice.name);
@@ -763,6 +801,7 @@ function VoiceCard({
     </div>
   );
 }
+
 
 function EmptyState({
   search,
